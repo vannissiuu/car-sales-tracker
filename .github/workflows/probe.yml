@@ -1,0 +1,701 @@
+name: Probe Car Sales Sources
+
+# 手动点击触发，或者 push 代码时自动跑一次
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    # 就算脚本内部出了没兜住的异常，也不要让整个 job 显示失败——
+    # "访问失败"本身就是我们要收集的结论，不是流程错误
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: pip install playwright requests
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Write probe script
+        run: |
+          cat > probe_sources.py << 'PROBE_SCRIPT_EOF'
+          #!/usr/bin/env python3
+          # -*- coding: utf-8 -*-
+          """
+          探针脚本：探测 GitHub Actions runner 能否访问国内汽车销量数据网站。
+          
+          设计原则：如实 dump 一切看到的东西，任何一步失败都不能让后面的步骤跑不起来。
+          这个脚本本身就是"证据收集器"——它的目的不是抓到数据，而是把真相打印出来，
+          哪怕真相是"全都失败了"。
+          
+          四个阶段：
+            A. 连通性与地域探测（本机出口 IP/地理位置 + 逐个 URL 的可达性）
+            B. Playwright 渲染 + XHR/fetch 接口抓包（仅对阶段 A 中判定可达的站点执行）
+            C. 渲染后页面的可见文本 / 表格提取
+            D. 汇总成 REPORT.md
+          
+          所有产出都写到 probe_output/ 目录下。
+          """
+          
+          import json
+          import os
+          import re
+          import sys
+          import time
+          import traceback
+          from datetime import datetime, timezone
+          
+          # ---------------------------------------------------------------------------
+          # 基础设置
+          # ---------------------------------------------------------------------------
+          
+          OUTPUT_DIR = os.path.join(os.getcwd(), "probe_output")
+          
+          COMMON_UA = (
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+              "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+          )
+          
+          REQUEST_TIMEOUT_SECONDS = 15
+          DELAY_BETWEEN_REQUESTS_SECONDS = 2
+          
+          # 阶段 A 要测试的目标 URL
+          TARGET_URLS = [
+              "https://www.dongchedi.com/",
+              "https://www.dongchedi.com/sales",
+              "https://www.cpcaauto.com/",
+              "http://www.caam.org.cn/tjsj",
+          ]
+          
+          # 阶段 B 只对这些 URL 做 Playwright 渲染 + 抓包（前提是阶段 A 判定"可达"）
+          # 这里只挑最关键的、已知是 JS 渲染 SPA 的销量榜页面，避免把每个可达页面都跑一遍
+          # 导致运行时间过长——如果其它页面在阶段 A 可达，报告里也会提示可以手动加进来。
+          PLAYWRIGHT_TARGETS = [
+              "https://www.dongchedi.com/sales",
+              "https://www.dongchedi.com/",
+              "https://www.cpcaauto.com/",
+          ]
+          
+          PLAYWRIGHT_POST_LOAD_WAIT_SECONDS = 8
+          PLAYWRIGHT_POST_SCROLL_WAIT_SECONDS = 5
+          
+          
+          def log(msg):
+              """统一的进度打印，带时间戳，方便在 Actions 日志里看进度。"""
+              ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+              print(f"[{ts}] {msg}", flush=True)
+          
+          
+          def ensure_output_dir():
+              os.makedirs(OUTPUT_DIR, exist_ok=True)
+              log(f"输出目录: {OUTPUT_DIR}")
+          
+          
+          def safe_filename_from_url(url):
+              """把 URL 变成一个安全的文件名片段。"""
+              s = re.sub(r"^https?://", "", url)
+              s = re.sub(r"[^a-zA-Z0-9._-]+", "_", s)
+              return s.strip("_") or "unknown"
+          
+          
+          def write_json(filename, data):
+              path = os.path.join(OUTPUT_DIR, filename)
+              try:
+                  with open(path, "w", encoding="utf-8") as f:
+                      json.dump(data, f, ensure_ascii=False, indent=2, default=str)
+                  log(f"  写入 {filename}")
+              except Exception as e:
+                  log(f"  !! 写入 {filename} 失败: {e}")
+          
+          
+          def write_text(filename, text):
+              path = os.path.join(OUTPUT_DIR, filename)
+              try:
+                  with open(path, "w", encoding="utf-8") as f:
+                      f.write(text)
+                  log(f"  写入 {filename}")
+              except Exception as e:
+                  log(f"  !! 写入 {filename} 失败: {e}")
+          
+          
+          # ---------------------------------------------------------------------------
+          # 阶段 A：连通性与地域探测
+          # ---------------------------------------------------------------------------
+          
+          def stage_a_connectivity():
+              log("=" * 70)
+              log("阶段 A：连通性与地域探测")
+              log("=" * 70)
+          
+              result = {
+                  "stage": "A_connectivity",
+                  "run_started_utc": datetime.now(timezone.utc).isoformat(),
+                  "runner_ip_info": None,
+                  "runner_ip_info_error": None,
+                  "url_checks": [],
+              }
+          
+              # 1. runner 出口 IP / 地理位置
+              try:
+                  import requests
+              except Exception as e:
+                  log(f"!! 无法 import requests: {e}")
+                  result["runner_ip_info_error"] = f"import requests 失败: {e}"
+                  requests = None
+          
+              if requests is not None:
+                  log("正在查询 runner 出口 IP 与地理位置 (ipinfo.io) ...")
+                  try:
+                      resp = requests.get(
+                          "https://ipinfo.io/json",
+                          headers={"User-Agent": COMMON_UA},
+                          timeout=REQUEST_TIMEOUT_SECONDS,
+                      )
+                      result["runner_ip_info"] = {
+                          "status_code": resp.status_code,
+                          "body": _try_json(resp),
+                      }
+                      log(f"  ipinfo.io 返回状态码 {resp.status_code}")
+                  except Exception as e:
+                      err = f"{type(e).__name__}: {e}"
+                      log(f"  !! 查询 ipinfo.io 失败: {err}")
+                      result["runner_ip_info_error"] = err
+          
+                  time.sleep(DELAY_BETWEEN_REQUESTS_SECONDS)
+          
+              # 2. 逐个测试目标 URL
+              if requests is not None:
+                  for url in TARGET_URLS:
+                      log(f"测试 {url} ...")
+                      check = {
+                          "url": url,
+                          "status_code": None,
+                          "elapsed_seconds": None,
+                          "response_headers": None,
+                          "body_preview": None,
+                          "body_length": None,
+                          "error": None,
+                          "reachable": False,
+                      }
+                      t0 = time.time()
+                      try:
+                          resp = requests.get(
+                              url,
+                              headers={"User-Agent": COMMON_UA},
+                              timeout=REQUEST_TIMEOUT_SECONDS,
+                              allow_redirects=True,
+                          )
+                          elapsed = time.time() - t0
+                          check["status_code"] = resp.status_code
+                          check["elapsed_seconds"] = round(elapsed, 3)
+                          check["response_headers"] = dict(resp.headers)
+                          check["body_length"] = len(resp.content) if resp.content else 0
+                          # 只保留前 2000 字符防止输出文件过大
+                          try:
+                              check["body_preview"] = resp.text[:2000]
+                          except Exception:
+                              check["body_preview"] = "<无法解码为文本>"
+                          check["reachable"] = resp.status_code is not None
+                          log(f"  -> 状态码 {resp.status_code}，耗时 {elapsed:.2f}s，正文长度 {check['body_length']}")
+                      except Exception as e:
+                          elapsed = time.time() - t0
+                          check["elapsed_seconds"] = round(elapsed, 3)
+                          check["error"] = f"{type(e).__name__}: {e}"
+                          log(f"  !! 请求失败 ({elapsed:.2f}s): {check['error']}")
+          
+                      result["url_checks"].append(check)
+                      time.sleep(DELAY_BETWEEN_REQUESTS_SECONDS)
+              else:
+                  result["url_checks"] = [
+                      {"url": u, "error": "requests 模块不可用，未测试", "reachable": False}
+                      for u in TARGET_URLS
+                  ]
+          
+              write_json("A_connectivity.json", result)
+              log("阶段 A 完成。")
+              return result
+          
+          
+          def _try_json(resp):
+              try:
+                  return resp.json()
+              except Exception:
+                  try:
+                      return resp.text[:2000]
+                  except Exception:
+                      return None
+          
+          
+          # ---------------------------------------------------------------------------
+          # 阶段 B：Playwright 渲染 + XHR/fetch 抓包
+          # ---------------------------------------------------------------------------
+          
+          def stage_b_playwright(connectivity_result):
+              log("=" * 70)
+              log("阶段 B：Playwright 渲染与接口抓包")
+              log("=" * 70)
+          
+              stage_b_summary = {
+                  "stage": "B_playwright",
+                  "targets_attempted": [],
+              }
+          
+              # 根据阶段 A 的结果，判断哪些 PLAYWRIGHT_TARGETS 值得跑一下。
+              # 规则放宽：只要阶段 A 没有直接抛异常（即拿到了某个状态码，哪怕是 403/404/5xx），
+              # 就认为"网络层面可达"，仍然值得用浏览器打开看看——因为 requests 被拦截 (如 403)
+              # 不代表 Playwright 真实浏览器也一定被拦截，这本身也是有价值的信息。
+              reachable_urls = set()
+              checks_by_url = {c["url"]: c for c in connectivity_result.get("url_checks", [])}
+              for url, check in checks_by_url.items():
+                  if check.get("status_code") is not None:
+                      reachable_urls.add(url)
+          
+              try:
+                  from playwright.sync_api import sync_playwright
+              except Exception as e:
+                  log(f"!! 无法 import playwright: {e}")
+                  stage_b_summary["fatal_error"] = f"import playwright 失败: {e}"
+                  write_json("B_summary.json", stage_b_summary)
+                  return stage_b_summary
+          
+              for idx, url in enumerate(PLAYWRIGHT_TARGETS, start=1):
+                  target_result = {
+                      "url": url,
+                      "attempted": False,
+                      "skipped_reason": None,
+                      "error": None,
+                      "xhr_json_files": [],
+                      "xhr_all_count": 0,
+                      "html_file": None,
+                      "screenshot_file": None,
+                  }
+          
+                  if url not in reachable_urls:
+                      reason = (
+                          f"阶段 A 中该 URL 未记录到任何状态码（可能是网络层直接超时/拒绝），"
+                          f"跳过 Playwright 渲染。仍建议查看 A_connectivity.json 中该 URL 的 error 字段。"
+                      )
+                      log(f"跳过 {url}: {reason}")
+                      target_result["skipped_reason"] = reason
+                      stage_b_summary["targets_attempted"].append(target_result)
+                      continue
+          
+                  log(f"[{idx}/{len(PLAYWRIGHT_TARGETS)}] Playwright 打开 {url} ...")
+                  target_result["attempted"] = True
+          
+                  captured_responses = []  # 每个元素: dict(url, method, status, content_type, body_preview, is_json, json_body)
+          
+                  try:
+                      with sync_playwright() as p:
+                          browser = p.chromium.launch(headless=True)
+                          context = browser.new_context(
+                              user_agent=COMMON_UA,
+                              viewport={"width": 1440, "height": 900},
+                          )
+                          page = context.new_page()
+          
+                          def on_response(response):
+                              try:
+                                  req = response.request
+                                  # 只关心 XHR / fetch 类型的资源，忽略 document/图片/css/js/font 等
+                                  resource_type = req.resource_type
+                                  if resource_type not in ("xhr", "fetch"):
+                                      return
+                                  headers = response.headers
+                                  content_type = headers.get("content-type", "")
+                                  entry = {
+                                      "url": response.url,
+                                      "method": req.method,
+                                      "status": response.status,
+                                      "content_type": content_type,
+                                      "body_preview": None,
+                                      "body_length": None,
+                                      "is_json": "json" in content_type.lower(),
+                                      "error": None,
+                                  }
+                                  try:
+                                      body = response.text()
+                                      entry["body_length"] = len(body)
+                                      entry["body_preview"] = body[:3000]
+                                      if entry["is_json"]:
+                                          entry["_full_body"] = body  # 内部使用，之后会单独落盘并从摘要里剔除
+                                  except Exception as body_err:
+                                      entry["error"] = f"读取响应体失败: {body_err}"
+                                  captured_responses.append(entry)
+                              except Exception as cb_err:
+                                  # 回调本身绝不能抛出去影响 Playwright 主流程
+                                  captured_responses.append({
+                                      "url": "<回调异常>",
+                                      "error": f"{type(cb_err).__name__}: {cb_err}",
+                                  })
+          
+                          page.on("response", on_response)
+          
+                          nav_error = None
+                          try:
+                              page.goto(url, timeout=30000, wait_until="domcontentloaded")
+                          except Exception as e:
+                              nav_error = f"{type(e).__name__}: {e}"
+                              log(f"  !! page.goto 失败: {nav_error}")
+          
+                          if nav_error is None:
+                              log(f"  页面已加载，等待 {PLAYWRIGHT_POST_LOAD_WAIT_SECONDS}s 让异步请求跑完 ...")
+                              page.wait_for_timeout(PLAYWRIGHT_POST_LOAD_WAIT_SECONDS * 1000)
+          
+                              try:
+                                  log("  滚动到页面底部（触发懒加载）...")
+                                  page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                              except Exception as scroll_err:
+                                  log(f"  !! 滚动失败: {scroll_err}")
+          
+                              page.wait_for_timeout(PLAYWRIGHT_POST_SCROLL_WAIT_SECONDS * 1000)
+          
+                              # 保存渲染后 HTML
+                              base_name = f"B_{idx:02d}_{safe_filename_from_url(url)}"
+                              try:
+                                  html = page.content()
+                                  write_text(f"{base_name}_rendered.html", html)
+                                  target_result["html_file"] = f"{base_name}_rendered.html"
+                              except Exception as e:
+                                  log(f"  !! 获取渲染后 HTML 失败: {e}")
+          
+                              # 截图
+                              try:
+                                  screenshot_path = os.path.join(OUTPUT_DIR, f"{base_name}_screenshot.png")
+                                  page.screenshot(path=screenshot_path, full_page=True)
+                                  target_result["screenshot_file"] = f"{base_name}_screenshot.png"
+                                  log(f"  写入 {base_name}_screenshot.png")
+                              except Exception as e:
+                                  log(f"  !! 截图失败: {e}")
+          
+                              # 阶段 C 需要用到 page，在这里顺手做，避免重复开浏览器
+                              stage_c_for_page(page, base_name)
+          
+                          else:
+                              target_result["error"] = nav_error
+          
+                          context.close()
+                          browser.close()
+          
+                  except Exception as e:
+                      err = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+                      log(f"  !! Playwright 处理 {url} 整体失败: {err}")
+                      target_result["error"] = (target_result["error"] or "") + " | " + err
+          
+                  # 汇总 XHR/fetch 结果
+                  target_result["xhr_all_count"] = len(captured_responses)
+                  log(f"  捕获到 {len(captured_responses)} 个 XHR/fetch 响应")
+          
+                  json_idx = 0
+                  summary_responses = []
+                  for entry in captured_responses:
+                      full_body = entry.pop("_full_body", None)
+                      summary_responses.append(entry)
+                      if entry.get("is_json") and full_body is not None:
+                          json_idx += 1
+                          json_filename = f"B_xhr_{idx:02d}_{json_idx:02d}_{safe_filename_from_url(url)}.json"
+                          json_path = os.path.join(OUTPUT_DIR, json_filename)
+                          try:
+                              # 尝试格式化成 JSON；如果解析失败就原样存文本
+                              parsed = json.loads(full_body)
+                              with open(json_path, "w", encoding="utf-8") as f:
+                                  json.dump(
+                                      {
+                                          "source_url": entry["url"],
+                                          "method": entry["method"],
+                                          "status": entry["status"],
+                                          "content_type": entry["content_type"],
+                                          "body": parsed,
+                                      },
+                                      f,
+                                      ensure_ascii=False,
+                                      indent=2,
+                                  )
+                          except Exception:
+                              with open(json_path, "w", encoding="utf-8") as f:
+                                  f.write(full_body)
+                          log(f"  写入 JSON 接口响应 {json_filename}  (来自 {entry['url']})")
+                          target_result["xhr_json_files"].append({
+                              "file": json_filename,
+                              "source_url": entry["url"],
+                              "field_names": _extract_top_level_field_names(full_body),
+                          })
+          
+                  write_json(
+                      f"B_{idx:02d}_{safe_filename_from_url(url)}_xhr_all.json",
+                      summary_responses,
+                  )
+          
+                  stage_b_summary["targets_attempted"].append(target_result)
+                  time.sleep(DELAY_BETWEEN_REQUESTS_SECONDS)
+          
+              write_json("B_summary.json", stage_b_summary)
+              log("阶段 B 完成。")
+              return stage_b_summary
+          
+          
+          def _extract_top_level_field_names(body_text):
+              """尽力从一段 JSON 文本里提取字段名，用于报告里快速判断有没有我们要的维度。
+              只做浅层递归（最多 3 层），避免超大对象把报告撑爆。"""
+              try:
+                  data = json.loads(body_text)
+              except Exception:
+                  return None
+          
+              fields = set()
+          
+              def walk(obj, depth):
+                  if depth > 3:
+                      return
+                  if isinstance(obj, dict):
+                      for k, v in obj.items():
+                          fields.add(k)
+                          walk(v, depth + 1)
+                  elif isinstance(obj, list):
+                      for item in obj[:3]:  # 只看列表前几个元素，够用来发现字段名了
+                          walk(item, depth + 1)
+          
+              walk(data, 0)
+              return sorted(fields)
+          
+          
+          # ---------------------------------------------------------------------------
+          # 阶段 C：页面可见内容提取（在阶段 B 的 Playwright 会话内顺手执行，见上面调用）
+          # ---------------------------------------------------------------------------
+          
+          def stage_c_for_page(page, base_name):
+              """在阶段 B 已经打开、加载完成的 page 上，提取可见文本与表格。
+              这里刻意不单独开一个新的浏览器会话，复用阶段 B 已经渲染好的页面，
+              避免重复请求同一个站点、浪费一次可能被限流的机会。"""
+              log(f"  阶段 C：提取 {base_name} 的可见文本与表格 ...")
+              try:
+                  visible_text = page.evaluate("document.body ? document.body.innerText : ''")
+              except Exception as e:
+                  visible_text = f"<提取可见文本失败: {e}>"
+              write_text(f"C_{base_name}_page_text.txt", visible_text or "")
+          
+              try:
+                  tables = page.evaluate(
+                      """
+                      () => {
+                          const tables = Array.from(document.querySelectorAll('table'));
+                          return tables.map((t, i) => {
+                              const rows = Array.from(t.querySelectorAll('tr')).map(tr =>
+                                  Array.from(tr.querySelectorAll('th,td')).map(cell => cell.innerText.trim())
+                              );
+                              return { table_index: i, row_count: rows.length, rows: rows.slice(0, 50) };
+                          });
+                      }
+                      """
+                  )
+              except Exception as e:
+                  tables = {"error": f"提取表格失败: {e}"}
+          
+              write_json(f"C_{base_name}_tables.json", tables)
+              if isinstance(tables, list):
+                  log(f"    找到 {len(tables)} 个 <table> 元素")
+              else:
+                  log(f"    表格提取出现问题: {tables}")
+          
+          
+          # ---------------------------------------------------------------------------
+          # 阶段 D：生成结论报告
+          # ---------------------------------------------------------------------------
+          
+          def stage_d_report(connectivity_result, playwright_summary):
+              log("=" * 70)
+              log("阶段 D：生成结论报告")
+              log("=" * 70)
+          
+              lines = []
+              lines.append("# 国产车销量数据源探测报告")
+              lines.append("")
+              lines.append(f"生成时间 (UTC): {datetime.now(timezone.utc).isoformat()}")
+              lines.append("")
+              lines.append("本报告由 `scripts/probe_sources.py` 在 GitHub Actions runner 上自动生成，")
+              lines.append("目的是回答两个问题：runner 能不能访问目标网站？如果能，网站返回的数据长什么样？")
+              lines.append("")
+          
+              # runner 地理位置
+              lines.append("## Runner 出口信息")
+              lines.append("")
+              ip_info = connectivity_result.get("runner_ip_info")
+              ip_error = connectivity_result.get("runner_ip_info_error")
+              if ip_info and ip_info.get("body"):
+                  body = ip_info["body"]
+                  if isinstance(body, dict):
+                      lines.append(f"- IP: `{body.get('ip', '未知')}`")
+                      lines.append(f"- 地区: {body.get('city', '?')}, {body.get('region', '?')}, {body.get('country', '?')}")
+                      lines.append(f"- 组织/ISP: {body.get('org', '未知')}")
+                  else:
+                      lines.append(f"- ipinfo.io 返回了非 JSON 内容，原始预览: `{str(body)[:200]}`")
+              else:
+                  lines.append(f"- 查询失败: {ip_error or '未知原因'}")
+              lines.append("")
+              lines.append("（如果目标网站有地域限制，这个 IP/地区信息是判断是否被地域屏蔽的关键线索。）")
+              lines.append("")
+          
+              # 连通性表格
+              lines.append("## 阶段 A：URL 可达性")
+              lines.append("")
+              lines.append("| URL | 状态码 | 耗时(秒) | 正文长度 | 错误 |")
+              lines.append("|---|---|---|---|---|")
+              for c in connectivity_result.get("url_checks", []):
+                  lines.append(
+                      f"| {c['url']} | {c.get('status_code', '-')} | {c.get('elapsed_seconds', '-')} "
+                      f"| {c.get('body_length', '-')} | {(c.get('error') or '').replace(chr(10), ' ')[:100]} |"
+                  )
+              lines.append("")
+          
+              # Playwright / XHR 汇总
+              lines.append("## 阶段 B：Playwright 渲染与接口抓包")
+              lines.append("")
+              targets = playwright_summary.get("targets_attempted", [])
+              if playwright_summary.get("fatal_error"):
+                  lines.append(f"**致命错误，Playwright 完全没跑起来**: {playwright_summary['fatal_error']}")
+                  lines.append("")
+              if not targets:
+                  lines.append("没有任何目标被尝试（可能阶段 A 里所有 URL 都彻底不可达）。")
+                  lines.append("")
+              for t in targets:
+                  lines.append(f"### {t['url']}")
+                  lines.append("")
+                  if t.get("skipped_reason"):
+                      lines.append(f"- 跳过: {t['skipped_reason']}")
+                      lines.append("")
+                      continue
+                  lines.append(f"- 是否尝试: {t['attempted']}")
+                  if t.get("error"):
+                      lines.append(f"- 错误: `{t['error'][:500]}`")
+                  lines.append(f"- 捕获到的 XHR/fetch 响应总数: {t.get('xhr_all_count', 0)}")
+                  lines.append(f"- 其中 JSON 接口数量: {len(t.get('xhr_json_files', []))}")
+                  if t.get("html_file"):
+                      lines.append(f"- 渲染后 HTML: `probe_output/{t['html_file']}`")
+                  if t.get("screenshot_file"):
+                      lines.append(f"- 截图: `probe_output/{t['screenshot_file']}`")
+                  lines.append("")
+                  if t.get("xhr_json_files"):
+                      lines.append("**捕获到的 JSON 接口及其字段名（用于判断能否拿到六个维度）：**")
+                      lines.append("")
+                      for jf in t["xhr_json_files"]:
+                          lines.append(f"- `{jf['file']}`")
+                          lines.append(f"  - 来源 URL: {jf['source_url']}")
+                          fields = jf.get("field_names")
+                          if fields:
+                              lines.append(f"  - 字段名: {', '.join(f'`{x}`' for x in fields)}")
+                          else:
+                              lines.append("  - 字段名: (未能解析出字段名，请直接查看该 JSON 文件)")
+                      lines.append("")
+                  else:
+                      lines.append("（未捕获到任何 JSON 接口——要么页面确实没有走 XHR/fetch 接口，")
+                      lines.append("要么被验证码/登录墙拦下了，请查看对应的截图和渲染后 HTML 核实。）")
+                      lines.append("")
+          
+              lines.append("## 需要人工核实的六个维度")
+              lines.append("")
+              lines.append("年月 / 厂商集团 / 品牌 / 车体类型 / 车型 / 能源类型 / 销量")
+              lines.append("")
+              lines.append("请对照上面每个 JSON 接口的字段名列表，以及 `C_*_page_text.txt` / `C_*_tables.json`")
+              lines.append("里的可见文本和表格内容，人工判断这些维度是否齐全。")
+              lines.append("")
+          
+              lines.append("## 已知的不确定性 / 推测部分")
+              lines.append("")
+              lines.append("- 本探针的抓取逻辑是在**完全无法访问目标网站**的环境下编写的，")
+              lines.append("  因此接口路径、字段名的猜测**都没有被验证过**，脚本只是把 Playwright")
+              lines.append("  实际观察到的一切原样记录下来，并没有预设任何接口一定存在。")
+              lines.append("- 如果某个站点有验证码、登录墙或地域屏蔽，脚本不会尝试绕过，只会如实记录截图和 HTML。")
+              lines.append("- `caam.org.cn` 用的是 `http://` 而非 `https://`（原始需求如此），如果该站点强制跳转到")
+              lines.append("  https 或反过来，请求可能会有重定向，已记录在 `A_connectivity.json` 的 response_headers 里。")
+              lines.append("")
+          
+              write_text("REPORT.md", "\n".join(lines))
+              log("阶段 D 完成，REPORT.md 已生成。")
+          
+          
+          # ---------------------------------------------------------------------------
+          # 主流程
+          # ---------------------------------------------------------------------------
+          
+          def main():
+              ensure_output_dir()
+          
+              log("开始探测。任何阶段出错都不会中断后续阶段。")
+          
+              # 阶段 A
+              try:
+                  connectivity_result = stage_a_connectivity()
+              except Exception as e:
+                  log(f"!! 阶段 A 整体异常: {e}\n{traceback.format_exc()}")
+                  connectivity_result = {"url_checks": [], "error": str(e)}
+          
+              # 阶段 B（阶段 C 在其内部对每个成功渲染的页面顺带执行）
+              try:
+                  playwright_summary = stage_b_playwright(connectivity_result)
+              except Exception as e:
+                  log(f"!! 阶段 B 整体异常: {e}\n{traceback.format_exc()}")
+                  playwright_summary = {"targets_attempted": [], "fatal_error": str(e)}
+          
+              # 阶段 D
+              try:
+                  stage_d_report(connectivity_result, playwright_summary)
+              except Exception as e:
+                  log(f"!! 阶段 D 整体异常: {e}\n{traceback.format_exc()}")
+                  # 就算报告生成失败，也至少留一个错误文件
+                  write_text("REPORT_GENERATION_FAILED.txt", f"{e}\n{traceback.format_exc()}")
+          
+              log("=" * 70)
+              log("探测流程全部结束。请查看 probe_output/ 目录下的所有文件。")
+              log("=" * 70)
+          
+          
+          if __name__ == "__main__":
+              try:
+                  main()
+              except Exception as e:
+                  # 最外层兜底：绝不允许脚本以未捕获异常的形式退出，
+                  # 保证 GitHub Actions 的 upload-artifact 步骤一定有东西可传。
+                  try:
+                      ensure_output_dir()
+                      write_text(
+                          "FATAL_ERROR.txt",
+                          f"探针脚本发生未预期的顶层异常：\n{e}\n\n{traceback.format_exc()}",
+                      )
+                  except Exception:
+                      print("连兜底写文件都失败了，直接打印到 stdout：")
+                      print(traceback.format_exc())
+                  # 依然以 0 退出，避免 job 因为"数据网站不可达"这种预期内的情况而标红
+                  # （工作流里也加了 continue-on-error 双重保险）
+                  sys.exit(0)
+          
+          PROBE_SCRIPT_EOF
+
+      - name: Run probe script
+        # 脚本内部已经用 try/except 兜住了几乎所有异常，
+        # 这里再加一层 continue-on-error 保险，确保后面的 upload 步骤一定能跑
+        continue-on-error: true
+        run: python3 probe_sources.py
+
+      - name: Upload probe output
+        # 关键：即使上面的步骤失败，也要执行这一步，
+        # 否则运行失败时我们什么产出都拿不到
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: probe-output
+          path: probe_output/
+          if-no-files-found: warn
+          retention-days: 30
