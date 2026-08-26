@@ -1,0 +1,11 @@
+{
+  "source_url": "https://www.dongchedi.com/motor/car_service/open_api/get_ip_city/?aid=1839&app_name=auto_web_pc&a_bogus=Oj4jkH6wmZR5cplG8CGSHVBliXfMrF8jx-i2SCSktPOvywzbwLP5Crc4aoq9s-6hXbB5xFVHuf0AbDVcZ2Xs3lHkLmpDSNzRruxcVX8L0qw6YFJsEHjhCw0zuwsKWbTLl%2FctiI65AsMNZdcl9NAhAQ5GS5zqBObpbHZRd%2FYyejAUpz8zD1BbtaX2bH-tB-d6%2FGkyHGY%3D",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "status": -1,
+    "prompts": "失败",
+    "message": "fail"
+  }
+}

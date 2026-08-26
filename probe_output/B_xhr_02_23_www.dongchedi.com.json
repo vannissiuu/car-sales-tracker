@@ -1,0 +1,9 @@
+{
+  "source_url": "https://security.zijieapi.com/api/metrics/emit",
+  "method": "POST",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "body": {
+    "message": "test"
+  }
+}

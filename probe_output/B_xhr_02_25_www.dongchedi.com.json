@@ -1,0 +1,11 @@
+{
+  "source_url": "https://sso.toutiao.com/check_login/?service=https:%2F%2Fwww.dongchedi.com%2F&aid=1839&account_sdk_source=sso",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "description": "",
+    "error_code": 0,
+    "has_login": false
+  }
+}

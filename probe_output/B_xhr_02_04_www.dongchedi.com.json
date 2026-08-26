@@ -1,0 +1,12 @@
+{
+  "source_url": "https://www.dongchedi.com/motor/m_api/conf?aid=1839&app_name=auto_web_pc&conf_key=agreement_update_announcement_pc&a_bogus=YJ0jkqW7QN5nepeGmCJ6HVBlO7jMNMWjLFTObotkSNOBLqtbhENICce-coqH44Lh7bBIxF1HLf0%2FYDncpdXz3ArkumkvudXS3SxnVUfo%2FqNXYMJsLNjsCL8zuwsC8csLaAn7iAf5Is0r1EOlVNATApAGy5FqBYbpRHMSdMzy9jAW3M8zD3BWtr62JH-zB4xW8bA9tE%3D%3D",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "body": {
+    "prompts": "",
+    "status": 0,
+    "message": "success",
+    "data": "{\n  \"title\": \"懂车帝经营主体变更通知\",\n  \"short_title\": \"经营主体变更\",\n  \"popup\": {\n    \"title\": \"平台经营者调整及协议更新公告\",\n    \"content\": [\n      {\n        \"text\": \"亲爱的用户：\",\n        \"type\": \"text\"\n      },\n      {\n        \"text\": \"根据业务开展的实际情况，懂车帝平台经营者预计于2026年6月2日起调整为重庆万象优车科技有限公司。平台经营者变更不会影响懂车帝正常运营，请您放心使用！\",\n        \"type\": \"p\"\n      },\n      {\n        \"text\": \"平台据此对懂车帝用户协议及隐私政策（以下统称“协议”）进行更新，协议于2026年4月28日起发布并持续征求意见七日。如您对本次更新内容有任何疑问、意见或建议，可通过懂车帝APP内“我的-用户反馈”进行反馈。征求意见期满后协议如无修改，将于2026年6月2日生效；如有修改，将另行公示。\",\n        \"type\": \"p\"\n      },\n      {\n        \"text\": \"感谢您对懂车帝的支持和关注！\",\n        \"type\": \"p\"\n      },\n      {\n        \"text\": \"附：\",\n        \"type\": \"text\"\n      },\n      {\n        \"text\": \"《用户协议》\",\n        \"type\": \"link\",\n        \"href\": \"https://m.dcdapp.com/motor/blitz/activity/33779\"\n      },\n      {\n        \"text\": \"、\",\n        \"type\": \"text\"\n      },\n      {\n        \"text\": \"《隐私政策》\",\n        \"type\": \"link\",\n        \"href\": \"https://m.dcdapp.com/motor/blitz/activity/33783\"\n      }\n    ],\n    \"button_text\": \"我知道了\"\n  },\n  \"show\": true\n}\n"
+  }
+}

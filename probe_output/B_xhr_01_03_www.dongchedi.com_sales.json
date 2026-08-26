@@ -1,0 +1,26 @@
+{
+  "source_url": "https://verify.zijieapi.com/captcha/i18n?aid=24140&lang=zh&bd_version=1.0.0.892&fp=verify_mt9zco2z_5FvVZQWq_ciK1_460N_9Zut_c4jU34eUfA2b&h5_check_version=3.5.2&os_name=windows&platform=pc&os_type=2&h5_sdk_version=3.5.80&webdriver=true&tmp=1787741873957",
+  "method": "GET",
+  "status": 200,
+  "content_type": "text/json; charset=utf-8",
+  "body": {
+    "code": 200,
+    "data": {
+      "H5_VerifyTips_11": "点击两个形状相同的物体",
+      "H5_VerifyTips_12": "‍点击两个形状不同的物体",
+      "H5_VerifyTips_13": "依次点击图形",
+      "H5_VerifyTips_14": "依次点击符号",
+      "confirm": "确认",
+      "img_error": "图片加载失败，请刷新重试或换个网络",
+      "loading": "加载中",
+      "net_error": "检测到您的网络环境较差，请更换网络或者稍后再试",
+      "refresh": "刷新",
+      "slide_prompt": "按住左边按钮拖动完成上方拼图",
+      "slide_prompt_whirl": "拖动左侧滑块，完成拼图\t",
+      "slide_tip": "请完成下列验证后继续",
+      "text_title_1": "依次点击文字",
+      "text_title_whirl": "拖动滑块，完成拼图\t"
+    },
+    "message": "验证通过"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "source_url": "https://www.dongchedi.com/ttwid/report_fingerprint/",
+  "method": "POST",
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "status_code": 0,
+    "message": "callback success"
+  }
+}

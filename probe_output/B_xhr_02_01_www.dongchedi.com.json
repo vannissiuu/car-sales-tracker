@@ -1,0 +1,12 @@
+{
+  "source_url": "https://www.dongchedi.com/tt-anti-token",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json;charset=utf-8",
+  "body": {
+    "code": 2,
+    "errno": 2,
+    "message": "User is not logined in!",
+    "data": {}
+  }
+}

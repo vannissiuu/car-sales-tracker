@@ -1,0 +1,16 @@
+{
+  "source_url": "https://www.dongchedi.com/passport/account/info/v2/?aid=1839&app_name=auto_web_pc",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "body": {
+    "data": {
+      "description": "会话过期，请重新登录",
+      "error_code": 13,
+      "name": "account_info_error",
+      "session_key": "f3e5b316735d0ac210df84ed3220b2c7",
+      "user_id": 0
+    },
+    "message": "error"
+  }
+}

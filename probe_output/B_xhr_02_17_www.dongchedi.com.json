@@ -1,0 +1,15 @@
+{
+  "source_url": "https://www.dongchedi.com/motor/car_service/open_api/get_city_name/?aid=1839&app_name=auto_web_pc&city_name=&msToken=ArOkaizwDnwewgXfdYKQT0tNM30tbEpbDowMragXavZWeV8n-TsYGdI6bY78OEU9FaK4yk-PEXfySJBTt-xOpogUFl8zfcez9GsLixCVaI320IQiu8DUe-WaRb5oGYRX3o3mNRIarp4MZd0J6M8v2j6-ZUfvyRnt2w%3D%3D&a_bogus=OysVgF7imdQ5cpAb8cGbH-5U2Hx%2FNF8jYBT2RbXk7xTXLq0TDENcCnc4Joq94aLhXSpcxqIHLfMMbEVcp2Uz3IHpompDSYwj1Yx5VUmo2qwXYMksgrjkCL8FowsC8b4LaQcJiA6RUs0n1dQlnNI0ABlGy5FoBOmpWqM6d%2FTyyjAUpz8zD1B6trXgbH4t-aA6QTGjHzD%3D",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json",
+  "body": {
+    "status": 0,
+    "prompts": "操作成功",
+    "data": {
+      "city_name": "北京",
+      "match": false
+    },
+    "message": "success"
+  }
+}

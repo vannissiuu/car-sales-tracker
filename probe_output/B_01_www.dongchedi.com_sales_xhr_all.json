@@ -1,0 +1,192 @@
+[
+  {
+    "url": "https://vcs.snssdk.com/vc/setting",
+    "method": "POST",
+    "status": 200,
+    "content_type": "application/json",
+    "body_preview": "{\"common\":{\"period\":5400000,\"alpha\":\"0.5\",\"retry_count\":3,\"retry_interval\":2000,\"rgb\":\"000000\",\"skip_launch\":0,\"use_jsb_request\":0,\"pre_create\":0,\"request_encrypt\":0,\"host\":{\"cn\":\"https://vcs.zijieapi.com/\",\"va\":\"https://vcs-va.byteoversea.com/\",\"sg\":\"https://vcs-sg.byteoversea.com/\",\"boe\":\"\",\"in\":\"\"},\"back_up_host\":{\"cn\":\"https://vcs.zijieapi.com/\",\"va\":\"https://vcs-va.tiktokv.com/\",\"sg\":\"https://vcs-sg.tiktokv.com/\",\"boe\":\"\",\"in\":\"\"},\"use_native_report\":0,\"use_dialog_size_v2\":1,\"ratio\":0,\"verify_use_dialog_v2\":0,\"identity_use_dialog_v2\":0,\"h5_load_retry_enable\":0,\"h5_load_timeout\":8000,\"verify_cancellable\":0,\"use_cache\":1,\"h5_verify_acc_switch\":1,\"h5_verify_gyro_switch\":1,\"sensor_update_interval\":0.05,\"sensor_max_num\":1200,\"popup_url\":{\"cn\":\"https://rmc.bytedance.com/verifycenter/normal-popup\"}},\"period\":0,\"qa\":{\"url\":{\"cn\":\"https://unpkg.byted-static.com/byted/secsdk-qa/1.2.8/build/index.html\",\"sg\":\"\",\"va\":\"\"},\"host\":{\"cn\":\"https://rc.zijieapi.com\",\"sg\":\"\",\"va\":\"\"},\"back_up_host\":{\"cn\":\"\",\"va\":\"\",\"sg\":\"\",\"boe\":\"\",\"in\":\"\"},\"js\":{},\"width\":300,\"height\":318},\"sms\":{\"url\":{\"cn\":\"https://unpkg.byted-static.com/byted/secsdk-mobile-original/1.9.10/build/index.html\",\"sg\":\"\",\"va\":\"\"},\"host\":{\"cn\":\"https://rc.zijieapi.com\",\"sg\":\"\",\"va\":\"\"},\"back_up_host\":{\"cn\":\"\",\"va\":\"\",\"sg\":\"\",\"boe\":\"\",\"in\":\"\"},\"js\":{\"cn\":\"https://unpkg.byted-static.com/byted/secsdk-mobile-original/1.9.10/build/index.js\",\"sg\":\"\",\"va\":\"\"},\"width\":0,\"height\":0},\"self_unpunish\":{\"url\":{\"cn\":\"https://unpkg.byted-static.com/byted/secsdk-unpunish/1.7.6/output/index.html\",\"sg\":\"\",\"va\":\"\"},\"host\":{\"cn\":\"https://rc.zijieapi.com\",\"sg\":\"\",\"va\":\"\"},\"back_up_host\":{\"cn\":\"\",\"va\":\"\",\"sg\":\"\",\"boe\":\"\",\"in\":\"\"},\"js\":{},\"width\":0,\"height\":0},\"verify\":{\"scene_level\":\"p2\",\"url\":{\"boe\":\"https://rmc-boe.bytedance.net/verifycenter/captcha\",\"cn\":\"https://rmc.bytedance.com/verifycenter/captcha\",\"sg\":\"https://lf-rc1.yhgfb-static.com/obj/rc-client-security-sg/secsdk-captcha/2.28.11/index.html\",\"va\":\"https://lf-rc1.yhgfb-static.com/obj/rc-client-security-us/secsdk-captcha/2.28.11/index.html\"},\"host\":{\"boe\":\"https://boe-verify.bytedance.net/\",\"cn\":\"https://verify.zijieapi.com/\",\"in\":\"https://verification-va-useast2a.byteoversea.com/\",\"sg\":\"https://verify-sg.byteoversea.com/\",\"va\":\"https://verification-va.byteoversea.com/\"},\"back_up_host\":{\"cn\":\"https://verify.zijieapi.com/\",\"va\":\"https://verification-va.tiktokv.com/\",\"sg\":\"https://verify-sg.tiktokv.com/\",\"boe\":\"https://boe-verify.bytedance.net/\",\"in\":\"\"},\"width\":300,\"height\":303,\"js\":{\"cn\":\"https://lf-cdn-tos.bytescm.com/obj/rc-verifycenter/verifycenter/1.0.0.413/index.js\",\"sg\":\"https://lf-headquarters-sg.yhgfb-static.com/obj/static-sg/secsdk-captcha/sg/2.26.17/captcha.js\",\"va\":\"https://sf16-scmcdn-va.ibytedtos.com/obj/static-us/secsdk-captcha/va/2.26.17/captcha.js\"},\"gray_url\":{\"cn\":\"https://rmc.bytedance.com/verifycenter/captcha\"},\"gray_js\":{\"cn\":\"https://lf-cdn-tos.bytescm.com/obj/rc-verifycenter/verifycenter/1.0.0.413/index.js\",\"sg\":\"https://sf16-scmcdn-sg.iby",
+    "body_length": 9524,
+    "is_json": true,
+    "error": null
+  },
+  {
+    "url": "https://lf-cdn-tos.bytescm.com/obj/rc-verifycenter/verifycenter/1.0.0.413/index.js",
+    "method": "GET",
+    "status": 200,
+    "content_type": "application/javascript",
+    "body_preview": "!function(e,t){\"object\"==typeof exports&&\"undefined\"!=typeof module?t(exports):\"function\"==typeof define&&false?define([\"exports\"],t):t((e=\"undefined\"!=typeof globalThis?globalThis:e||self).verifyCenter={})}(this,(function(e){\"use strict\";var t=\"undefined\"!=typeof globalThis?globalThis:\"undefined\"!=typeof window?window:\"undefined\"!=typeof global?global:\"undefined\"!=typeof self?self:{};var n={exports:{}};!function(e,n){e.exports=function(){function e(e){var t=typeof e;return null!==e&&(\"object\"===t||\"function\"===t)}function n(e){return\"function\"==typeof e}var o=Array.isArray?Array.isArray:function(e){return\"[object Array]\"===Object.prototype.toString.call(e)},i=0,r=void 0,s=void 0,a=function(e,t){_[i]=e,_[i+1]=t,2===(i+=2)&&(s?s(w):O())};function c(e){s=e}function l(e){a=e}var d=\"undefined\"!=typeof window?window:void 0,u=d||{},p=u.MutationObserver||u.WebKitMutationObserver,f=\"undefined\"==typeof self&&\"undefined\"!=typeof process&&\"[object process]\"==={}.toString.call(process),h=\"undefined\"!=typeof Uint8ClampedArray&&\"undefined\"!=typeof importScripts&&\"undefined\"!=typeof MessageChannel;function v(){return function(){return process.nextTick(w)}}function m(){return void 0!==r?function(){r(w)}:b()}function y(){var e=0,t=new p(w),n=document.createTextNode(\"\");return t.observe(n,{characterData:!0}),function(){n.data=e=++e%2}}function g(){var e=new MessageChannel;return e.port1.onmessage=w,function(){return e.port2.postMessage(0)}}function b(){var e=setTimeout;return function(){return e(w,1)}}var _=new Array(1e3);function w(){for(var e=0;e<i;e+=2){(0,_[e])(_[e+1]),_[e]=void 0,_[e+1]=void 0}i=0}function C(){try{var e=Function(\"return this\")().require(\"vertx\");return r=e.runOnLoop||e.runOnContext,m()}catch(e){return b()}}var O=void 0;function k(e,t){var n=this,o=new this.constructor(x);void 0===o[E]&&K(o);var i=n._state;if(i){var r=arguments[i-1];a((function(){return U(i,o,r,n._result)}))}else{W(n,o,e,t)}return o}function S(e){var t=this;if(e&&\"object\"==typeof e&&e.constructor===t){return e}var n=new t(x);return V(n,e),n}O=f?v():p?y():h?g():void 0===d?C():b();var E=Math.random().toString(36).substring(2);function x(){}var L=void 0,A=1,R=2;function j(){return new TypeError(\"You cannot resolve a promise with itself\")}function T(){return new TypeError(\"A promises callback cannot return that same promise.\")}function P(e,t,n,o){try{e.call(t,n,o)}catch(e){return e}}function B(e,t,n){a((function(e){var o=!1,i=P(n,t,(function(n){o||(o=!0,t!==n?V(e,n):D(e,n))}),(function(t){o||(o=!0,M(e,t))}),\"Settle: \"+(e._label||\" unknown promise\"));!o&&i&&(o=!0,M(e,i))}),e)}function F(e,t){t._state===A?D(e,t._result):t._state===R?M(e,t._result):W(t,void 0,(function(t){return V(e,t)}),(function(t){return M(e,t)}))}function I(e,t,o){t.constructor===e.constructor&&o===k&&t.constructor.resolve===S?F(e,t):void 0===o?D(e,t):n(o)?B(e,t,o):D(e,t)}function V(t,n){if(t===n){M(t,j())}else if(e(n)){var o=void 0;try{o=n.then}catch(e){return void M(t,e)}I(t,n,o)}else{D(t,n)}}function N(e){e._o",
+    "body_length": 60785,
+    "is_json": false,
+    "error": null
+  },
+  {
+    "url": "https://verify.snssdk.com/captcha/reportFrontend",
+    "method": "POST",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body_preview": "{\"code\":200,\"data\":null,\"message\":\"\"}",
+    "body_length": 37,
+    "is_json": false,
+    "error": null
+  },
+  {
+    "url": "https://verify.snssdk.com/captcha/reportFrontend",
+    "method": "POST",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body_preview": "{\"code\":200,\"data\":null,\"message\":\"\"}",
+    "body_length": 37,
+    "is_json": false,
+    "error": null
+  },
+  {
+    "url": "https://verify.snssdk.com/captcha/reportFrontend",
+    "method": "POST",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body_preview": "{\"code\":200,\"data\":null,\"message\":\"\"}",
+    "body_length": 37,
+    "is_json": false,
+    "error": null
+  },
+  {
+    "url": "https://verify.snssdk.com/captcha/reportFrontend",
+    "method": "POST",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body_preview": "{\"code\":200,\"data\":null,\"message\":\"\"}",
+    "body_length": 37,
+    "is_json": false,
+    "error": null
+  },
+  {
+    "url": "https://mon.zijieapi.com/monitor_web/settings/browser-settings?bid=rmc_verifycenter&store=1",
+    "method": "GET",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body_preview": "{\"data\":{\"sample\":{\"sample_rate\":1,\"include_users\":[],\"sample_granularity\":\"session\",\"rules\":[{\"name\":\"js_error\",\"enable\":true,\"sample_rate\":1,\"conditional_sample_rules\":[]},{\"name\":\"http\",\"enable\":true,\"sample_rate\":0.01,\"conditional_sample_rules\":[]},{\"name\":\"performance\",\"enable\":true,\"sample_rate\":0.01,\"conditional_sample_rules\":[]},{\"name\":\"resource_error\",\"enable\":true,\"sample_rate\":1,\"conditional_sample_rules\":[]},{\"name\":\"resource\",\"enable\":true,\"sample_rate\":0.1,\"conditional_sample_rules\":[]},{\"name\":\"custom\",\"enable\":true,\"sample_rate\":1,\"conditional_sample_rules\":[]},{\"name\":\"performance_timing\",\"enable\":true,\"sample_rate\":0.01,\"conditional_sample_rules\":[]},{\"name\":\"performance_longtask\",\"enable\":true,\"sample_rate\":0.01,\"conditional_sample_rules\":[]},{\"name\":\"pageview\",\"enable\":true,\"sample_rate\":1,\"conditional_sample_rules\":[]},{\"name\":\"action\",\"enable\":true,\"sample_rate\":0.01,\"conditional_sample_rules\":[]},{\"name\":\"blank_screen\",\"enable\":true,\"sample_rate\":1,\"conditional_sample_rules\":[]}]},\"user_id\":\"43040c0c-4a2f-86ff-3c61-9d3792e1e615\",\"plugins\":{\"heatmap\":{\"open_list\":[],\"url\":\"https://lf3-short.bytegoofy.com/slardar/heatmap/resource/heatmap.cn.js\"}},\"quota_rate\":1,\"timestamp\":1787741297194,\"apdex\":{\"satisfying_threshold\":0.5,\"frustrating_threshold\":0.3,\"error_weight\":[8,5,2,5000],\"duration_apdex\":[[{\"weight\":0,\"threshold\":1000},{\"weight\":1,\"threshold\":3000},{\"weight\":2}],[{\"weight\":0,\"threshold\":300},{\"weight\":1,\"threshold\":1500},{\"weight\":1}],[{\"weight\":0,\"threshold\":300},{\"weight\":2,\"threshold\":1500},{\"weight\":2}]],\"perf_apdex\":{\"action\":[{\"weight\":3,\"threshold\":2500},{\"weight\":3,\"threshold\":5000},{\"weight\":3}],\"cls\":[{\"weight\":3,\"threshold\":0.1},{\"weight\":3,\"threshold\":0.25},{\"weight\":3}],\"fcp\":[{\"weight\":3,\"threshold\":2000},{\"weight\":3,\"threshold\":4000},{\"weight\":3}],\"fp\":[{\"weight\":3,\"threshold\":0},{\"weight\":3,\"threshold\":0},{\"weight\":3}],\"lcp\":[{\"weight\":3,\"threshold\":2500},{\"weight\":3,\"threshold\":4000},{\"weight\":3}],\"spa_load\":[{\"weight\":10,\"threshold\":2500},{\"weight\":10,\"threshold\":4500},{\"weight\":10}]},\"last_n\":180000},\"refresh_after\":86400,\"updated_at\":1779422420000},\"errmsg\":\"success\",\"errno\":200}",
+    "body_length": 2164,
+    "is_json": true,
+    "error": null
+  },
+  {
+    "url": "https://verify.zijieapi.com/captcha/i18n?aid=24140&lang=zh&bd_version=1.0.0.892&fp=verify_mt9zco2z_5FvVZQWq_ciK1_460N_9Zut_c4jU34eUfA2b&h5_check_version=3.5.2&os_name=windows&platform=pc&os_type=2&h5_sdk_version=3.5.80&webdriver=true&tmp=1787741873957",
+    "method": "GET",
+    "status": 200,
+    "content_type": "text/json; charset=utf-8",
+    "body_preview": "{\"code\":200,\"data\":{\"H5_VerifyTips_11\":\"点击两个形状相同的物体\",\"H5_VerifyTips_12\":\"‍点击两个形状不同的物体\",\"H5_VerifyTips_13\":\"依次点击图形\",\"H5_VerifyTips_14\":\"依次点击符号\",\"confirm\":\"确认\",\"img_error\":\"图片加载失败，请刷新重试或换个网络\",\"loading\":\"加载中\",\"net_error\":\"检测到您的网络环境较差，请更换网络或者稍后再试\",\"refresh\":\"刷新\",\"slide_prompt\":\"按住左边按钮拖动完成上方拼图\",\"slide_prompt_whirl\":\"拖动左侧滑块，完成拼图\\t\",\"slide_tip\":\"请完成下列验证后继续\",\"text_title_1\":\"依次点击文字\",\"text_title_whirl\":\"拖动滑块，完成拼图\\t\"},\"message\":\"验证通过\"}",
+    "body_length": 428,
+    "is_json": true,
+    "error": null
+  },
+  {
+    "url": "https://lf-rc1.yhgfb-cn-static.com/obj/rc-verifycenter/rmc-captcha/1.0.0.892/index.wasm",
+    "method": "GET",
+    "status": 200,
+    "content_type": "application/wasm",
+    "body_preview": null,
+    "body_length": null,
+    "is_json": false,
+    "error": "读取响应体失败: 'utf-8' codec can't decode byte 0xc9 in position 9: invalid continuation byte"
+  },
+  {
+    "url": "https://mcs.zijieapi.com/webid",
+    "method": "POST",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body_preview": "{\"e\":0,\"web_id\":\"7678292855244326443\"}",
+    "body_length": 38,
+    "is_json": true,
+    "error": null
+  },
+  {
+    "url": "https://verify.zijieapi.com/captcha/get?aid=24140&lang=zh&bd_version=1.0.0.892&subtype=slide&detail=MyatrPJlTsUeI04OPTF7efH4SNQY*hXHI4DwesQ865PqWYxgoyYkagJASwDn8b9Z4H3mWmdS1YETokXZ8GR-CwFF6meuurf*XvMenDpnu0J8l0s*6*zZvVRRbwP7HlOe*07bhTVb*7KbdOCTHXIJr-beE-SHIvs5dloPeSHaqEi1zV7zh49Rgm8sE4L2RUZP2KJ8lV6krPueEtgolFN7rgdn9gQ36Fz98JjlctFKShFehm1i4T1HyjnQR-NCVkQDiS1IYyNF*kxy2E3n3hSKG-QXA6ZKIztHx66YCfa*gz5Kpy54*K*og8k.&server_sdk_env=%7B%22idc%22%3A%22sinfonline%22%2C%22region%22%3A%22CN%22%2C%22server_type%22%3A%22whale%22%7D&mode=slide&fp=verify_mt9zco2z_5FvVZQWq_ciK1_460N_9Zut_c4jU34eUfA2b&h5_check_version=3.5.2&os_name=windows&platform=pc&os_type=2&h5_sdk_version=3.5.80&webdriver=true&tmp=1787741874665&a_bogus=QJ0VDt7jO25fO3KeuCGUeePUmwVMrzSjM1iQ8xcR7FuoyZUGrH-9K-c4aow5sBgX7YpyiK1HDjF%2Fbddcp2Gi3e9kwmkfuPTRrGIIVS8LMZqDTBkh3HmsCJSEoJ4FUWsY%2FAAviQL1lUlxI2c3qrc0AIFyC%2Feq58YMsHPbd3RgCx%2F5XlRxndOWTaTFOiaeQ4cIFW6uej%3D%3D",
+    "method": "GET",
+    "status": 200,
+    "content_type": "text/html; charset=utf-8",
+    "body_preview": "{\"code\":200,\"data\":{\"challenge_code\":99999,\"codifica\":\"true\",\"cyfreso\":68,\"host\":\"\",\"id\":\"f2f4ace7bcd9eb361aa710e30c5bbf731f9ae1f2\",\"mode\":\"slide\",\"question\":{\"url1\":\"https://p9-catpcha.byteimg.com/tos-cn-i-188rlo5p4y/e48e6a80c8614deea21b8e4ca7da6660~tplv-188rlo5p4y-2.jpeg\",\"url2\":\"https://p9-catpcha.byteimg.com/tos-cn-i-188rlo5p4y/c613862acf5445668c28beaeff010ea5~tplv-188rlo5p4y-1.png\",\"backup_url1\":[\"https://p3-catpcha.byteimg.com/tos-cn-i-188rlo5p4y/e48e6a80c8614deea21b8e4ca7da6660~tplv-188rlo5p4y-2.jpeg\",\"https://p6-catpcha.byteimg.com/tos-cn-i-188rlo5p4y/e48e6a80c8614deea21b8e4ca7da6660~tplv-188rlo5p4y-2.jpeg\"],\"backup_url2\":[\"https://p3-catpcha.byteimg.com/tos-cn-i-188rlo5p4y/c613862acf5445668c28beaeff010ea5~tplv-188rlo5p4y-1.png\",\"https://p6-catpcha.byteimg.com/tos-cn-i-188rlo5p4y/c613862acf5445668c28beaeff010ea5~tplv-188rlo5p4y-1.png\"],\"tip_y\":95,\"obfuscation\":\"\"},\"region\":\"\",\"version\":2},\"message\":\"验证通过\"}",
+    "body_length": 927,
+    "is_json": false,
+    "error": null
+  },
+  {
+    "url": "https://mcs.zijieapi.com/list",
+    "method": "POST",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body_preview": "{\"e\":0,\"sc\":7,\"tc\":7}",
+    "body_length": 21,
+    "is_json": true,
+    "error": null
+  },
+  {
+    "url": "https://mcs.zijieapi.com/list",
+    "method": "POST",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body_preview": "{\"e\":0,\"sc\":1}",
+    "body_length": 14,
+    "is_json": true,
+    "error": null
+  },
+  {
+    "url": "https://mcs.zijieapi.com/list",
+    "method": "POST",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body_preview": "{\"e\":0,\"sc\":1,\"tc\":1}",
+    "body_length": 21,
+    "is_json": true,
+    "error": null
+  },
+  {
+    "url": "https://mcs.zijieapi.com/list",
+    "method": "POST",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body_preview": "{\"e\":0,\"sc\":7,\"tc\":7}",
+    "body_length": 21,
+    "is_json": true,
+    "error": null
+  },
+  {
+    "url": "https://mcs.zijieapi.com/list",
+    "method": "POST",
+    "status": 200,
+    "content_type": "application/json; charset=utf-8",
+    "body_preview": "{\"e\":0,\"sc\":1,\"tc\":1}",
+    "body_length": 21,
+    "is_json": true,
+    "error": null
+  },
+  {
+    "url": "https://mssdk.bytedance.com/web/r/token?ms_appid=2385",
+    "method": "POST",
+    "status": 200,
+    "content_type": "text/plain; charset=utf-8",
+    "body_preview": "{\"maigc\":538051346,\"version\":1,\"dataType\":8}",
+    "body_length": 44,
+    "is_json": false,
+    "error": null
+  },
+  {
+    "url": "https://mon.zijieapi.com/monitor_browser/collect/batch/?biz_id=rmc_verifycenter",
+    "method": "POST",
+    "status": 204,
+    "content_type": "",
+    "body_preview": "",
+    "body_length": 0,
+    "is_json": false,
+    "error": null
+  },
+  {
+    "url": "https://mssdk.bytedance.com/web/common?ms_appid=2385&msToken=CN4TaJUEkxBqY6hxdAs5c_7oCOxKmXqm376rDtvAr9pLYqWvPSdA7fa1RK0PB9kkqCL2EGzBsR2XreJjaZ8Qk2Q5Oz5cstl7QvevcOJM9z_g_IYIocL0b0ueDxMlBe9hZulijq-dDoQnOC1pYBxPcr-Lbvj97pmo1g%3D%3D",
+    "method": "POST",
+    "status": 200,
+    "content_type": "text/plain; charset=utf-8",
+    "body_preview": "{\"maigc\":538051346,\"version\":1,\"dataType\":8}",
+    "body_length": 44,
+    "is_json": false,
+    "error": null
+  }
+]

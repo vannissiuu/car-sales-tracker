@@ -1,0 +1,12 @@
+{
+  "source_url": "https://www.dongchedi.com/motor/ad/m/pc/group?aid=1839&app_name=auto_web_pc&group_type=headline&a_bogus=Qy4fgF67EZmnP3eb8CGfH3%2FUK7xArF8jhliObeDkyNFWyqUTkLPICra4aoqos-ghvuB5xF37uf0AYxxcZdX03lHkwmpvSDhfHYOIVXsLMqw6bzvsgrbwCz8FowBCW5GLeQcvi1v5Ws0rZD5lIHI0Adla95z9-YmpSNZfd%2FT9yjW830Szg1pjtcfgGH-z-aV6OGkfHED%3D",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "body": {
+    "prompts": "",
+    "status": 0,
+    "message": "success",
+    "data": {}
+  }
+}

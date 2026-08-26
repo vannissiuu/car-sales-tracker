@@ -1,0 +1,11 @@
+{
+  "source_url": "https://mcs.zijieapi.com/list",
+  "method": "POST",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "body": {
+    "e": 0,
+    "sc": 1,
+    "tc": 1
+  }
+}

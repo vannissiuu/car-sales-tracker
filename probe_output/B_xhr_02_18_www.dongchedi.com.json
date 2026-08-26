@@ -1,0 +1,12 @@
+{
+  "source_url": "https://www.dongchedi.com/motor/ad/m/pc/banners?city_name=%E5%8C%97%E4%BA%AC&msToken=ArOkaizwDnwewgXfdYKQT0tNM30tbEpbDowMragXavZWeV8n-TsYGdI6bY78OEU9FaK4yk-PEXfySJBTt-xOpogUFl8zfcez9GsLixCVaI320IQiu8DUe-WaRb5oGYRX3o3mNRIarp4MZd0J6M8v2j6-ZUfvyRnt2w%3D%3D&a_bogus=DJsfhe6wm2mnapltmCJWH-1lGqn%2Frz8jZlTxROGpHPYTLZ0GEDPVCac4coqos-6hJupnxq17LfMMYxdcpIUk3IrpumpvSwGj3YxIVWvLMqwhY0vsgqb0CLmzqwsKWcTLaQcvilX5IsMn1D5lnrAkAd-Ge5zqBmbpbrZ6dZz9SjA8p08zL3pStafgnH-S-aIfsnS%3D",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "body": {
+    "prompts": "",
+    "status": 0,
+    "message": "success",
+    "data": {}
+  }
+}

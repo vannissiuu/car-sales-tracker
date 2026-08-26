@@ -1,0 +1,453 @@
+{
+  "source_url": "https://www.dongchedi.com/motor/pc/car/rank_data_config?aid=1839&app_name=auto_web_pc&a_bogus=QJ0VgwyEQ2mjapeG8cGSH3%2FlxhdlrMWjdMi2SCtk9PYDLqzbwjN9Cce4nowH44yhXuB5xFIHuf0AYEVcqIUw3ArpzmpvSkvWHuxAVWmohqwXbzvsDrjiCw8zLwsFW5GLe%2FcUiAfRXsMNZDOlIrATAQ-ay5Fo-mbpRqMbdMuyyjA8pFWzg1pjtnf2JH-tB-d6%2FG7yHYS%3D",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "body": {
+    "prompts": "",
+    "status": 0,
+    "message": "success",
+    "data": {
+      "score_type": {
+        "data": {
+          "options": [
+            {
+              "param": "score",
+              "text": "总榜"
+            },
+            {
+              "param": "comfort",
+              "text": "舒适榜"
+            },
+            {
+              "param": "appearance",
+              "text": "外观榜"
+            },
+            {
+              "param": "configuration",
+              "text": "配置榜"
+            },
+            {
+              "param": "control",
+              "text": "操控榜"
+            },
+            {
+              "param": "power",
+              "text": "动力榜"
+            },
+            {
+              "param": "space",
+              "text": "空间榜"
+            },
+            {
+              "param": "interiors",
+              "text": "内饰榜"
+            }
+          ]
+        },
+        "icon": "",
+        "key": "score_type",
+        "text": "懂车分榜单"
+      },
+      "tab_list": [
+        {
+          "title": "销量榜",
+          "rank_data_type": 20000,
+          "min_version_code": 0,
+          "sub_tab_list": [
+            {
+              "rank_data_type": 11,
+              "min_version_code": 0,
+              "title": "零售量"
+            },
+            {
+              "title": "批发量",
+              "rank_data_type": 2,
+              "min_version_code": 0
+            }
+          ]
+        },
+        {
+          "title": "热门榜",
+          "rank_data_type": 1,
+          "min_version_code": 0
+        },
+        {
+          "title": "懂车分榜",
+          "rank_data_type": 3,
+          "min_version_code": 600
+        },
+        {
+          "title": "实测榜",
+          "rank_data_type": 10000,
+          "sub_tab_list": [
+            {
+              "title": "安全榜",
+              "rank_data_type": 5,
+              "min_version_code": 0
+            },
+            {
+              "title": "能耗榜",
+              "rank_data_type": 9,
+              "min_version_code": 0
+            },
+            {
+              "title": "麋鹿测试",
+              "rank_data_type": 6,
+              "min_version_code": 0
+            },
+            {
+              "title": "加速榜",
+              "rank_data_type": 7,
+              "min_version_code": 0
+            },
+            {
+              "title": "制动榜",
+              "rank_data_type": 10,
+              "min_version_code": 0
+            },
+            {
+              "title": "赛道圈速",
+              "rank_data_type": 4,
+              "min_version_code": 0
+            }
+          ]
+        },
+        {
+          "title": "新能源榜",
+          "rank_data_type": 10001,
+          "sub_tab_list": [
+            {
+              "min_version_code": 0,
+              "title": "续航榜",
+              "rank_data_type": 60
+            },
+            {
+              "title": "能耗榜",
+              "rank_data_type": 61,
+              "min_version_code": 0
+            }
+          ]
+        },
+        {
+          "title": "城市榜",
+          "rank_data_type": 10002,
+          "sub_tab_list": [
+            {
+              "rank_data_type": 64,
+              "min_version_code": 0,
+              "title": "热销榜"
+            },
+            {
+              "title": "降价榜",
+              "rank_data_type": 52,
+              "min_version_code": 0
+            }
+          ]
+        }
+      ],
+      "manufacturer": {
+        "text": "厂商",
+        "data": {
+          "options": [
+            {
+              "param": "",
+              "text": "不限"
+            },
+            {
+              "param": "合资",
+              "text": "合资"
+            },
+            {
+              "param": "自主",
+              "text": "自主"
+            }
+          ]
+        },
+        "key": "manufacturer"
+      },
+      "city": {
+        "key": "city",
+        "text": "城市"
+      },
+      "new_version": 2,
+      "is_publish_time": false,
+      "price": {
+        "key": "price",
+        "data": {
+          "options": [
+            {
+              "text": "不限价格",
+              "param": "0,-1"
+            },
+            {
+              "text": "5万以下",
+              "param": "0,5"
+            },
+            {
+              "text": "5-8万",
+              "param": "5,8"
+            },
+            {
+              "param": "8,12",
+              "text": "8-12万"
+            },
+            {
+              "text": "12-18万",
+              "param": "12,18"
+            },
+            {
+              "text": "18-25万",
+              "param": "18,25"
+            },
+            {
+              "text": "25-35万",
+              "param": "25,35"
+            },
+            {
+              "param": "35,-1",
+              "text": "35万以上"
+            }
+          ]
+        },
+        "icon": "",
+        "text": "价格"
+      },
+      "filters": [
+        {
+          "icon": "",
+          "key": "all",
+          "selected_icon": "",
+          "text": "全部"
+        },
+        {
+          "key": "outter_detail_type",
+          "data": {
+            "options": [
+              {
+                "text": "全部轿车",
+                "param": "0,1,2,3,4,5"
+              },
+              {
+                "text": "微型车",
+                "param": "0"
+              },
+              {
+                "text": "小型车",
+                "param": "1"
+              },
+              {
+                "text": "紧凑型车",
+                "param": "2"
+              },
+              {
+                "text": "中型车",
+                "param": "3"
+              },
+              {
+                "text": "中大型车",
+                "param": "4"
+              },
+              {
+                "param": "5",
+                "text": "大型车"
+              }
+            ]
+          },
+          "icon": "https://p3-dcd.byteimg.com/origin/tos-cn-i-dcdx/2efdee81cb076cc0917b8473613a06e6",
+          "selected_icon": "https://p3-dcd.byteimg.com/origin/tos-cn-i-dcdx/4d61690ad6576763cabdea3af93ab4f9",
+          "text": "轿车"
+        },
+        {
+          "text": "SUV",
+          "key": "outter_detail_type",
+          "data": {
+            "options": [
+              {
+                "text": "全部SUV",
+                "param": "10,11,12,13,14"
+              },
+              {
+                "text": "小型SUV",
+                "param": "10"
+              },
+              {
+                "param": "11",
+                "text": "紧凑型SUV"
+              },
+              {
+                "text": "中型SUV",
+                "param": "12"
+              },
+              {
+                "text": "中大型SUV",
+                "param": "13"
+              },
+              {
+                "param": "14",
+                "text": "大型SUV"
+              }
+            ]
+          },
+          "icon": "https://p3-dcd.byteimg.com/origin/tos-cn-i-dcdx/13cd733c8e5cde091f4b12130575275b",
+          "selected_icon": "https://p9-dcd.byteimg.com/origin/tos-cn-i-dcdx/032077e16a4216eeda5c47516b03d2d6"
+        },
+        {
+          "text": "MPV",
+          "key": "outter_detail_type",
+          "data": {
+            "options": [
+              {
+                "text": "全部MPV",
+                "param": "20,21,22,23,24"
+              },
+              {
+                "text": "小型MPV",
+                "param": "20"
+              },
+              {
+                "text": "紧凑型MPV",
+                "param": "21"
+              },
+              {
+                "text": "中型MPV",
+                "param": "22"
+              },
+              {
+                "text": "中大型MPV",
+                "param": "24"
+              },
+              {
+                "param": "23",
+                "text": "大型MPV"
+              }
+            ]
+          },
+          "icon": "https://p9-dcd.byteimg.com/origin/tos-cn-i-dcdx/23a564b0ca440d95224a95aefd653db2",
+          "selected_icon": "https://p3-dcd.byteimg.com/origin/tos-cn-i-dcdx/76dbe8c31f83c8020e8eeb8ddbe66c69"
+        },
+        {
+          "text": "新能源",
+          "key": "new_energy_type",
+          "data": {
+            "options": [
+              {
+                "text": "全部新能源",
+                "param": "1,2,3,4"
+              },
+              {
+                "text": "纯电动",
+                "param": "1"
+              },
+              {
+                "text": "插电式混动",
+                "param": "2"
+              },
+              {
+                "text": "增程式",
+                "param": "3"
+              }
+            ]
+          },
+          "icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/bde81072ea405fddf77fa9964a4d4a61",
+          "selected_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/0cbaf23bb323c108dcccbe46e220f3db"
+        }
+      ],
+      "capacity_l": {
+        "data": {
+          "options": [
+            {
+              "param": "0,-1",
+              "text": "不限排量"
+            },
+            {
+              "text": "1.0L及以下",
+              "param": "0,1"
+            },
+            {
+              "param": "1.1,1.6",
+              "text": "1.1-1.6L"
+            },
+            {
+              "param": "1.7,2",
+              "text": "1.7-2.0L"
+            },
+            {
+              "param": "2.1,2.5",
+              "text": "2.1-2.5L"
+            },
+            {
+              "param": "2.6,3",
+              "text": "2.6-3.0L"
+            },
+            {
+              "text": "3.1-4.0L",
+              "param": "3.1,4"
+            },
+            {
+              "param": "4,-1",
+              "text": "4.0L以上"
+            }
+          ]
+        },
+        "icon": "",
+        "key": "capacity_l",
+        "text": "排量"
+      },
+      "new_energy_type": {
+        "data": {
+          "options": [
+            {
+              "text": "纯电动",
+              "param": "1"
+            },
+            {
+              "text": "插电式混动",
+              "param": "2"
+            }
+          ]
+        },
+        "key": "new_energy_type",
+        "text": ""
+      },
+      "brand_id": {
+        "key": "brand_id",
+        "text": "品牌"
+      },
+      "sells_rank_month": [
+        {
+          "text": "2026年07月",
+          "month": 202607
+        },
+        {
+          "text": "2026年06月",
+          "month": 202606
+        },
+        {
+          "text": "2026年05月",
+          "month": 202605
+        },
+        {
+          "text": "2026年04月",
+          "month": 202604
+        },
+        {
+          "text": "2026年03月",
+          "month": 202603
+        },
+        {
+          "text": "2026年02月",
+          "month": 202602
+        },
+        {
+          "text": "近半年",
+          "month": 500
+        },
+        {
+          "text": "近一年",
+          "month": 1000
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,3154 @@
+{
+  "source_url": "https://www.dongchedi.com/motor/searchpage/launcher/main/v1/?aid=1839&app_name=auto_web_pc&a_bogus=QvsRDHUyDdQbcpebmCJjH-QluZjlrM8jdBi2SHbpSPYfLhzbijNCCnC-noq9saLhvbpVxq37wfM%2FYddcNdXz3InkwmpDuDij3bOVVX6ogqigYFksEqbzCwsFowsCWcTLl%2FnXiIf5WsMNZD5lIHI0AQ5a95zHBQRpWHMRdZT9tjWW3MWzEZpftrf2jH4zBaIWB8XtCj%3D%3D",
+  "method": "GET",
+  "status": 200,
+  "content_type": "application/json; charset=utf-8",
+  "body": {
+    "message": "success",
+    "data": {
+      "dynamic_code": {
+        "lua_search_hot": "",
+        "lua_v5": ""
+      },
+      "bottom_content": [],
+      "rank_board": [
+        {
+          "rank_name": "热搜榜",
+          "rank_code": 0,
+          "tops": [
+            {
+              "title": "9月首周新能源销量分析",
+              "description": "",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=9%E6%9C%88%E9%A6%96%E5%91%A8%E6%96%B0%E8%83%BD%E6%BA%90%E9%94%80%E9%87%8F%E5%88%86%E6%9E%90"
+            },
+            {
+              "title": "全新斯柯达速派谍照曝光",
+              "description": "",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=%E5%85%A8%E6%96%B0%E6%96%AF%E6%9F%AF%E8%BE%BE%E9%80%9F%E6%B4%BE%E8%B0%8D%E7%85%A7%E6%9B%9D%E5%85%89"
+            },
+            {
+              "title": "奇瑞新SUV命名“舒享家”",
+              "description": "",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=%E5%A5%87%E7%91%9E%E6%96%B0SUV%E5%91%BD%E5%90%8D%E2%80%9C%E8%88%92%E4%BA%AB%E5%AE%B6%E2%80%9D"
+            },
+            {
+              "title": "丰田回应工厂停产",
+              "description": "",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=%E4%B8%B0%E7%94%B0%E5%9B%9E%E5%BA%94%E5%B7%A5%E5%8E%82%E5%81%9C%E4%BA%A7"
+            },
+            {
+              "title": "捷途旅行者越野挑战实测",
+              "description": "",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=%E6%8D%B7%E9%80%94%E6%97%85%E8%A1%8C%E8%80%85%E8%B6%8A%E9%87%8E%E6%8C%91%E6%88%98%E5%AE%9E%E6%B5%8B"
+            },
+            {
+              "title": "特斯拉上海工厂第200万辆车下线",
+              "description": "",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=%E7%89%B9%E6%96%AF%E6%8B%89%E4%B8%8A%E6%B5%B7%E5%B7%A5%E5%8E%82%E7%AC%AC200%E4%B8%87%E8%BE%86%E8%BD%A6%E4%B8%8B%E7%BA%BF"
+            },
+            {
+              "title": "比亚迪海豹在巴西上市",
+              "description": "",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=%E6%AF%94%E4%BA%9A%E8%BF%AA%E6%B5%B7%E8%B1%B9%E5%9C%A8%E5%B7%B4%E8%A5%BF%E4%B8%8A%E5%B8%82"
+            },
+            {
+              "title": "奥迪Activesphere概念车亮相",
+              "description": "",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAActivesphere%E6%A6%82%E5%BF%B5%E8%BD%A6%E4%BA%AE%E7%9B%B8"
+            },
+            {
+              "title": "方程豹豹5配置信息",
+              "description": "",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6c9bb46c5af17ea321330556a895ac76~tplv-resize:0:0.image",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=%E6%96%B9%E7%A8%8B%E8%B1%B9%E8%B1%B95%E9%85%8D%E7%BD%AE%E4%BF%A1%E6%81%AF"
+            },
+            {
+              "title": "比亚迪海豹DM-i上市",
+              "description": "",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4279e00d4d32cdab4201c3fcfd361242~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/d737a3846c6fd24107afebbc78781c49~tplv-resize:0:0.image",
+              "detail_url": "sslocal://search?growth_from=search_hot&keyword=%E6%AF%94%E4%BA%9A%E8%BF%AA%E6%B5%B7%E8%B1%B9DM-i%E4%B8%8A%E5%B8%82"
+            }
+          ]
+        },
+        {
+          "rank_name": "热销榜",
+          "rank_code": 2,
+          "tops": [
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "title": "星愿",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/ec12b817ebedb0cdc7232ac986afce9b",
+              "description": "0名",
+              "count_tag": "全国销量 ",
+              "series_name": "星愿",
+              "cover_url": "http://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac8a5ee1d8774df59ccd8aaa375fac7e~tplv-resize:480:0.png",
+              "series_id": 20154,
+              "sale_count": 55105,
+              "detail_url": "sslocal://concern?cid=20154",
+              "price_text": "5.98-9.18万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "title": "海豚",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/ec12b817ebedb0cdc7232ac986afce9b",
+              "description": "0名",
+              "count_tag": "全国销量 ",
+              "series_name": "海豚",
+              "cover_url": "http://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/dc616c2ab21c47d9beddc2c940f8828d~tplv-resize:480:0.png",
+              "series_id": 5008,
+              "sale_count": 34910,
+              "detail_url": "sslocal://concern?cid=5008",
+              "price_text": "9.18-11.78万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "title": "Model 3",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/ec12b817ebedb0cdc7232ac986afce9b",
+              "description": "0名",
+              "count_tag": "全国销量 ",
+              "series_name": "Model 3",
+              "cover_url": "http://p1-dcd.byteimg.com/img/tos-cn-i-dcdx/f1cb1d06a54f44e0a4b8c7eefd1791cd~tplv-resize:480:0.png",
+              "series_id": 3762,
+              "sale_count": 33743,
+              "detail_url": "sslocal://concern?cid=3762",
+              "price_text": "23.55-33.95万"
+            },
+            {
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "title": "海鸥",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/ec12b817ebedb0cdc7232ac986afce9b",
+              "description": "0名",
+              "count_tag": "全国销量 ",
+              "series_name": "海鸥",
+              "cover_url": "http://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/06d44bd3f3354beda202de7b482b0694~tplv-resize:480:0.png",
+              "series_id": 5952,
+              "sale_count": 27971,
+              "detail_url": "sslocal://concern?cid=5952",
+              "price_text": "6.08-7.99万"
+            },
+            {
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "title": "小米SU7",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "2名",
+              "count_tag": "全国销量 ",
+              "series_name": "小米SU7",
+              "cover_url": "http://p6-dcd.byteimg.com/img/tos-cn-i-dcdx/cbdad660b73c48808f6c6317e38738e2~tplv-resize:480:0.png",
+              "series_id": 6187,
+              "sale_count": 21044,
+              "detail_url": "sslocal://concern?cid=6187",
+              "price_text": "21.99-30.39万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "title": "缤果Pro",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/ec12b817ebedb0cdc7232ac986afce9b",
+              "description": "0名",
+              "count_tag": "全国销量 ",
+              "series_name": "缤果Pro",
+              "cover_url": "http://p1-dcd.byteimg.com/img/tos-cn-i-dcdx/ddc4096681174714a43cc46864430480~tplv-resize:480:0.png",
+              "series_id": 26039,
+              "sale_count": 19396,
+              "detail_url": "sslocal://concern?cid=26039",
+              "price_text": "5.68-7.08万"
+            },
+            {
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "title": "MG4",
+              "trend_icon": "https://p9-dcd.byteimg.com/obj/tos-cn-i-dcdx/16a0332e85c4c78f7582d28d6bde7a39",
+              "description": "2名",
+              "count_tag": "全国销量 ",
+              "series_name": "MG4",
+              "cover_url": "http://p1-dcd.byteimg.com/img/tos-cn-i-dcdx/e6605595e9bf4be5a6234f27ecfaadd9~tplv-resize:480:0.png",
+              "series_id": 5828,
+              "sale_count": 19176,
+              "detail_url": "sslocal://concern?cid=5828",
+              "price_text": "6.58-9.98万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "title": "帝豪",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "1名",
+              "count_tag": "全国销量 ",
+              "series_name": "帝豪",
+              "cover_url": "http://p1-dcd.byteimg.com/img/tos-cn-i-dcdx/bc0b49cf6ce64af69812bdf57ce865ac~tplv-resize:480:0.png",
+              "series_id": 733,
+              "sale_count": 16225,
+              "detail_url": "sslocal://concern?cid=733",
+              "price_text": "4.88-8.89万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6c9bb46c5af17ea321330556a895ac76~tplv-resize:0:0.image",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "title": "朗逸",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "2名",
+              "count_tag": "全国销量 ",
+              "series_name": "朗逸",
+              "cover_url": "http://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/32129dbc6b824b1abf2e2388c1890b95~tplv-resize:480:0.png",
+              "series_id": 393,
+              "sale_count": 14620,
+              "detail_url": "sslocal://concern?cid=393",
+              "price_text": "6.00-9.39万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4279e00d4d32cdab4201c3fcfd361242~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/d737a3846c6fd24107afebbc78781c49~tplv-resize:0:0.image",
+              "title": "迈腾",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "5名",
+              "count_tag": "全国销量 ",
+              "series_name": "迈腾",
+              "cover_url": "http://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/af209a0bc7a548a89dc86b1062cac9c7~tplv-resize:480:0.png",
+              "series_id": 415,
+              "sale_count": 13831,
+              "detail_url": "sslocal://concern?cid=415",
+              "price_text": "11.99-21.69万"
+            }
+          ]
+        },
+        {
+          "rank_name": "直播小时榜",
+          "rank_code": 8,
+          "tops": [
+            {
+              "anchor_id": "4030152714754116",
+              "anchor_name": "风云新能源汽车",
+              "avatar_url": "https://p26-passport.byteacctimg.com/img/user-avatar/58390f5f386f573215e73ef560fd10d0~300x300.image",
+              "room_id": "7678184915208407850",
+              "open_url": "sslocal://livesaas?anchor_id=4030152714754116&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000SHerl_hwAPpm5WTSXJ1aL_sqaTE6Se0k&request_id=202608261858085426305C21B451AA615B&room_id=7678184915208407850&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image"
+            },
+            {
+              "anchor_id": "2419343928859779",
+              "anchor_name": "科净威汽车用品旗舰店",
+              "avatar_url": "https://p26-passport.byteacctimg.com/img/user-avatar/d0709973a5b66f740b7df3aabb0cc8cd~300x300.image",
+              "room_id": "7675869916582808363",
+              "open_url": "sslocal://livesaas?anchor_id=2419343928859779&enter_from_merge=live_search_section&enter_method=main_tab&open_id=e33581af-af96-4477-b85b-6373ed7a4b35&request_id=202608261858085426305C21B451AA615B&room_id=7675869916582808363&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image"
+            },
+            {
+              "anchor_id": "602997402118525",
+              "anchor_name": "车仆官方旗舰店",
+              "avatar_url": "https://p6-passport.byteacctimg.com/img/user-avatar/7d138997a4580c3d511c93aeaa4c032c~300x300.image",
+              "room_id": "7676067577021795078",
+              "open_url": "sslocal://livesaas?anchor_id=602997402118525&enter_from_merge=live_search_section&enter_method=main_tab&open_id=8c8ea2ad-279e-4f4d-8cc9-a99cf0cf75f0&request_id=202608261858085426305C21B451AA615B&room_id=7676067577021795078&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image"
+            },
+            {
+              "anchor_id": "2619458025164459",
+              "anchor_name": "WURTH伍尔特官方旗舰店",
+              "avatar_url": "https://p26-passport.byteacctimg.com/img/user-avatar/6153b9722ed75402ee5b59cf27338653~300x300.image",
+              "room_id": "7676547906832173859",
+              "open_url": "sslocal://livesaas?anchor_id=2619458025164459&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000kseUEQ1mAUkX1oDfu43JkZv4XlSQmqCW&request_id=202608261858085426305C21B451AA615B&room_id=7676547906832173859&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image"
+            },
+            {
+              "anchor_id": "3348454291816116",
+              "anchor_name": "科净威香薰用品旗舰店",
+              "avatar_url": "https://p6-passport.byteacctimg.com/img/user-avatar/461c4b0bd4cf9e087f84c5480d82ca36~300x300.image",
+              "room_id": "7675867823809317632",
+              "open_url": "sslocal://livesaas?anchor_id=3348454291816116&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000rYmCQAKZ5Ko9lKUCAP2pVDHNLF0WVSrk&request_id=202608261858085426305C21B451AA615B&room_id=7675867823809317632&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image"
+            },
+            {
+              "anchor_id": "2720666386449209",
+              "anchor_name": "科净威香薰旗舰店",
+              "avatar_url": "https://p9-passport.byteacctimg.com/img/user-avatar/67ceb0a11bd4fe5354f23a9c9c19e707~300x300.image",
+              "room_id": "7677725157498047272",
+              "open_url": "sslocal://livesaas?anchor_id=2720666386449209&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000IXLPsOXi3DMh5AgtvwuFDWvXTawoSYPO&request_id=202608261858085426305C21B451AA615B&room_id=7677725157498047272&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image"
+            },
+            {
+              "anchor_id": "803070352046032",
+              "anchor_name": "端庄优雅沙滩vj5",
+              "avatar_url": "https://p9-passport.byteacctimg.com/img/mosaic-legacy/3792/5112637127~120x256.image",
+              "room_id": "7677682654837279529",
+              "open_url": "sslocal://livesaas?anchor_id=803070352046032&enter_from_merge=live_search_section&enter_method=main_tab&open_id=4ea16bb5-74d1-4deb-9daf-982b5ce90282&request_id=202608261858085426305C21B451AA615B&room_id=7677682654837279529&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image"
+            },
+            {
+              "anchor_id": "2081816899750569",
+              "anchor_name": "科净威汽车零部件旗舰店",
+              "avatar_url": "https://p26-passport.byteacctimg.com/img/user-avatar/3342fb76d6e30664c1db303d2f2149f3~300x300.image",
+              "room_id": "7677026030179896104",
+              "open_url": "sslocal://livesaas?anchor_id=2081816899750569&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000kjTxSjL271ed4XaSrPsvSR5-cljTNnfX&request_id=202608261858085426305C21B451AA615B&room_id=7677026030179896104&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image"
+            },
+            {
+              "anchor_id": "3350964743970095",
+              "anchor_name": "德耳曼官方旗舰店",
+              "avatar_url": "https://p6-passport.byteacctimg.com/img/user-avatar/340fb8c9d2496b203884ec19742aaf7e~300x300.image",
+              "room_id": "7675804086243019570",
+              "open_url": "sslocal://livesaas?anchor_id=3350964743970095&enter_from_merge=live_search_section&enter_method=main_tab&open_id=386260cb-3aaa-46d2-9e40-2c4957fe9f53&request_id=202608261858085426305C21B451AA615B&room_id=7675804086243019570&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6c9bb46c5af17ea321330556a895ac76~tplv-resize:0:0.image",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image"
+            },
+            {
+              "anchor_id": "1667339987199219",
+              "anchor_name": "宝能汽车精护",
+              "avatar_url": "https://p6-passport.byteacctimg.com/img/user-avatar/ee1ff0810291b7d0892a1c1db3a61b1b~300x300.image",
+              "room_id": "7676205501855632154",
+              "open_url": "sslocal://livesaas?anchor_id=1667339987199219&enter_from_merge=live_search_section&enter_method=main_tab&open_id=c963c49a-e354-48f3-beba-afbe1753420b&request_id=202608261858085426305C21B451AA615B&room_id=7676205501855632154&room_type=normal",
+              "score": "10.0w 人次",
+              "is_living": true,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4279e00d4d32cdab4201c3fcfd361242~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/d737a3846c6fd24107afebbc78781c49~tplv-resize:0:0.image"
+            }
+          ]
+        },
+        {
+          "rank_name": "作者榜",
+          "open_url": "sslocal://webview?url=https%3A%2F%2Fis.snssdk.com%2Fmotor%2Finapp%2Fugcs%2Fmp-rank.html&should_append_common_param=1&enable_resume_pause_js=1&bounce_disable=1&back_button_color=white&status_bar_color=white&hide_bar=1&hide_status_bar=1&title=%E6%87%82%E8%BD%A6%E5%8F%B7%E6%A6%9C%E5%8D%95",
+          "rank_code": 3,
+          "more_text": "查看完整作者榜",
+          "tops": [
+            {
+              "name": "枫行视界",
+              "description": "综合指数：872.48",
+              "avatar_url": "https://sf6-cdn-tos.toutiaostatic.com/img/user-avatar/93a6ec9ce9bb4812a3f9ff05529ed6aa~300x300.image",
+              "detail_url": "sslocal://profile?uid=9215615036",
+              "id": "9215615036",
+              "score_total": 872.48,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image"
+            },
+            {
+              "name": "爱车兵团",
+              "description": "综合指数：829.91",
+              "avatar_url": "https://sf1-cdn-tos.toutiaostatic.com/img/user-avatar/be8b68331698f341ad8197f61e1dd2f7~300x300.image",
+              "detail_url": "sslocal://profile?uid=59091102527",
+              "id": "59091102527",
+              "score_total": 829.91,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image"
+            },
+            {
+              "name": "玩车教授",
+              "description": "综合指数：824.83",
+              "avatar_url": "https://sf3-cdn-tos.toutiaostatic.com/img/user-avatar/d73ce8ceefb2c436dd76751d2c4373fa~300x300.image",
+              "detail_url": "sslocal://profile?uid=1931859874",
+              "id": "1931859874",
+              "score_total": 824.83,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image"
+            },
+            {
+              "name": "大家车言论",
+              "description": "综合指数：795.73",
+              "avatar_url": "https://sf6-cdn-tos.toutiaostatic.com/img/user-avatar/6d7d791f9b7ff0a1d36811e936428f44~300x300.image",
+              "detail_url": "sslocal://profile?uid=4624361651",
+              "id": "4624361651",
+              "score_total": 795.73,
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image"
+            },
+            {
+              "name": "大虾试车真香",
+              "description": "综合指数：792.55",
+              "avatar_url": "https://sf3-cdn-tos.bdxiguastatic.com/img/user-avatar/88ae10385161a83d5a6e7f8c527e2b6e~300x300.image",
+              "detail_url": "sslocal://profile?uid=286296613600541",
+              "id": "286296613600541",
+              "score_total": 792.55,
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image"
+            },
+            {
+              "name": "车主指南",
+              "description": "综合指数：782.05",
+              "avatar_url": "https://sf6-cdn-tos.toutiaostatic.com/img/user-avatar/947698e552487f3e111085f96d477897~300x300.image",
+              "detail_url": "sslocal://profile?uid=6595985995",
+              "id": "6595985995",
+              "score_total": 782.05,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image"
+            },
+            {
+              "name": "Y车评",
+              "description": "综合指数：773.69",
+              "avatar_url": "https://sf1-cdn-tos.toutiaostatic.com/img/user-avatar/76247a53d36bd776a1239b0d64babb21~300x300.image",
+              "detail_url": "sslocal://profile?uid=5565291449",
+              "id": "5565291449",
+              "score_total": 773.69,
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image"
+            },
+            {
+              "name": "老司机出品",
+              "description": "综合指数：768.91",
+              "avatar_url": "https://sf6-cdn-tos.toutiaostatic.com/img/user-avatar/374528842dcfc983072690f7c715b58a~300x300.image",
+              "detail_url": "sslocal://profile?uid=55435878150",
+              "id": "55435878150",
+              "score_total": 768.91,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image"
+            }
+          ]
+        },
+        {
+          "rank_name": "用户榜",
+          "rank_code": 7,
+          "tops": [
+            {
+              "id": "75115703034",
+              "name": "珠海赵润森",
+              "description": "点赞26 回复18",
+              "avatar_url": "https://sf6-cdn-tos.toutiaostatic.com/img/user-avatar/47fa133ef4c020966ba54c6ffb30d63b~300x300.image",
+              "detail_url": "sslocal://profile?uid=75115703034",
+              "score_total": 99.57,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image"
+            },
+            {
+              "id": "104362761601",
+              "name": "深邃黑暗幻想ddf",
+              "description": "点赞32 回复6",
+              "avatar_url": "https://sf3-cdn-tos.toutiaostatic.com/img/user-avatar/e641b99f1e90898a825b4d8e178247af~300x300.image",
+              "detail_url": "sslocal://profile?uid=104362761601",
+              "score_total": 79.22,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image"
+            },
+            {
+              "id": "86643695256",
+              "name": "钳子爱开车",
+              "description": "点赞4 回复11",
+              "avatar_url": "https://sf3-cdn-tos.toutiaostatic.com/img/user-avatar/62fa8d255e3dcb6312d9e7ea98920aa6~300x300.image",
+              "detail_url": "sslocal://profile?uid=86643695256",
+              "score_total": 75.59,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image"
+            },
+            {
+              "id": "68045984602",
+              "name": "木头30432",
+              "description": "点赞18 回复6",
+              "avatar_url": "https://sf3-cdn-tos.toutiaostatic.com/img/user-avatar/2x_3961a6fdc0503dd5a37125274fddc49c~300x300.image",
+              "detail_url": "sslocal://profile?uid=68045984602",
+              "score_total": 75.25,
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image"
+            },
+            {
+              "id": "2088668739408332",
+              "name": "宝马bimmer",
+              "description": "点赞3 回复11",
+              "avatar_url": "https://sf3-cdn-tos.toutiaostatic.com/img/tos-cn-i-0022/b4344220f97c477b854b3e826680d304~300x300.image",
+              "detail_url": "sslocal://profile?uid=2088668739408332",
+              "score_total": 69.76,
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image"
+            },
+            {
+              "id": "206350433387516",
+              "name": "我是最客观的",
+              "description": "点赞3 回复7",
+              "avatar_url": "https://sf3-cdn-tos.toutiaostatic.com/img/mosaic-legacy/3796/2975850990~300x300.image",
+              "detail_url": "sslocal://profile?uid=206350433387516",
+              "score_total": 61.64,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image"
+            },
+            {
+              "id": "106568789713",
+              "name": "JJ8101",
+              "description": "点赞10 回复5",
+              "avatar_url": "https://sf1-cdn-tos.toutiaostatic.com/img/motor-img/2d22efc70b6c7a746aac6f05ec2ec957~300x300.image",
+              "detail_url": "sslocal://profile?uid=106568789713",
+              "score_total": 59.9,
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image"
+            },
+            {
+              "id": "2700029405959416",
+              "name": "巍言颂听",
+              "description": "点赞9 回复4",
+              "avatar_url": "https://sf3-cdn-tos.toutiaostatic.com/img/user-avatar/2x_8c0c91d850cd5d227f4849d6d620669a~300x300.image",
+              "detail_url": "sslocal://profile?uid=2700029405959416",
+              "score_total": 58.38,
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image"
+            }
+          ]
+        }
+      ],
+      "rank_board_v2": [
+        {
+          "rank_name": "汽车排行·销量",
+          "open_url": "sslocal://webview?url=https%3A%2F%2Fis.snssdk.com%2Fmotor%2Ffeoffline%2Fautorank%2Fnext.html%3Flink_source%3D&should_append_common_param=1&enable_resume_pause_js=1&bounce_disable=1&hide_bar=1&hide_status_bar=1&back_button_color=black&status_bar_color=black&link_source_path=page_search_input_search_input_tab_list_cell",
+          "rank_code": 11,
+          "have_children_rank": false,
+          "tops": [
+            {
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/23565ec5858140d58895300c6b93e030~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/1f5d3cfa301f4fb080c5a89b09748d71~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "星愿",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "1名",
+              "count_tag": "销量 ",
+              "series_name": "星愿",
+              "cover_url": "https://p9-dcd.byteimg.com/tos-cn-i-dcdx/ac8a5ee1d8774df59ccd8aaa375fac7e~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 20154,
+              "sale_count": 32306,
+              "detail_url": "sslocal://concern?cid=20154",
+              "price_text": "6.48-9.88万"
+            },
+            {
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/a0dcda2b859343e2bcd8fdb37edf491e~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/103eedb69b2243ada42f6f6b9b031732~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "零跑A10",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "1名",
+              "count_tag": "销量 ",
+              "series_name": "零跑A10",
+              "cover_url": "https://p3-dcd.byteimg.com/tos-cn-i-dcdx/523751e3d9eb41bdb975352f8cbec43b~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 9267,
+              "sale_count": 26424,
+              "detail_url": "sslocal://concern?cid=9267",
+              "price_text": "6.58-8.68万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/c519445ac5a845239a56dd8b8d73dbb7~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/737e81ac32794bbea770e2bb3e142fda~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "Model Y",
+              "trend_icon": "https://p9-dcd.byteimg.com/obj/tos-cn-i-dcdx/16a0332e85c4c78f7582d28d6bde7a39",
+              "description": "2名",
+              "count_tag": "销量 ",
+              "series_name": "Model Y",
+              "cover_url": "https://p9-dcd.byteimg.com/tos-cn-i-dcdx/31b02aeb33334fb28e2c34dd81ed4528~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 4363,
+              "sale_count": 25158,
+              "detail_url": "sslocal://concern?cid=4363",
+              "price_text": "26.35-31.35万"
+            },
+            {
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/08068eceb69442d1a90c31600e209652~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/963db330b48a41799c32a4ae73d52b24~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "小米SU7",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "1名",
+              "count_tag": "销量 ",
+              "series_name": "小米SU7",
+              "cover_url": "https://p9-dcd.byteimg.com/tos-cn-i-dcdx/cbdad660b73c48808f6c6317e38738e2~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 6187,
+              "sale_count": 21044,
+              "detail_url": "sslocal://concern?cid=6187",
+              "price_text": "21.99-30.39万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/48f60b50e7de450faebbe5b1b98c755c~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6059d65fcf694ea58c7378c3e2564a27~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "元UP",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "2名",
+              "count_tag": "销量 ",
+              "series_name": "元UP",
+              "cover_url": "https://p3-dcd.byteimg.com/tos-cn-i-dcdx/f3bd2e9744044187b726b05ecccdce42~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 9689,
+              "sale_count": 20275,
+              "detail_url": "sslocal://concern?cid=9689",
+              "price_text": "7.48-11.98万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ca35034a49bd4d339832d8071e124d30~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/bbb6dfcecd1349d58a814db499d5d3a7~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "长安启源Q05",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/ec12b817ebedb0cdc7232ac986afce9b",
+              "description": "0名",
+              "count_tag": "销量 ",
+              "series_name": "长安启源Q05",
+              "cover_url": "https://p3-dcd.byteimg.com/tos-cn-i-dcdx/d165339b96b94c7bb9f77369d17afdc1~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 25634,
+              "sale_count": 18871,
+              "detail_url": "sslocal://concern?cid=25634",
+              "price_text": "7.99-11.49万"
+            },
+            {
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/64f80d45129f41bd9e392bca7468c4d7~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b9a940c92fb7466ab1aee99b69c4e090~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "理想i6",
+              "trend_icon": "https://p9-dcd.byteimg.com/obj/tos-cn-i-dcdx/16a0332e85c4c78f7582d28d6bde7a39",
+              "description": "3名",
+              "count_tag": "销量 ",
+              "series_name": "理想i6",
+              "cover_url": "https://p3-dcd.byteimg.com/tos-cn-i-dcdx/23bca80155b2406abca7b473c8e85691~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 25557,
+              "sale_count": 15420,
+              "detail_url": "sslocal://concern?cid=25557",
+              "price_text": "24.98-26.98万"
+            },
+            {
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/f9635d2960594ce5b93a729f0d14a980~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/7df634c27d9f420ea967df2c726aa5ff~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "卡罗拉锐放",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "28名",
+              "count_tag": "销量 ",
+              "series_name": "卡罗拉锐放",
+              "cover_url": "https://p3-dcd.byteimg.com/tos-cn-i-dcdx/ed29d140eaba4685b466b69482e34e3b~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 5382,
+              "sale_count": 14510,
+              "detail_url": "sslocal://concern?cid=5382",
+              "price_text": "12.68-15.98万"
+            },
+            {
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a25074d4b8f4459a861106be9020f9c6~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/9a06e329d8294d7dbbd442d8d942022e~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "海豚",
+              "trend_icon": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/99022829f6ee8c2e49d4f286d1e08255",
+              "description": "12名",
+              "count_tag": "销量 ",
+              "series_name": "海豚",
+              "cover_url": "https://p3-dcd.byteimg.com/tos-cn-i-dcdx/dc616c2ab21c47d9beddc2c940f8828d~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 5008,
+              "sale_count": 13910,
+              "detail_url": "sslocal://concern?cid=5008",
+              "price_text": "9.98-12.58万"
+            },
+            {
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/df3a5b688e244a63820e1325e7cb3cb4~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cdf3bc1df21e4ef8a62ed815e1266b08~tplv-resize:0:0.image?psm=motor.search.launcher",
+              "title": "宋Pro DM",
+              "trend_icon": "https://p9-dcd.byteimg.com/obj/tos-cn-i-dcdx/16a0332e85c4c78f7582d28d6bde7a39",
+              "description": "2名",
+              "count_tag": "销量 ",
+              "series_name": "宋Pro DM",
+              "cover_url": "https://p3-dcd.byteimg.com/tos-cn-i-dcdx/a1d1f6d0748e45188828a777eb62376f~tplv-resize:640:0.png?psm=motor.rank.data",
+              "series_id": 3504,
+              "sale_count": 13757,
+              "detail_url": "sslocal://concern?cid=3504",
+              "price_text": "10.28-13.29万"
+            }
+          ],
+          "bubble_info": null
+        },
+        {
+          "rank_name": "互动榜",
+          "rank_code": 13,
+          "children_rank_list": [
+            {
+              "rank_name": "直播小时榜",
+              "rank_code": 16,
+              "have_children_rank": false,
+              "tops": [
+                {
+                  "anchor_id": "4030152714754116",
+                  "anchor_name": "风云新能源汽车",
+                  "avatar_url": "https://p26-passport.byteacctimg.com/img/user-avatar/58390f5f386f573215e73ef560fd10d0~300x300.image",
+                  "room_id": "7678184915208407850",
+                  "open_url": "sslocal://livesaas?anchor_id=4030152714754116&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000SHerl_hwAPpm5WTSXJ1aL_sqaTE6Se0k&request_id=202608261858085426305C21B451AA615B&room_id=7678184915208407850&room_type=normal",
+                  "score": "10.0w 人次",
+                  "is_living": true,
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image"
+                },
+                {
+                  "anchor_id": "2419343928859779",
+                  "anchor_name": "科净威汽车用品旗舰店",
+                  "avatar_url": "https://p26-passport.byteacctimg.com/img/user-avatar/d0709973a5b66f740b7df3aabb0cc8cd~300x300.image",
+                  "room_id": "7675869916582808363",
+                  "open_url": "sslocal://livesaas?anchor_id=2419343928859779&enter_from_merge=live_search_section&enter_method=main_tab&open_id=e33581af-af96-4477-b85b-6373ed7a4b35&request_id=202608261858085426305C21B451AA615B&room_id=7675869916582808363&room_type=normal",
+                  "score": "10.0w 人次",
+                  "is_living": true,
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image"
+                },
+                {
+                  "anchor_id": "602997402118525",
+                  "anchor_name": "车仆官方旗舰店",
+                  "avatar_url": "https://p6-passport.byteacctimg.com/img/user-avatar/7d138997a4580c3d511c93aeaa4c032c~300x300.image",
+                  "room_id": "7676067577021795078",
+                  "open_url": "sslocal://livesaas?anchor_id=602997402118525&enter_from_merge=live_search_section&enter_method=main_tab&open_id=8c8ea2ad-279e-4f4d-8cc9-a99cf0cf75f0&request_id=202608261858085426305C21B451AA615B&room_id=7676067577021795078&room_type=normal",
+                  "score": "10.0w 人次",
+                  "is_living": true,
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image"
+                },
+                {
+                  "anchor_id": "2619458025164459",
+                  "anchor_name": "WURTH伍尔特官方旗舰店",
+                  "avatar_url": "https://p26-passport.byteacctimg.com/img/user-avatar/6153b9722ed75402ee5b59cf27338653~300x300.image",
+                  "room_id": "7676547906832173859",
+                  "open_url": "sslocal://livesaas?anchor_id=2619458025164459&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000kseUEQ1mAUkX1oDfu43JkZv4XlSQmqCW&request_id=202608261858085426305C21B451AA615B&room_id=7676547906832173859&room_type=normal",
+                  "score": "10.0w 人次",
+                  "is_living": true,
+                  "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image"
+                },
+                {
+                  "anchor_id": "3348454291816116",
+                  "anchor_name": "科净威香薰用品旗舰店",
+                  "avatar_url": "https://p6-passport.byteacctimg.com/img/user-avatar/461c4b0bd4cf9e087f84c5480d82ca36~300x300.image",
+                  "room_id": "7675867823809317632",
+                  "open_url": "sslocal://livesaas?anchor_id=3348454291816116&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000rYmCQAKZ5Ko9lKUCAP2pVDHNLF0WVSrk&request_id=202608261858085426305C21B451AA615B&room_id=7675867823809317632&room_type=normal",
+                  "score": "10.0w 人次",
+                  "is_living": true,
+                  "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image"
+                },
+                {
+                  "anchor_id": "2720666386449209",
+                  "anchor_name": "科净威香薰旗舰店",
+                  "avatar_url": "https://p9-passport.byteacctimg.com/img/user-avatar/67ceb0a11bd4fe5354f23a9c9c19e707~300x300.image",
+                  "room_id": "7677725157498047272",
+                  "open_url": "sslocal://livesaas?anchor_id=2720666386449209&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000IXLPsOXi3DMh5AgtvwuFDWvXTawoSYPO&request_id=202608261858085426305C21B451AA615B&room_id=7677725157498047272&room_type=normal",
+                  "score": "10.0w 人次",
+                  "is_living": true,
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image"
+                },
+                {
+                  "anchor_id": "803070352046032",
+                  "anchor_name": "端庄优雅沙滩vj5",
+                  "avatar_url": "https://p9-passport.byteacctimg.com/img/mosaic-legacy/3792/5112637127~120x256.image",
+                  "room_id": "7677682654837279529",
+                  "open_url": "sslocal://livesaas?anchor_id=803070352046032&enter_from_merge=live_search_section&enter_method=main_tab&open_id=4ea16bb5-74d1-4deb-9daf-982b5ce90282&request_id=202608261858085426305C21B451AA615B&room_id=7677682654837279529&room_type=normal",
+                  "score": "10.0w 人次",
+                  "is_living": true,
+                  "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image"
+                },
+                {
+                  "anchor_id": "2081816899750569",
+                  "anchor_name": "科净威汽车零部件旗舰店",
+                  "avatar_url": "https://p26-passport.byteacctimg.com/img/user-avatar/3342fb76d6e30664c1db303d2f2149f3~300x300.image",
+                  "room_id": "7677026030179896104",
+                  "open_url": "sslocal://livesaas?anchor_id=2081816899750569&enter_from_merge=live_search_section&enter_method=main_tab&open_id=_000kjTxSjL271ed4XaSrPsvSR5-cljTNnfX&request_id=202608261858085426305C21B451AA615B&room_id=7677026030179896104&room_type=normal",
+                  "score": "10.0w 人次",
+                  "is_living": true,
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image"
+                },
+                {
+                  "anchor_id": "3350964743970095",
+                  "anchor_name": "德耳曼官方旗舰店",
+                  "avatar_url": "https://p6-passport.byteacctimg.com/img/user-avatar/340fb8c9d2496b203884ec19742aaf7e~300x300.image",
+                  "room_id": "7675804086243019570",
+                  "open_url": "sslocal://livesaas?anchor_id=3350964743970095&enter_from_merge=live_search_section&enter_method=main_tab&open_id=386260cb-3aaa-46d2-9e40-2c4957fe9f53&request_id=202608261858085426305C21B451AA615B&room_id=7675804086243019570&room_type=normal",
+                  "score": "10.0w 人次",
+                  "is_living": true,
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6c9bb46c5af17ea321330556a895ac76~tplv-resize:0:0.image",
+                  "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image"
+                }
+              ],
+              "bubble_info": null
+            },
+            {
+              "rank_name": "作者榜",
+              "open_url": "sslocal://webview?url=https%3A%2F%2Fis.snssdk.com%2Fmotor%2Finapp%2Fugcs%2Fmp-rank.html&should_append_common_param=1&enable_resume_pause_js=1&bounce_disable=1&back_button_color=white&status_bar_color=white&hide_bar=1&hide_status_bar=1&title=%E6%87%82%E8%BD%A6%E5%8F%B7%E6%A6%9C%E5%8D%95",
+              "rank_code": 17,
+              "more_text": "查看完整作者榜",
+              "have_children_rank": false,
+              "tops": [
+                {
+                  "name": "枫行视界",
+                  "description": "指数：872.48",
+                  "avatar_url": "https://sf6-cdn-tos.toutiaostatic.com/img/user-avatar/93a6ec9ce9bb4812a3f9ff05529ed6aa~300x300.image",
+                  "detail_url": "sslocal://profile?uid=9215615036",
+                  "id": "9215615036",
+                  "score_total": 872.48,
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image"
+                },
+                {
+                  "name": "爱车兵团",
+                  "description": "指数：829.91",
+                  "avatar_url": "https://sf1-cdn-tos.toutiaostatic.com/img/user-avatar/be8b68331698f341ad8197f61e1dd2f7~300x300.image",
+                  "detail_url": "sslocal://profile?uid=59091102527",
+                  "id": "59091102527",
+                  "score_total": 829.91,
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image"
+                },
+                {
+                  "name": "玩车教授",
+                  "description": "指数：824.83",
+                  "avatar_url": "https://sf3-cdn-tos.toutiaostatic.com/img/user-avatar/d73ce8ceefb2c436dd76751d2c4373fa~300x300.image",
+                  "detail_url": "sslocal://profile?uid=1931859874",
+                  "id": "1931859874",
+                  "score_total": 824.83,
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image"
+                },
+                {
+                  "name": "大家车言论",
+                  "description": "指数：795.73",
+                  "avatar_url": "https://sf6-cdn-tos.toutiaostatic.com/img/user-avatar/6d7d791f9b7ff0a1d36811e936428f44~300x300.image",
+                  "detail_url": "sslocal://profile?uid=4624361651",
+                  "id": "4624361651",
+                  "score_total": 795.73,
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+                  "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image"
+                },
+                {
+                  "name": "大虾试车真香",
+                  "description": "指数：792.55",
+                  "avatar_url": "https://sf3-cdn-tos.bdxiguastatic.com/img/user-avatar/88ae10385161a83d5a6e7f8c527e2b6e~300x300.image",
+                  "detail_url": "sslocal://profile?uid=286296613600541",
+                  "id": "286296613600541",
+                  "score_total": 792.55,
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+                  "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image"
+                },
+                {
+                  "name": "车主指南",
+                  "description": "指数：782.05",
+                  "avatar_url": "https://sf6-cdn-tos.toutiaostatic.com/img/user-avatar/947698e552487f3e111085f96d477897~300x300.image",
+                  "detail_url": "sslocal://profile?uid=6595985995",
+                  "id": "6595985995",
+                  "score_total": 782.05,
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image"
+                },
+                {
+                  "name": "Y车评",
+                  "description": "指数：773.69",
+                  "avatar_url": "https://sf1-cdn-tos.toutiaostatic.com/img/user-avatar/76247a53d36bd776a1239b0d64babb21~300x300.image",
+                  "detail_url": "sslocal://profile?uid=5565291449",
+                  "id": "5565291449",
+                  "score_total": 773.69,
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+                  "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image"
+                },
+                {
+                  "name": "老司机出品",
+                  "description": "指数：768.91",
+                  "avatar_url": "https://sf6-cdn-tos.toutiaostatic.com/img/user-avatar/374528842dcfc983072690f7c715b58a~300x300.image",
+                  "detail_url": "sslocal://profile?uid=55435878150",
+                  "id": "55435878150",
+                  "score_total": 768.91,
+                  "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image"
+                },
+                {
+                  "name": "大飙车",
+                  "description": "指数：762.22",
+                  "avatar_url": "https://sf6-cdn-tos.bdxiguastatic.com/img/user-avatar/6fedb667863686a1f5ddc23d0630a9e1~300x300.image",
+                  "detail_url": "sslocal://profile?uid=51719180939",
+                  "id": "51719180939",
+                  "score_total": 762.22,
+                  "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+                  "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6c9bb46c5af17ea321330556a895ac76~tplv-resize:0:0.image"
+                }
+              ],
+              "bubble_info": null
+            }
+          ],
+          "have_children_rank": true,
+          "tops": [],
+          "bubble_info": null
+        }
+      ],
+      "hot_search_roll_info_v2": [
+        {
+          "default": "10万以内最好十款车",
+          "text": "10万以内最好十款车 | 奕境X9正式预售",
+          "origin": "sort|ad",
+          "supply_type": "7",
+          "recall_type": "longtail_hot_search_words",
+          "word_list": [
+            {
+              "series_name": "10万以内最好十款车",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=10%E4%B8%87%E4%BB%A5%E5%86%85%E6%9C%80%E5%A5%BD%E5%8D%81%E6%AC%BE%E8%BD%A6",
+              "origin": "sort",
+              "search_mode": "predict",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "6199659834113879342",
+                "words_position": 0,
+                "words_content": "10万以内最好十款车",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "6199659834113879342",
+              "supply_type": "7",
+              "recall_type": "longtail_hot_search_words"
+            },
+            {
+              "origin": "ad",
+              "url": "sslocal://webview?status_bar_color=black&title=%E5%A5%95%E5%A2%83X9%E6%AD%A3%E5%BC%8F%E9%A2%84%E5%94%AE&url=https%3A%2F%2Fm.dcdapp.com%2Flandingpage%2Fdcar%2F2026%2Fyjx9%2F0821%2Fddze%2F%3Fad_id%3D7674949458638950425%26ad_price_type%3Dcpt%26cid%3D7674950518141095961%26convert_id%3DE1QjMAczywQxs-PY4lOffL-QuHW0gif-3qBijITHWd4NgKcS7gvtsP_GjwurfIpnLeIAgKutFMUh-hkZootM7o9m3_fIioA5MQ_KUVLBd5pQ6y2J_kAloNHCvBTbUNBERfWKedFKNdFhYvfUAqpzHottEtA1SmD4cB-0reWiZWCzT1GvyEElOjFrTVWKnJ4ciZzSCw9xfvIBi0aOMsaDfN07xd4NlbX6UEiyC0une-LKGpN2BnPTTL_rjhv7FeQl%26image_mode%3D68%26req_id%3D202608261858085426305C21B451AA615B%26rit%3D8000155%26target_brush_number%3D0",
+              "icon_url": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/0c5d0ecc52407845c9ffd94593d634c7",
+              "dark_icon_url": "https://p3-dcd.byteimg.com/obj/tos-cn-i-dcdx/89239bbfffd517e3fbec0eece28558a4",
+              "series_name": "奕境X9正式预售",
+              "search_mode": "predict",
+              "raw_spread_data": {
+                "dealer_order_id": "",
+                "ad_group_id_str": "0",
+                "image_mode": 68,
+                "is_preview": false,
+                "open_url": "sslocal://webview?status_bar_color=black&title=%E5%A5%95%E5%A2%83X9%E6%AD%A3%E5%BC%8F%E9%A2%84%E5%94%AE&url=https%3A%2F%2Fm.dcdapp.com%2Flandingpage%2Fdcar%2F2026%2Fyjx9%2F0821%2Fddze%2F%3Fad_id%3D7674949458638950425%26ad_price_type%3Dcpt%26cid%3D7674950518141095961%26convert_id%3DE1QjMAczywQxs-PY4lOffL-QuHW0gif-3qBijITHWd4NgKcS7gvtsP_GjwurfIpnLeIAgKutFMUh-hkZootM7o9m3_fIioA5MQ_KUVLBd5pQ6y2J_kAloNHCvBTbUNBERfWKedFKNdFhYvfUAqpzHottEtA1SmD4cB-0reWiZWCzT1GvyEElOjFrTVWKnJ4ciZzSCw9xfvIBi0aOMsaDfN07xd4NlbX6UEiyC0une-LKGpN2BnPTTL_rjhv7FeQl%26image_mode%3D68%26req_id%3D202608261858085426305C21B451AA615B%26rit%3D8000155%26target_brush_number%3D0",
+                "ad_business_group": "品牌广告",
+                "track_url_list": [
+                  "https://12BE100005-0.m.ctrmi.cn/t/ad2?eid=12BE100005&sdr=clt&ac=0&os=2&ts=__TS__&bdid=1909e6a6740af11fa3c49b92a25cb4c961a5607f0951586d9c4b2e285fd414c5&rqid=__REQID__&ua=__UA__&ip=__IP__"
+                ],
+                "web_url": "https://m.dcdapp.com/landingpage/dcar/2026/yjx9/0821/ddze/?ad_id=7674949458638950425&ad_price_type=cpt&cid=7674950518141095961&convert_id=E1QjMAczywQxs-PY4lOffL-QuHW0gif-3qBijITHWd4NgKcS7gvtsP_GjwurfIpnLeIAgKutFMUh-hkZootM7o9m3_fIioA5MQ_KUVLBd5pQ6y2J_kAloNHCvBTbUNBERfWKedFKNdFhYvfUAqpzHottEtA1SmD4cB-0reWiZWCzT1GvyEElOjFrTVWKnJ4ciZzSCw9xfvIBi0aOMsaDfN07xd4NlbX6UEiyC0une-LKGpN2BnPTTL_rjhv7FeQl&image_mode=68&req_id=202608261858085426305C21B451AA615B&rit=8000155&target_brush_number=0",
+                "web_title": "奕境X9正式预售",
+                "rit": 8000155,
+                "text": "奕境X9正式预售",
+                "click_track_url_list": [
+                  "https://12BE100005-1.m.ctrmi.cn/t/ad2?eid=12BE100005&sdr=clt&ac=1&os=2&ts=__TS__&bdid=1909e6a6740af11fa3c49b92a25cb4c961a5607f0951586d9c4b2e285fd414c5&rqid=__REQID__&ua=__UA__&ip=__IP__&rd="
+                ],
+                "label": "广告",
+                "channel_id": 999999,
+                "id_str": "7674949458638950425",
+                "ad_log_id": "202608261858085426305C21B451AA615B",
+                "ad_price_type": "cpt",
+                "rit_str": "8000155",
+                "materiel_id": "7674950518141095961",
+                "log_extra": "{\"target_fixed_position\":\"0\",\"ad_id\":\"7674949458638950425\",\"click_track_url_list\":[\"https://12BE100005-1.m.ctrmi.cn/t/ad2?eid=12BE100005&sdr=clt&ac=1&os=2&ts=__TS__&bdid=1909e6a6740af11fa3c49b92a25cb4c961a5607f0951586d9c4b2e285fd414c5&rqid=__REQID__&ua=__UA__&ip=__IP__&rd=\"],\"ad_rit\":\"8000155\",\"is_dcar_ad\":1,\"track_url_list\":[\"https://12BE100005-0.m.ctrmi.cn/t/ad2?eid=12BE100005&sdr=clt&ac=0&os=2&ts=__TS__&bdid=1909e6a6740af11fa3c49b92a25cb4c961a5607f0951586d9c4b2e285fd414c5&rqid=__REQID__&ua=__UA__&ip=__IP__\"],\"req_id\":\"202608261858085426305C21B451AA615B\",\"target_brush_number\":\"0\",\"bdid\":\"1909e6a6740af11fa3c49b92a25cb4c961a5607f0951586d9c4b2e285fd414c5\",\"style_tpl_id\":80,\"target_sub_brand_id\":\"0\",\"vids\":\"8910314,8972107,13172693,17183140,3757179,4195048\",\"channel_id\":999999,\"target_brand_id\":\"-1\",\"materiel_str\":\"7674950518141095961\",\"is_preview\":0,\"target_channel_id\":\"999999\",\"target_series_id\":\"-1\",\"rit\":\"8000155\",\"req_rit\":\"8000155\",\"start_time\":1787068800,\"end_time\":1788019199,\"master_aid\":0,\"target_rit\":\"8000155\",\"ad_price_type\":\"cpt\",\"did\":\"0\",\"image_mode\":68,\"sort_log_info\":\"{\\\"hash_gid\\\":7612758193661822675,\\\"series_id\\\":26057}\",\"date\":\"2026-08-19\",\"bucket_num\":0,\"ad_business_group\":\"品牌广告\",\"convert_id\":\"E1QjMAczywQxs-PY4lOffL-QuHW0gif-3qBijITHWd4NgKcS7gvtsP_GjwurfIpnLeIAgKutFMUh-hkZootM7o9m3_fIioA5MQ_KUVLBd5pQ6y2J_kAloNHCvBTbUNBERfWKedFKNdFhYvfUAqpzHottEtA1SmD4cB-0reWiZWCzT1GvyEElOjFrTVWKnJ4ciZzSCw9xfvIBi0aOMsaDfN07xd4NlbX6UEiyC0une-LKGpN2BnPTTL_rjhv7FeQl\",\"item_index\":0,\"external_action\":\"cpm\",\"target_city\":\"未知\",\"version\":\"0\"}",
+                "ad_business_type": 1,
+                "dealer_order_id_str": "",
+                "convert_id": "E1QjMAczywQxs-PY4lOffL-QuHW0gif-3qBijITHWd4NgKcS7gvtsP_GjwurfIpnLeIAgKutFMUh-hkZootM7o9m3_fIioA5MQ_KUVLBd5pQ6y2J_kAloNHCvBTbUNBERfWKedFKNdFhYvfUAqpzHottEtA1SmD4cB-0reWiZWCzT1GvyEElOjFrTVWKnJ4ciZzSCw9xfvIBi0aOMsaDfN07xd4NlbX6UEiyC0une-LKGpN2BnPTTL_rjhv7FeQl",
+                "id": 7674949458638950000,
+                "materiel_str": "7674950518141095961"
+              }
+            },
+            {
+              "series_id": "99",
+              "series_name": "奥迪A6L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA6L",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "99",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "99",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5179987288159094109",
+                "words_position": 1,
+                "words_content": "奥迪A6L",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "5179987288159094109",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "4302",
+              "series_name": "奥迪A7L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA7L",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "4302",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "4302",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5711264162501899280",
+                "words_position": 2,
+                "words_content": "奥迪A7L",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "5711264162501899280",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_name": "迈腾b9380尊贵大迈包",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%BF%88%E8%85%BEb9380%E5%B0%8A%E8%B4%B5%E5%A4%A7%E8%BF%88%E5%8C%85",
+              "origin": "sort",
+              "search_mode": "predict",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "9068699176573048563",
+                "words_position": 3,
+                "words_content": "迈腾b9380尊贵大迈包",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "9068699176573048563",
+              "supply_type": "7",
+              "recall_type": "longtail_hot_search_words"
+            },
+            {
+              "series_id": "579",
+              "series_name": "蒙迪欧",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%92%99%E8%BF%AA%E6%AC%A7",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "579",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "579",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "1319139343265468294",
+                "words_position": 4,
+                "words_content": "蒙迪欧",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "1319139343265468294",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "8154",
+              "series_name": "轻骑铃木 优驿UE125T",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%BD%BB%E9%AA%91%E9%93%83%E6%9C%A8+%E4%BC%98%E9%A9%BFUE125T",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "8154",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "8154",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "8359028026513381795",
+                "words_position": 5,
+                "words_content": "轻骑铃木 优驿UE125T",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "8359028026513381795",
+              "supply_type": "2",
+              "recall_type": "justviewover5"
+            },
+            {
+              "series_id": "5364",
+              "series_name": "奥迪Q6",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAQ6",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "5364",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "5364",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7680090134492221380",
+                "words_position": 6,
+                "words_content": "奥迪Q6",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "7680090134492221380",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            }
+          ],
+          "discovery_words": [
+            {
+              "series_id": "5",
+              "series_name": "丰田",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E4%B8%B0%E7%94%B0",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "query_content_id": "5",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "5",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 8,
+                "words_content": "丰田",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "3736",
+              "series_name": "凯迪拉克CT5",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%87%AF%E8%BF%AA%E6%8B%89%E5%85%8BCT5",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "query_content_id": "3736",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "3736",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "6319572176766619016",
+                "words_position": 9,
+                "words_content": "凯迪拉克CT5",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "6319572176766619016",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "16",
+              "series_name": "比亚迪",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E6%AF%94%E4%BA%9A%E8%BF%AA",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "query_content_id": "16",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "16",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 10,
+                "words_content": "比亚迪",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "145",
+              "series_name": "宝马3系",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%AE%9D%E9%A9%AC3%E7%B3%BB",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "query_content_id": "145",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "145",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "8980837441458732700",
+                "words_position": 11,
+                "words_content": "宝马3系",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "8980837441458732700",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "2",
+              "series_name": "奥迪",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AA",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "query_content_id": "2",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "2",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 12,
+                "words_content": "奥迪",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "99",
+              "series_name": "奥迪A6L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA6L",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "query_content_id": "99",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "99",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5179987288159094109",
+                "words_position": 13,
+                "words_content": "奥迪A6L",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "5179987288159094109",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "12",
+              "series_name": "别克",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%88%AB%E5%85%8B",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "query_content_id": "12",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "12",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 14,
+                "words_content": "别克",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "146",
+              "series_name": "宝马5系",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%AE%9D%E9%A9%AC5%E7%B3%BB",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "query_content_id": "146",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "146",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7876109541144994816",
+                "words_position": 15,
+                "words_content": "宝马5系",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "7876109541144994816",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "63",
+              "series_name": "特斯拉",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E7%89%B9%E6%96%AF%E6%8B%89",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "query_content_id": "63",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "63",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 16,
+                "words_content": "特斯拉",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "212",
+              "series_name": "奔驰C级",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%94%E9%A9%B0C%E7%BA%A7",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/d737a3846c6fd24107afebbc78781c49~tplv-resize:0:0.image",
+              "query_content_id": "212",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "212",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "1218412784499548705",
+                "words_position": 17,
+                "words_content": "奔驰C级",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "1218412784499548705",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            }
+          ],
+          "hot_search_words": [
+            {
+              "title": "9月首周新能源销量分析",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D9%25E6%259C%2588%25E9%25A6%2596%25E5%2591%25A8%25E6%2596%25B0%25E8%2583%25BD%25E6%25BA%2590%25E9%2594%2580%25E9%2587%258F%25E5%2588%2586%25E6%259E%2590",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "全新斯柯达速派谍照曝光",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%2585%25A8%25E6%2596%25B0%25E6%2596%25AF%25E6%259F%25AF%25E8%25BE%25BE%25E9%2580%259F%25E6%25B4%25BE%25E8%25B0%258D%25E7%2585%25A7%25E6%259B%259D%25E5%2585%2589",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "奇瑞新SUV命名“舒享家”",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%25A5%2587%25E7%2591%259E%25E6%2596%25B0SUV%25E5%2591%25BD%25E5%2590%258D%25E2%2580%259C%25E8%2588%2592%25E4%25BA%25AB%25E5%25AE%25B6%25E2%2580%259D",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "丰田回应工厂停产",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E4%25B8%25B0%25E7%2594%25B0%25E5%259B%259E%25E5%25BA%2594%25E5%25B7%25A5%25E5%258E%2582%25E5%2581%259C%25E4%25BA%25A7",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "捷途旅行者越野挑战实测",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%258D%25B7%25E9%2580%2594%25E6%2597%2585%25E8%25A1%258C%25E8%2580%2585%25E8%25B6%258A%25E9%2587%258E%25E6%258C%2591%25E6%2588%2598%25E5%25AE%259E%25E6%25B5%258B",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "特斯拉上海工厂第200万辆车下线",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E7%2589%25B9%25E6%2596%25AF%25E6%258B%2589%25E4%25B8%258A%25E6%25B5%25B7%25E5%25B7%25A5%25E5%258E%2582%25E7%25AC%25AC200%25E4%25B8%2587%25E8%25BE%2586%25E8%25BD%25A6%25E4%25B8%258B%25E7%25BA%25BF",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "比亚迪海豹在巴西上市",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%25AF%2594%25E4%25BA%259A%25E8%25BF%25AA%25E6%25B5%25B7%25E8%25B1%25B9%25E5%259C%25A8%25E5%25B7%25B4%25E8%25A5%25BF%25E4%25B8%258A%25E5%25B8%2582",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "奥迪Activesphere概念车亮相",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%25A5%25A5%25E8%25BF%25AAActivesphere%25E6%25A6%2582%25E5%25BF%25B5%25E8%25BD%25A6%25E4%25BA%25AE%25E7%259B%25B8",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "方程豹豹5配置信息",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6c9bb46c5af17ea321330556a895ac76~tplv-resize:0:0.image",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%2596%25B9%25E7%25A8%258B%25E8%25B1%25B9%25E8%25B1%25B95%25E9%2585%258D%25E7%25BD%25AE%25E4%25BF%25A1%25E6%2581%25AF",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            }
+          ],
+          "req_id": "202608261858085426305C21B451AA615B",
+          "item_id": 6199659834113879342,
+          "track": {
+            "impr_id": "202608261858085426305C21B451AA615B",
+            "group_id": "6199659834113879342",
+            "words_content": "10万以内最好十款车",
+            "words_source": "predict",
+            "words_position": 0,
+            "page_id": "page_category",
+            "preset_words_info_map": "{\"is_long_size\":\"0\",\"recall_type\":\"longtail_hot_search_words\",\"scenes_id\":\"187\",\"sub_title\":\"\",\"button_text\":\"\",\"recommend_tag\":\"17\",\"supply_type\":\"7\",\"bot_query\":\"10万以内最好十款车\",\"ai_hook_category\":\"0\",\"main_title\":\"10万以内最好十款车\"}",
+            "search_position": "main"
+          },
+          "tag_color": "#D18700",
+          "tag_color_dark": "#B89325",
+          "tag_border_color": "#D18700",
+          "tag_border_color_dark": "#B89325",
+          "tag_style": {
+            "tag_color": "#636675",
+            "tag_color_dark": "#636675",
+            "immersion_tag_color": "#D5D6D7",
+            "tag_border_color": [
+              "#DFE1E8"
+            ],
+            "tag_border_color_dark": [
+              "#44444D"
+            ],
+            "immersion_border_color": [
+              "#626265"
+            ]
+          }
+        },
+        {
+          "default": "奥迪A6L",
+          "text": "奥迪A6L | 奥迪A7L",
+          "origin": "sort|sort",
+          "supply_type": "2|2",
+          "recall_type": "justviewover720|justviewover720",
+          "word_list": [
+            {
+              "series_id": "4302",
+              "series_name": "奥迪A7L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA7L",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "4302",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "4302",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5711264162501899280",
+                "words_position": 0,
+                "words_content": "奥迪A7L",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "5711264162501899280",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_name": "10万以内最好十款车",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=10%E4%B8%87%E4%BB%A5%E5%86%85%E6%9C%80%E5%A5%BD%E5%8D%81%E6%AC%BE%E8%BD%A6",
+              "origin": "sort",
+              "search_mode": "predict",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "6199659834113879342",
+                "words_position": 1,
+                "words_content": "10万以内最好十款车",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "6199659834113879342",
+              "supply_type": "7",
+              "recall_type": "longtail_hot_search_words"
+            },
+            {
+              "series_id": "99",
+              "series_name": "奥迪A6L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA6L",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "99",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "99",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5179987288159094109",
+                "words_position": 2,
+                "words_content": "奥迪A6L",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "5179987288159094109",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_name": "迈腾b9380尊贵大迈包",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%BF%88%E8%85%BEb9380%E5%B0%8A%E8%B4%B5%E5%A4%A7%E8%BF%88%E5%8C%85",
+              "origin": "sort",
+              "search_mode": "predict",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "9068699176573048563",
+                "words_position": 3,
+                "words_content": "迈腾b9380尊贵大迈包",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "9068699176573048563",
+              "supply_type": "7",
+              "recall_type": "longtail_hot_search_words"
+            },
+            {
+              "series_id": "579",
+              "series_name": "蒙迪欧",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%92%99%E8%BF%AA%E6%AC%A7",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "579",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "579",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "1319139343265468294",
+                "words_position": 4,
+                "words_content": "蒙迪欧",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "1319139343265468294",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "8154",
+              "series_name": "轻骑铃木 优驿UE125T",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%BD%BB%E9%AA%91%E9%93%83%E6%9C%A8+%E4%BC%98%E9%A9%BFUE125T",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "8154",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "8154",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "8359028026513381795",
+                "words_position": 5,
+                "words_content": "轻骑铃木 优驿UE125T",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "8359028026513381795",
+              "supply_type": "2",
+              "recall_type": "justviewover5"
+            },
+            {
+              "series_id": "5364",
+              "series_name": "奥迪Q6",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAQ6",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "5364",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "5364",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7680090134492221380",
+                "words_position": 6,
+                "words_content": "奥迪Q6",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "7680090134492221380",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "9235",
+              "series_name": "五菱星光PHEV",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E4%BA%94%E8%8F%B1%E6%98%9F%E5%85%89PHEV",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "9235",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "9235",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7917618180606962829",
+                "words_position": 7,
+                "words_content": "五菱星光PHEV",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "7917618180606962829",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            }
+          ],
+          "discovery_words": [
+            {
+              "series_id": "5",
+              "series_name": "丰田",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E4%B8%B0%E7%94%B0",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "query_content_id": "5",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "5",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 8,
+                "words_content": "丰田",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "3736",
+              "series_name": "凯迪拉克CT5",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%87%AF%E8%BF%AA%E6%8B%89%E5%85%8BCT5",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "query_content_id": "3736",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "3736",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "6319572176766619016",
+                "words_position": 9,
+                "words_content": "凯迪拉克CT5",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "6319572176766619016",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "16",
+              "series_name": "比亚迪",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E6%AF%94%E4%BA%9A%E8%BF%AA",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "query_content_id": "16",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "16",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 10,
+                "words_content": "比亚迪",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "145",
+              "series_name": "宝马3系",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%AE%9D%E9%A9%AC3%E7%B3%BB",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "query_content_id": "145",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "145",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "8980837441458732700",
+                "words_position": 11,
+                "words_content": "宝马3系",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "8980837441458732700",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "2",
+              "series_name": "奥迪",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AA",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "query_content_id": "2",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "2",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 12,
+                "words_content": "奥迪",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "99",
+              "series_name": "奥迪A6L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA6L",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "query_content_id": "99",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "99",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5179987288159094109",
+                "words_position": 13,
+                "words_content": "奥迪A6L",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "5179987288159094109",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "12",
+              "series_name": "别克",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%88%AB%E5%85%8B",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "query_content_id": "12",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "12",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 14,
+                "words_content": "别克",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "146",
+              "series_name": "宝马5系",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%AE%9D%E9%A9%AC5%E7%B3%BB",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "query_content_id": "146",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "146",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7876109541144994816",
+                "words_position": 15,
+                "words_content": "宝马5系",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "7876109541144994816",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "63",
+              "series_name": "特斯拉",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E7%89%B9%E6%96%AF%E6%8B%89",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "query_content_id": "63",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "63",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 16,
+                "words_content": "特斯拉",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "212",
+              "series_name": "奔驰C级",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%94%E9%A9%B0C%E7%BA%A7",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/d737a3846c6fd24107afebbc78781c49~tplv-resize:0:0.image",
+              "query_content_id": "212",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "212",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "1218412784499548705",
+                "words_position": 17,
+                "words_content": "奔驰C级",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "1218412784499548705",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            }
+          ],
+          "hot_search_words": [
+            {
+              "title": "9月首周新能源销量分析",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D9%25E6%259C%2588%25E9%25A6%2596%25E5%2591%25A8%25E6%2596%25B0%25E8%2583%25BD%25E6%25BA%2590%25E9%2594%2580%25E9%2587%258F%25E5%2588%2586%25E6%259E%2590",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "全新斯柯达速派谍照曝光",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%2585%25A8%25E6%2596%25B0%25E6%2596%25AF%25E6%259F%25AF%25E8%25BE%25BE%25E9%2580%259F%25E6%25B4%25BE%25E8%25B0%258D%25E7%2585%25A7%25E6%259B%259D%25E5%2585%2589",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "奇瑞新SUV命名“舒享家”",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%25A5%2587%25E7%2591%259E%25E6%2596%25B0SUV%25E5%2591%25BD%25E5%2590%258D%25E2%2580%259C%25E8%2588%2592%25E4%25BA%25AB%25E5%25AE%25B6%25E2%2580%259D",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "丰田回应工厂停产",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E4%25B8%25B0%25E7%2594%25B0%25E5%259B%259E%25E5%25BA%2594%25E5%25B7%25A5%25E5%258E%2582%25E5%2581%259C%25E4%25BA%25A7",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "捷途旅行者越野挑战实测",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%258D%25B7%25E9%2580%2594%25E6%2597%2585%25E8%25A1%258C%25E8%2580%2585%25E8%25B6%258A%25E9%2587%258E%25E6%258C%2591%25E6%2588%2598%25E5%25AE%259E%25E6%25B5%258B",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "特斯拉上海工厂第200万辆车下线",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E7%2589%25B9%25E6%2596%25AF%25E6%258B%2589%25E4%25B8%258A%25E6%25B5%25B7%25E5%25B7%25A5%25E5%258E%2582%25E7%25AC%25AC200%25E4%25B8%2587%25E8%25BE%2586%25E8%25BD%25A6%25E4%25B8%258B%25E7%25BA%25BF",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "比亚迪海豹在巴西上市",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%25AF%2594%25E4%25BA%259A%25E8%25BF%25AA%25E6%25B5%25B7%25E8%25B1%25B9%25E5%259C%25A8%25E5%25B7%25B4%25E8%25A5%25BF%25E4%25B8%258A%25E5%25B8%2582",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "奥迪Activesphere概念车亮相",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%25A5%25A5%25E8%25BF%25AAActivesphere%25E6%25A6%2582%25E5%25BF%25B5%25E8%25BD%25A6%25E4%25BA%25AE%25E7%259B%25B8",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "方程豹豹5配置信息",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6c9bb46c5af17ea321330556a895ac76~tplv-resize:0:0.image",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%2596%25B9%25E7%25A8%258B%25E8%25B1%25B9%25E8%25B1%25B95%25E9%2585%258D%25E7%25BD%25AE%25E4%25BF%25A1%25E6%2581%25AF",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            }
+          ],
+          "req_id": "202608261858085426305C21B451AA615B",
+          "item_id": 5179987288159094109,
+          "track": {
+            "impr_id": "202608261858085426305C21B451AA615B",
+            "group_id": "5179987288159094109",
+            "words_content": "奥迪A6L",
+            "words_source": "predict",
+            "words_position": 1,
+            "page_id": "page_category",
+            "preset_words_info_map": "{\"ai_hook_category\":\"0\",\"button_text\":\"\",\"main_title\":\"奥迪A6L\",\"sub_title\":\"\",\"is_long_size\":\"0\",\"recommend_tag\":\"17\",\"recall_type\":\"justviewover720\",\"supply_type\":\"2\",\"bot_query\":\"奥迪A6L\",\"scenes_id\":\"187\"}",
+            "search_position": "main"
+          },
+          "tag_color": "#D18700",
+          "tag_color_dark": "#B89325",
+          "tag_border_color": "#D18700",
+          "tag_border_color_dark": "#B89325",
+          "tag_style": {
+            "tag_color": "#636675",
+            "tag_color_dark": "#636675",
+            "immersion_tag_color": "#D5D6D7",
+            "tag_border_color": [
+              "#DFE1E8"
+            ],
+            "tag_border_color_dark": [
+              "#44444D"
+            ],
+            "immersion_border_color": [
+              "#626265"
+            ]
+          }
+        },
+        {
+          "default": "奥迪A7L",
+          "text": "奥迪A7L | 迈腾b9380尊贵大迈包",
+          "origin": "sort|sort",
+          "supply_type": "2|7",
+          "recall_type": "justviewover720|longtail_hot_search_words",
+          "word_list": [
+            {
+              "series_name": "迈腾b9380尊贵大迈包",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%BF%88%E8%85%BEb9380%E5%B0%8A%E8%B4%B5%E5%A4%A7%E8%BF%88%E5%8C%85",
+              "origin": "sort",
+              "search_mode": "predict",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "9068699176573048563",
+                "words_position": 0,
+                "words_content": "迈腾b9380尊贵大迈包",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "9068699176573048563",
+              "supply_type": "7",
+              "recall_type": "longtail_hot_search_words"
+            },
+            {
+              "series_name": "10万以内最好十款车",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=10%E4%B8%87%E4%BB%A5%E5%86%85%E6%9C%80%E5%A5%BD%E5%8D%81%E6%AC%BE%E8%BD%A6",
+              "origin": "sort",
+              "search_mode": "predict",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "6199659834113879342",
+                "words_position": 1,
+                "words_content": "10万以内最好十款车",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "6199659834113879342",
+              "supply_type": "7",
+              "recall_type": "longtail_hot_search_words"
+            },
+            {
+              "series_id": "99",
+              "series_name": "奥迪A6L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA6L",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "99",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "99",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5179987288159094109",
+                "words_position": 2,
+                "words_content": "奥迪A6L",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "5179987288159094109",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "4302",
+              "series_name": "奥迪A7L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA7L",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "4302",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "4302",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5711264162501899280",
+                "words_position": 3,
+                "words_content": "奥迪A7L",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "5711264162501899280",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "579",
+              "series_name": "蒙迪欧",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%92%99%E8%BF%AA%E6%AC%A7",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "579",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "579",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "1319139343265468294",
+                "words_position": 4,
+                "words_content": "蒙迪欧",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "1319139343265468294",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "8154",
+              "series_name": "轻骑铃木 优驿UE125T",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%BD%BB%E9%AA%91%E9%93%83%E6%9C%A8+%E4%BC%98%E9%A9%BFUE125T",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "8154",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "8154",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "8359028026513381795",
+                "words_position": 5,
+                "words_content": "轻骑铃木 优驿UE125T",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "8359028026513381795",
+              "supply_type": "2",
+              "recall_type": "justviewover5"
+            },
+            {
+              "series_id": "5364",
+              "series_name": "奥迪Q6",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAQ6",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "5364",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "5364",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7680090134492221380",
+                "words_position": 6,
+                "words_content": "奥迪Q6",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "7680090134492221380",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "9235",
+              "series_name": "五菱星光PHEV",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E4%BA%94%E8%8F%B1%E6%98%9F%E5%85%89PHEV",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "9235",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "9235",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7917618180606962829",
+                "words_position": 7,
+                "words_content": "五菱星光PHEV",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "7917618180606962829",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            }
+          ],
+          "discovery_words": [
+            {
+              "series_id": "5",
+              "series_name": "丰田",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E4%B8%B0%E7%94%B0",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "query_content_id": "5",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "5",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 8,
+                "words_content": "丰田",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "3736",
+              "series_name": "凯迪拉克CT5",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%87%AF%E8%BF%AA%E6%8B%89%E5%85%8BCT5",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "query_content_id": "3736",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "3736",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "6319572176766619016",
+                "words_position": 9,
+                "words_content": "凯迪拉克CT5",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "6319572176766619016",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "16",
+              "series_name": "比亚迪",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E6%AF%94%E4%BA%9A%E8%BF%AA",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "query_content_id": "16",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "16",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 10,
+                "words_content": "比亚迪",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "145",
+              "series_name": "宝马3系",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%AE%9D%E9%A9%AC3%E7%B3%BB",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "query_content_id": "145",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "145",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "8980837441458732700",
+                "words_position": 11,
+                "words_content": "宝马3系",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "8980837441458732700",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "2",
+              "series_name": "奥迪",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AA",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "query_content_id": "2",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "2",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 12,
+                "words_content": "奥迪",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "99",
+              "series_name": "奥迪A6L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA6L",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "query_content_id": "99",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "99",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5179987288159094109",
+                "words_position": 13,
+                "words_content": "奥迪A6L",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "5179987288159094109",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "12",
+              "series_name": "别克",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%88%AB%E5%85%8B",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "query_content_id": "12",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "12",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 14,
+                "words_content": "别克",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "146",
+              "series_name": "宝马5系",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%AE%9D%E9%A9%AC5%E7%B3%BB",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "query_content_id": "146",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "146",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7876109541144994816",
+                "words_position": 15,
+                "words_content": "宝马5系",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "7876109541144994816",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "63",
+              "series_name": "特斯拉",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E7%89%B9%E6%96%AF%E6%8B%89",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "query_content_id": "63",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "63",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 16,
+                "words_content": "特斯拉",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "212",
+              "series_name": "奔驰C级",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%94%E9%A9%B0C%E7%BA%A7",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/d737a3846c6fd24107afebbc78781c49~tplv-resize:0:0.image",
+              "query_content_id": "212",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "212",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "1218412784499548705",
+                "words_position": 17,
+                "words_content": "奔驰C级",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "1218412784499548705",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            }
+          ],
+          "hot_search_words": [
+            {
+              "title": "9月首周新能源销量分析",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D9%25E6%259C%2588%25E9%25A6%2596%25E5%2591%25A8%25E6%2596%25B0%25E8%2583%25BD%25E6%25BA%2590%25E9%2594%2580%25E9%2587%258F%25E5%2588%2586%25E6%259E%2590",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "全新斯柯达速派谍照曝光",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%2585%25A8%25E6%2596%25B0%25E6%2596%25AF%25E6%259F%25AF%25E8%25BE%25BE%25E9%2580%259F%25E6%25B4%25BE%25E8%25B0%258D%25E7%2585%25A7%25E6%259B%259D%25E5%2585%2589",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "奇瑞新SUV命名“舒享家”",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%25A5%2587%25E7%2591%259E%25E6%2596%25B0SUV%25E5%2591%25BD%25E5%2590%258D%25E2%2580%259C%25E8%2588%2592%25E4%25BA%25AB%25E5%25AE%25B6%25E2%2580%259D",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "丰田回应工厂停产",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E4%25B8%25B0%25E7%2594%25B0%25E5%259B%259E%25E5%25BA%2594%25E5%25B7%25A5%25E5%258E%2582%25E5%2581%259C%25E4%25BA%25A7",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "捷途旅行者越野挑战实测",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%258D%25B7%25E9%2580%2594%25E6%2597%2585%25E8%25A1%258C%25E8%2580%2585%25E8%25B6%258A%25E9%2587%258E%25E6%258C%2591%25E6%2588%2598%25E5%25AE%259E%25E6%25B5%258B",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "特斯拉上海工厂第200万辆车下线",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E7%2589%25B9%25E6%2596%25AF%25E6%258B%2589%25E4%25B8%258A%25E6%25B5%25B7%25E5%25B7%25A5%25E5%258E%2582%25E7%25AC%25AC200%25E4%25B8%2587%25E8%25BE%2586%25E8%25BD%25A6%25E4%25B8%258B%25E7%25BA%25BF",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "比亚迪海豹在巴西上市",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%25AF%2594%25E4%25BA%259A%25E8%25BF%25AA%25E6%25B5%25B7%25E8%25B1%25B9%25E5%259C%25A8%25E5%25B7%25B4%25E8%25A5%25BF%25E4%25B8%258A%25E5%25B8%2582",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "奥迪Activesphere概念车亮相",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%25A5%25A5%25E8%25BF%25AAActivesphere%25E6%25A6%2582%25E5%25BF%25B5%25E8%25BD%25A6%25E4%25BA%25AE%25E7%259B%25B8",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "方程豹豹5配置信息",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6c9bb46c5af17ea321330556a895ac76~tplv-resize:0:0.image",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%2596%25B9%25E7%25A8%258B%25E8%25B1%25B9%25E8%25B1%25B95%25E9%2585%258D%25E7%25BD%25AE%25E4%25BF%25A1%25E6%2581%25AF",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            }
+          ],
+          "req_id": "202608261858085426305C21B451AA615B",
+          "item_id": 5711264162501899280,
+          "track": {
+            "impr_id": "202608261858085426305C21B451AA615B",
+            "group_id": "5711264162501899280",
+            "words_content": "奥迪A7L",
+            "words_source": "predict",
+            "words_position": 2,
+            "page_id": "page_category",
+            "preset_words_info_map": "{\"ai_hook_category\":\"0\",\"main_title\":\"奥迪A7L\",\"recall_type\":\"justviewover720\",\"sub_title\":\"\",\"button_text\":\"\",\"scenes_id\":\"187\",\"is_long_size\":\"0\",\"recommend_tag\":\"17\",\"supply_type\":\"2\",\"bot_query\":\"奥迪A7L\"}",
+            "search_position": "main"
+          },
+          "tag_color": "#D18700",
+          "tag_color_dark": "#B89325",
+          "tag_border_color": "#D18700",
+          "tag_border_color_dark": "#B89325",
+          "tag_style": {
+            "tag_color": "#636675",
+            "tag_color_dark": "#636675",
+            "immersion_tag_color": "#D5D6D7",
+            "tag_border_color": [
+              "#DFE1E8"
+            ],
+            "tag_border_color_dark": [
+              "#44444D"
+            ],
+            "immersion_border_color": [
+              "#626265"
+            ]
+          }
+        },
+        {
+          "default": "迈腾b9380尊贵大迈包",
+          "text": "迈腾b9380尊贵大迈包 | 蒙迪欧",
+          "origin": "sort|sort",
+          "supply_type": "7|2",
+          "recall_type": "longtail_hot_search_words|justviewover720",
+          "word_list": [
+            {
+              "series_id": "579",
+              "series_name": "蒙迪欧",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%92%99%E8%BF%AA%E6%AC%A7",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "579",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "579",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "1319139343265468294",
+                "words_position": 0,
+                "words_content": "蒙迪欧",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "1319139343265468294",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_name": "10万以内最好十款车",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=10%E4%B8%87%E4%BB%A5%E5%86%85%E6%9C%80%E5%A5%BD%E5%8D%81%E6%AC%BE%E8%BD%A6",
+              "origin": "sort",
+              "search_mode": "predict",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "6199659834113879342",
+                "words_position": 1,
+                "words_content": "10万以内最好十款车",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "6199659834113879342",
+              "supply_type": "7",
+              "recall_type": "longtail_hot_search_words"
+            },
+            {
+              "series_id": "99",
+              "series_name": "奥迪A6L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA6L",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "99",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "99",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5179987288159094109",
+                "words_position": 2,
+                "words_content": "奥迪A6L",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "5179987288159094109",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "4302",
+              "series_name": "奥迪A7L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA7L",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "4302",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "4302",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5711264162501899280",
+                "words_position": 3,
+                "words_content": "奥迪A7L",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "5711264162501899280",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_name": "迈腾b9380尊贵大迈包",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%BF%88%E8%85%BEb9380%E5%B0%8A%E8%B4%B5%E5%A4%A7%E8%BF%88%E5%8C%85",
+              "origin": "sort",
+              "search_mode": "predict",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "9068699176573048563",
+                "words_position": 4,
+                "words_content": "迈腾b9380尊贵大迈包",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "9068699176573048563",
+              "supply_type": "7",
+              "recall_type": "longtail_hot_search_words"
+            },
+            {
+              "series_id": "8154",
+              "series_name": "轻骑铃木 优驿UE125T",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E8%BD%BB%E9%AA%91%E9%93%83%E6%9C%A8+%E4%BC%98%E9%A9%BFUE125T",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "8154",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "8154",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "8359028026513381795",
+                "words_position": 5,
+                "words_content": "轻骑铃木 优驿UE125T",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "8359028026513381795",
+              "supply_type": "2",
+              "recall_type": "justviewover5"
+            },
+            {
+              "series_id": "5364",
+              "series_name": "奥迪Q6",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAQ6",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "5364",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "5364",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7680090134492221380",
+                "words_position": 6,
+                "words_content": "奥迪Q6",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "7680090134492221380",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            },
+            {
+              "series_id": "9235",
+              "series_name": "五菱星光PHEV",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E4%BA%94%E8%8F%B1%E6%98%9F%E5%85%89PHEV",
+              "origin": "sort",
+              "search_mode": "predict",
+              "query_content_id": "9235",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "9235",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7917618180606962829",
+                "words_position": 7,
+                "words_content": "五菱星光PHEV",
+                "words_source": "predict",
+                "preset_words_info_map": null
+              },
+              "group_id": "7917618180606962829",
+              "supply_type": "2",
+              "recall_type": "justviewover720"
+            }
+          ],
+          "discovery_words": [
+            {
+              "series_id": "5",
+              "series_name": "丰田",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E4%B8%B0%E7%94%B0",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "query_content_id": "5",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "5",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 8,
+                "words_content": "丰田",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "3736",
+              "series_name": "凯迪拉克CT5",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%87%AF%E8%BF%AA%E6%8B%89%E5%85%8BCT5",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "query_content_id": "3736",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "3736",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "6319572176766619016",
+                "words_position": 9,
+                "words_content": "凯迪拉克CT5",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "6319572176766619016",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "16",
+              "series_name": "比亚迪",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E6%AF%94%E4%BA%9A%E8%BF%AA",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "query_content_id": "16",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "16",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 10,
+                "words_content": "比亚迪",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "145",
+              "series_name": "宝马3系",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%AE%9D%E9%A9%AC3%E7%B3%BB",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "query_content_id": "145",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "145",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "8980837441458732700",
+                "words_position": 11,
+                "words_content": "宝马3系",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "8980837441458732700",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "2",
+              "series_name": "奥迪",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AA",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "query_content_id": "2",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "2",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 12,
+                "words_content": "奥迪",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "99",
+              "series_name": "奥迪A6L",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%A5%E8%BF%AAA6L",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "query_content_id": "99",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "99",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "5179987288159094109",
+                "words_position": 13,
+                "words_content": "奥迪A6L",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "5179987288159094109",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "12",
+              "series_name": "别克",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%88%AB%E5%85%8B",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "query_content_id": "12",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "12",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 14,
+                "words_content": "别克",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "146",
+              "series_name": "宝马5系",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%AE%9D%E9%A9%AC5%E7%B3%BB",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "query_content_id": "146",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "146",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "7876109541144994816",
+                "words_position": 15,
+                "words_content": "宝马5系",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "7876109541144994816",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            },
+            {
+              "series_id": "63",
+              "series_name": "特斯拉",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E7%89%B9%E6%96%AF%E6%8B%89",
+              "origin": "recommend",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "query_content_id": "63",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "0",
+              "brand_id": "63",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "",
+                "words_position": 16,
+                "words_content": "特斯拉",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "new_energy_type": 0
+            },
+            {
+              "series_id": "212",
+              "series_name": "奔驰C级",
+              "url": "sslocal://search?cur_tab=1&growth_from=search_hot&keyword=%E5%A5%94%E9%A9%B0C%E7%BA%A7",
+              "origin": "sort",
+              "search_mode": "search_discovery",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/d737a3846c6fd24107afebbc78781c49~tplv-resize:0:0.image",
+              "query_content_id": "212",
+              "req_id": "202608261858085426305C21B451AA615B",
+              "car_series_id": "212",
+              "sug_info": {
+                "sug_session_id": "202608261858085426305C21B451AA615B",
+                "sug_impr_id": "202608261858085426305C21B451AA615B",
+                "search_position": "news",
+                "sug_group_id": "1218412784499548705",
+                "words_position": 17,
+                "words_content": "奔驰C级",
+                "words_source": "search_discovery",
+                "preset_words_info_map": null
+              },
+              "group_id": "1218412784499548705",
+              "supply_type": "2",
+              "recall_type": "hot_recall"
+            }
+          ],
+          "hot_search_words": [
+            {
+              "title": "9月首周新能源销量分析",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a605057943bc0865e3a485a8592fbb8a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/5ec91e02e46ccb23d3923cbeec010698~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D9%25E6%259C%2588%25E9%25A6%2596%25E5%2591%25A8%25E6%2596%25B0%25E8%2583%25BD%25E6%25BA%2590%25E9%2594%2580%25E9%2587%258F%25E5%2588%2586%25E6%259E%2590",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "全新斯柯达速派谍照曝光",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/82664f7df717932336e5f111eac2ceb0~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/b34189cd39b1f046fa62adbb11858792~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%2585%25A8%25E6%2596%25B0%25E6%2596%25AF%25E6%259F%25AF%25E8%25BE%25BE%25E9%2580%259F%25E6%25B4%25BE%25E8%25B0%258D%25E7%2585%25A7%25E6%259B%259D%25E5%2585%2589",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "奇瑞新SUV命名“舒享家”",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/8dcacd8934dc08f5e93c08a26f86b9d2~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/0808a080fe4dd277a5eff24c76badb75~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%25A5%2587%25E7%2591%259E%25E6%2596%25B0SUV%25E5%2591%25BD%25E5%2590%258D%25E2%2580%259C%25E8%2588%2592%25E4%25BA%25AB%25E5%25AE%25B6%25E2%2580%259D",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "丰田回应工厂停产",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/5f6af2d5c665af214c2fa61141f5467c~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/cbe1dca67420e95c86d60bd2b4d6f546~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E4%25B8%25B0%25E7%2594%25B0%25E5%259B%259E%25E5%25BA%2594%25E5%25B7%25A5%25E5%258E%2582%25E5%2581%259C%25E4%25BA%25A7",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "捷途旅行者越野挑战实测",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/e7aa4d166919eb981e30688cf4d8f79a~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/741754a7a749724f516c9ac15a486b5a~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%258D%25B7%25E9%2580%2594%25E6%2597%2585%25E8%25A1%258C%25E8%2580%2585%25E8%25B6%258A%25E9%2587%258E%25E6%258C%2591%25E6%2588%2598%25E5%25AE%259E%25E6%25B5%258B",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "特斯拉上海工厂第200万辆车下线",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/ac4909908195a71a46a3bc5fa0e70b89~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/e667792c4a21e0e5e45a0898f8d7cc6c~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E7%2589%25B9%25E6%2596%25AF%25E6%258B%2589%25E4%25B8%258A%25E6%25B5%25B7%25E5%25B7%25A5%25E5%258E%2582%25E7%25AC%25AC200%25E4%25B8%2587%25E8%25BE%2586%25E8%25BD%25A6%25E4%25B8%258B%25E7%25BA%25BF",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "比亚迪海豹在巴西上市",
+              "dark_serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/59fe6c7b9b552019a4270d580615572b~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/fd6bb75c566a8f2a7133ef09b0521fc5~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%25AF%2594%25E4%25BA%259A%25E8%25BF%25AA%25E6%25B5%25B7%25E8%25B1%25B9%25E5%259C%25A8%25E5%25B7%25B4%25E8%25A5%25BF%25E4%25B8%258A%25E5%25B8%2582",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "奥迪Activesphere概念车亮相",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/493e44ed48181103f23e68224edd0fd5~tplv-resize:0:0.image",
+              "serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/a37e48b59c6cbbb430bf64f87cccc3c9~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E5%25A5%25A5%25E8%25BF%25AAActivesphere%25E6%25A6%2582%25E5%25BF%25B5%25E8%25BD%25A6%25E4%25BA%25AE%25E7%259B%25B8",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            },
+            {
+              "title": "方程豹豹5配置信息",
+              "dark_serial_icon": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/6c9bb46c5af17ea321330556a895ac76~tplv-resize:0:0.image",
+              "serial_icon": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/6a3543a7831e0890a40a312b4049e031~tplv-resize:0:0.image",
+              "icon_url": "https://p3-dcd.byteimg.com/img/tos-cn-i-dcdx/4383dac458d4469028bbe8ffeba5b506~tplv-resize:0:0.image",
+              "dark_icon_url": "https://p9-dcd.byteimg.com/img/tos-cn-i-dcdx/1fa2ad580201de955408f8ef31053be6~tplv-resize:0:0.image",
+              "detail_url": "sslocal://webview?bounce_disable=1&enable_resume_pause_js=1&hide_back=1&hide_back_buttonView=1&hide_bar=1&should_append_common_param=1&title=%E6%87%82%E8%BD%A6%E5%B8%9D+-+%E7%83%AD%E9%97%A8%E6%90%9C%E7%B4%A2&url=https%3A%2F%2Fapi.dcarapi.com%2Fmotor%2Finapp%2Fbasic_pages%2Fhot-search.html%3Fkeyword%3D%25E6%2596%25B9%25E7%25A8%258B%25E8%25B1%25B9%25E8%25B1%25B95%25E9%2585%258D%25E7%25BD%25AE%25E4%25BF%25A1%25E6%2581%25AF",
+              "origin": "hot",
+              "search_mode": "hot",
+              "tag": 0
+            }
+          ],
+          "req_id": "202608261858085426305C21B451AA615B",
+          "item_id": 9068699176573048563,
+          "track": {
+            "impr_id": "202608261858085426305C21B451AA615B",
+            "group_id": "9068699176573048563",
+            "words_content": "迈腾b9380尊贵大迈包",
+            "words_source": "predict",
+            "words_position": 3,
+            "page_id": "page_category",
+            "preset_words_info_map": "{\"ai_hook_category\":\"0\",\"button_text\":\"\",\"is_long_size\":\"0\",\"scenes_id\":\"187\",\"bot_query\":\"迈腾b9380尊贵大迈包\",\"recommend_tag\":\"17\",\"sub_title\":\"\",\"supply_type\":\"7\",\"main_title\":\"迈腾b9380尊贵大迈包\",\"recall_type\":\"longtail_hot_search_words\"}",
+            "search_position": "main"
+          },
+          "tag_color": "#D18700",
+          "tag_color_dark": "#B89325",
+          "tag_border_color": "#D18700",
+          "tag_border_color_dark": "#B89325",
+          "tag_style": {
+            "tag_color": "#636675",
+            "tag_color_dark": "#636675",
+            "immersion_tag_color": "#D5D6D7",
+            "tag_border_color": [
+              "#DFE1E8"
+            ],
+            "tag_border_color_dark": [
+              "#44444D"
+            ],
+            "immersion_border_color": [
+              "#626265"
+            ]
+          }
+        }
+      ],
+      "feedback_button": {
+        "text": "意见反馈",
+        "schema": "sslocal://webview?status_bar_color=black&add_common=true&hide_bar=1&hide_status_bar=1&hide_back_close=1&hide_back=true&hide_back_buttonView=1&url=https%3A%2F%2Fhelpdesk.bytedance.com%2Fsites%2Fstandalone%2Fhelpcenter%2Fhome%3Fbiz_id%3D33%26hotlineSolution%3D3"
+      },
+      "animate_time": 400,
+      "interval_time": 5000,
+      "hot_search_str": "搜索发现",
+      "prefetch": {
+        "count": 100,
+        "timeout": 300,
+        "default": 0,
+        "word_list": 0,
+        "discovery_words": 0,
+        "history_list": 0
+      },
+      "insert_mode": 2,
+      "track": {
+        "req_id": "202608261858085426305C21B451AA615B"
+      }
+    }
+  }
+}
