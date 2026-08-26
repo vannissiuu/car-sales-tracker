@@ -1,4 +1,4 @@
-name: Probe Car Sales Sources
+name: Probe Car Sales Sources v3 (16888)
 
 # 手动点击触发，或者 push 代码时自动跑一次
 on:
@@ -28,32 +28,38 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python dependencies
-        run: pip install playwright requests
-
-      - name: Install Playwright browsers
-        run: playwright install --with-deps chromium
+        # v3 目标是服务端渲染的静态 HTML（xl.16888.com），不需要 Playwright/浏览器渲染，
+        # 依赖只要 requests + 两种表格解析方式（pandas.read_html 用 lxml 做解析器）+ bs4
+        run: pip install requests beautifulsoup4 lxml pandas
 
       - name: Write probe script
         run: |
-          cat > probe_sources.py << 'PROBE_SCRIPT_EOF'
+          cat > probe_v3.py << 'PROBE_SCRIPT_EOF'
           #!/usr/bin/env python3
           # -*- coding: utf-8 -*-
           """
-          探针脚本：探测 GitHub Actions runner 能否访问国内汽车销量数据网站。
+          探针脚本 v3：验证车主之家 xl.16888.com 能否作为「2024-01 至今 / 乘用车 / 车型级」
+          月度销量数据源。
           
-          设计原则：如实 dump 一切看到的东西，任何一步失败都不能让后面的步骤跑不起来。
-          这个脚本本身就是"证据收集器"——它的目的不是抓到数据，而是把真相打印出来，
-          哪怕真相是"全都失败了"。
+          背景（上一轮已验证的事实，本脚本不再重复验证）：
+            - GitHub Actions runner 出口 IP 在美国弗吉尼亚，访问中国网站无地域封锁
+            - 懂车帝 /sales 有滑块验证码 + 签名参数，且只保留最近 6 个月数据
+            - 乘联会 requests 直连 403，中汽协直连 200
           
-          四个阶段：
-            A. 连通性与地域探测（本机出口 IP/地理位置 + 逐个 URL 的可达性）
-            B. Playwright 渲染 + XHR/fetch 接口抓包（仅对阶段 A 中判定可达的站点执行）
-            C. 渲染后页面的可见文本 / 表格提取
-            D. 汇总成 REPORT.md
+          本轮目标：
+            - 16888 是否服务端渲染、requests 能否直接拿到表格
+            - 编码是否是 GBK/GB2312 家族，处理不对会全是乱码
+            - 车型级页面一个月有多少行、分页情况
+            - 2018 年 / 2022 年是否真有历史数据
+            - 2026 年 7 月是否已有数据（时效性）
+            - body-5(SUV) / ev(新能源) 页面表格结构是否和 style 页面一致
+            - 太平洋汽车作为交叉校验源是否可用
           
-          所有产出都写到 probe_output/ 目录下。
+          设计原则：探针只探测列表里这 10 个 URL，不自动翻页扩量。任何一步失败都不能
+          让脚本崩掉——网络失败、解析失败本身就是我们要收集的结论。
           """
           
+          import io
           import json
           import os
           import re
@@ -61,44 +67,82 @@ jobs:
           import time
           import traceback
           from datetime import datetime, timezone
+          from urllib.parse import urlparse
           
           # ---------------------------------------------------------------------------
           # 基础设置
           # ---------------------------------------------------------------------------
           
-          OUTPUT_DIR = os.path.join(os.getcwd(), "probe_output")
+          OUTPUT_DIR = os.path.join(os.getcwd(), "probe_v3_output")
           
           COMMON_UA = (
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
           )
           
-          REQUEST_TIMEOUT_SECONDS = 15
-          DELAY_BETWEEN_REQUESTS_SECONDS = 2
+          REQUEST_HEADERS = {
+              "User-Agent": COMMON_UA,
+              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+              "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+          }
           
-          # 阶段 A 要测试的目标 URL
-          TARGET_URLS = [
-              "https://www.dongchedi.com/",
-              "https://www.dongchedi.com/sales",
-              "https://www.cpcaauto.com/",
-              "http://www.caam.org.cn/tjsj",
+          REQUEST_TIMEOUT_SECONDS = 20
+          DELAY_BETWEEN_REQUESTS_SECONDS = 3
+          
+          # 阶段 A/B/C：这 10 个 URL 就是本次探针的全部目标，不做任何自动翻页扩展
+          TARGETS = [
+              {"id": "01_style_202401_p1", "group": "A",
+               "url": "https://xl.16888.com/style-202401-202401-1.html",
+               "desc": "车型级 2024年1月 第1页"},
+              {"id": "02_style_202401_p2", "group": "A",
+               "url": "https://xl.16888.com/style-202401-202401-2.html",
+               "desc": "车型级 2024年1月 第2页（验证分页，排名应从51开始）"},
+              {"id": "03_style_202607_p1", "group": "A",
+               "url": "https://xl.16888.com/style-202607-202607-1.html",
+               "desc": "车型级 2026年7月（验证数据时效性，最新月份有没有）"},
+              {"id": "04_factory_202401_p1", "group": "A",
+               "url": "https://xl.16888.com/factory-202401-202401-1.html",
+               "desc": "厂商级 2024年1月（验证厂商维度）"},
+              {"id": "05_body5_suv_202401_p1", "group": "A",
+               "url": "https://xl.16888.com/body-5-202401-202401-1.html",
+               "desc": "SUV 2024年1月（验证车体类型维度）"},
+              {"id": "06_body3_mpv_202401_p1", "group": "A",
+               "url": "https://xl.16888.com/body-3-202401-202401-1.html",
+               "desc": "MPV 2024年1月"},
+              {"id": "07_ev_202401_p1", "group": "A",
+               "url": "https://xl.16888.com/ev-202401-202401-1.html",
+               "desc": "新能源 2024年1月（验证能源类型维度）"},
+              {"id": "08_style_202201_p1", "group": "B",
+               "url": "https://xl.16888.com/style-202201-202201-1.html",
+               "desc": "2022年1月（更早的历史，边界探测）"},
+              {"id": "09_style_201801_p1", "group": "B",
+               "url": "https://xl.16888.com/style-201801-201801-1.html",
+               "desc": "2018年1月（历史深度边界探测）"},
+              {"id": "10_pcauto_cross_check", "group": "C",
+               "url": "https://price.pcauto.com.cn/top/sales/s1-t1.html",
+               "desc": "太平洋汽车当月榜（交叉校验对照，非 16888）"},
           ]
           
-          # 阶段 B 只对这些 URL 做 Playwright 渲染 + 抓包（前提是阶段 A 判定"可达"）
-          # 这里只挑最关键的、已知是 JS 渲染 SPA 的销量榜页面，避免把每个可达页面都跑一遍
-          # 导致运行时间过长——如果其它页面在阶段 A 可达，报告里也会提示可以手动加进来。
-          PLAYWRIGHT_TARGETS = [
-              "https://www.dongchedi.com/sales",
-              "https://www.dongchedi.com/",
-              "https://www.cpcaauto.com/",
+          SAMPLE_TARGET_ID = "01_style_202401_p1"
+          SAMPLE_CSV_NAME = "sample_202401.csv"
+          
+          # 命中这些字样，判定为验证码/人机校验/访问受限
+          BLOCK_MARKERS = [
+              "验证码", "captcha", "人机验证", "安全验证", "访问异常",
+              "拒绝访问", "禁止访问", "blocked", "Access Denied",
           ]
           
-          PLAYWRIGHT_POST_LOAD_WAIT_SECONDS = 8
-          PLAYWRIGHT_POST_SCROLL_WAIT_SECONDS = 5
+          # 猜测「共 XX 条 / 共 XX 页」之类的分页提示文字
+          PAGINATION_PATTERNS = [
+              r"共\s*(\d+)\s*条",
+              r"共\s*(\d+)\s*页",
+              r"共计\s*(\d+)\s*条",
+              r"/\s*(\d+)\s*页",
+              r"(\d+)\s*条数据",
+          ]
           
           
           def log(msg):
-              """统一的进度打印，带时间戳，方便在 Actions 日志里看进度。"""
               ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
               print(f"[{ts}] {msg}", flush=True)
           
@@ -108,11 +152,14 @@ jobs:
               log(f"输出目录: {OUTPUT_DIR}")
           
           
-          def safe_filename_from_url(url):
-              """把 URL 变成一个安全的文件名片段。"""
-              s = re.sub(r"^https?://", "", url)
-              s = re.sub(r"[^a-zA-Z0-9._-]+", "_", s)
-              return s.strip("_") or "unknown"
+          def write_text(filename, text):
+              path = os.path.join(OUTPUT_DIR, filename)
+              try:
+                  with open(path, "w", encoding="utf-8") as f:
+                      f.write(text if text is not None else "")
+                  log(f"  写入 {filename} ({len(text or '')} 字符)")
+              except Exception as e:
+                  log(f"  !! 写入 {filename} 失败: {e}")
           
           
           def write_json(filename, data):
@@ -125,509 +172,545 @@ jobs:
                   log(f"  !! 写入 {filename} 失败: {e}")
           
           
-          def write_text(filename, text):
-              path = os.path.join(OUTPUT_DIR, filename)
+          def safe_id(s):
+              s = re.sub(r"[^a-zA-Z0-9._-]+", "_", s)
+              return s.strip("_") or "unknown"
+          
+          
+          # ---------------------------------------------------------------------------
+          # 编码处理：16888 很可能是 GBK/GB2312/GB18030 家族，处理不对就是满屏乱码
+          # ---------------------------------------------------------------------------
+          
+          def decode_response(resp):
+              """
+              返回 (最终采用的正文文本, 最终采用的编码名, 调试笔记列表)。
+              策略优先级：
+                1. HTML <meta charset=...> 里显式声明的编码（最可信）
+                2. gb18030（GBK/GB2312 的超集，猜中文站十有八九不会错）
+                3. requests 自己的 apparent_encoding（chardet/charset_normalizer 猜测）
+                4. utf-8 兜底
+              每一步都记录下来，方便事后人工核对是不是真的没乱码。
+              """
+              notes = []
+              raw = resp.content
+              notes.append(f"requests声明的encoding(resp.encoding): {resp.encoding}")
+          
               try:
-                  with open(path, "w", encoding="utf-8") as f:
-                      f.write(text)
-                  log(f"  写入 {filename}")
+                  apparent = resp.apparent_encoding
               except Exception as e:
-                  log(f"  !! 写入 {filename} 失败: {e}")
+                  apparent = None
+                  notes.append(f"apparent_encoding 获取失败: {e}")
+              notes.append(f"apparent_encoding: {apparent}")
+          
+              meta_charset = None
+              try:
+                  m = re.search(rb'charset\s*=\s*["\']?\s*([a-zA-Z0-9_-]+)', raw[:4096])
+                  if m:
+                      meta_charset = m.group(1).decode("ascii", errors="ignore").strip().lower().strip('"\'/')
+                      notes.append(f"HTML <meta> 声明的 charset: {meta_charset}")
+              except Exception as e:
+                  notes.append(f"meta charset 嗅探失败: {e}")
+          
+              def try_decode(enc):
+                  try:
+                      return raw.decode(enc, errors="replace")
+                  except Exception as e:
+                      notes.append(f"用 {enc} 解码失败: {e}")
+                      return None
+          
+              candidates = []  # (enc, text) 按优先级排列，取第一个能拿到文本的
+              if meta_charset:
+                  candidates.append(meta_charset)
+              candidates.append("gb18030")
+              if apparent:
+                  candidates.append(apparent)
+              candidates.append("utf-8")
+          
+              chosen_enc = None
+              chosen_text = None
+              for enc in candidates:
+                  text = try_decode(enc)
+                  if text is not None:
+                      chosen_enc = enc
+                      chosen_text = text
+                      break
+          
+              notes.append(f"最终采用编码: {chosen_enc}")
+              return chosen_text or "", chosen_enc, notes
+          
+          
+          def find_pagination_hints(text):
+              hits = []
+              for pat in PAGINATION_PATTERNS:
+                  for m in re.finditer(pat, text):
+                      snippet_start = max(0, m.start() - 15)
+                      snippet_end = min(len(text), m.end() + 15)
+                      hits.append({
+                          "pattern": pat,
+                          "matched": m.group(0),
+                          "context": text[snippet_start:snippet_end].replace("\n", " ").strip(),
+                      })
+              # 去重，最多保留 20 条，避免报告被灌爆
+              seen = set()
+              uniq = []
+              for h in hits:
+                  key = (h["pattern"], h["matched"])
+                  if key not in seen:
+                      seen.add(key)
+                      uniq.append(h)
+              return uniq[:20]
+          
+          
+          def check_block_markers(text):
+              hits = [m for m in BLOCK_MARKERS if m.lower() in text.lower()]
+              return hits
           
           
           # ---------------------------------------------------------------------------
-          # 阶段 A：连通性与地域探测
+          # 表格提取：pandas.read_html 和 BeautifulSoup 都试，哪个成功用哪个
           # ---------------------------------------------------------------------------
           
-          def stage_a_connectivity():
-              log("=" * 70)
-              log("阶段 A：连通性与地域探测")
-              log("=" * 70)
+          def extract_tables_pandas(html_text):
+              """返回 (表格列表[每个是 list-of-dict 形式的 DataFrame.to_dict], 错误信息或None)"""
+              try:
+                  import pandas as pd
+              except Exception as e:
+                  return None, f"import pandas 失败: {e}"
+              try:
+                  dfs = pd.read_html(io.StringIO(html_text))
+              except Exception as e:
+                  return None, f"pd.read_html 失败: {type(e).__name__}: {e}"
+              tables = []
+              for df in dfs:
+                  # 列名统一转成字符串，防止 MultiIndex / 数字列名导致 json 序列化出错
+                  try:
+                      df.columns = [str(c) for c in df.columns]
+                  except Exception:
+                      pass
+                  tables.append({
+                      "columns": [str(c) for c in df.columns.tolist()],
+                      "row_count": int(df.shape[0]),
+                      "head_rows": json.loads(df.head(5).to_json(orient="records", force_ascii=False)),
+                  })
+              return tables, None
           
+          
+          def extract_tables_bs4(html_text):
+              """返回 (表格列表, 错误信息或None)。手工解析 <table>，作为 pandas 失败时的后备方案。"""
+              try:
+                  from bs4 import BeautifulSoup
+              except Exception as e:
+                  return None, f"import bs4 失败: {e}"
+              try:
+                  soup = BeautifulSoup(html_text, "lxml")
+              except Exception:
+                  try:
+                      soup = BeautifulSoup(html_text, "html.parser")
+                  except Exception as e:
+                      return None, f"BeautifulSoup 解析失败: {e}"
+          
+              tables = []
+              try:
+                  raw_tables = soup.find_all("table")
+              except Exception as e:
+                  return None, f"查找 <table> 失败: {e}"
+          
+              for t in raw_tables:
+                  rows = []
+                  for tr in t.find_all("tr"):
+                      cells = [c.get_text(strip=True) for c in tr.find_all(["th", "td"])]
+                      if cells:
+                          rows.append(cells)
+                  if not rows:
+                      continue
+                  header = rows[0]
+                  body_rows = rows[1:]
+                  head_rows = []
+                  for r in body_rows[:5]:
+                      row_dict = {}
+                      for i, val in enumerate(r):
+                          key = header[i] if i < len(header) else f"col_{i}"
+                          row_dict[key] = val
+                      head_rows.append(row_dict)
+                  tables.append({
+                      "columns": header,
+                      "row_count": len(body_rows),
+                      "head_rows": head_rows,
+                  })
+              return tables, None
+          
+          
+          def get_body_visible_text(html_text):
+              try:
+                  from bs4 import BeautifulSoup
+                  try:
+                      soup = BeautifulSoup(html_text, "lxml")
+                  except Exception:
+                      soup = BeautifulSoup(html_text, "html.parser")
+                  return soup.get_text(separator="\n")
+              except Exception:
+                  # 连 bs4 都没有，退化成正则粗暴去标签
+                  return re.sub(r"<[^>]+>", " ", html_text)
+          
+          
+          # ---------------------------------------------------------------------------
+          # 单个 URL 的完整探测流程
+          # ---------------------------------------------------------------------------
+          
+          def fetch_one(target, blocked_domains):
+              url = target["url"]
+              domain = urlparse(url).netloc
               result = {
-                  "stage": "A_connectivity",
-                  "run_started_utc": datetime.now(timezone.utc).isoformat(),
-                  "runner_ip_info": None,
-                  "runner_ip_info_error": None,
-                  "url_checks": [],
+                  "id": target["id"],
+                  "group": target["group"],
+                  "url": url,
+                  "desc": target["desc"],
+                  "domain": domain,
+                  "skipped": False,
+                  "skip_reason": None,
+                  "status_code": None,
+                  "elapsed_seconds": None,
+                  "body_bytes": None,
+                  "encoding_notes": [],
+                  "chosen_encoding": None,
+                  "block_markers_found": [],
+                  "pagination_hints": [],
+                  "table_extraction_method": None,
+                  "tables_pandas": None,
+                  "tables_pandas_error": None,
+                  "tables_bs4": None,
+                  "tables_bs4_error": None,
+                  "html_file": None,
+                  "error": None,
               }
           
-              # 1. runner 出口 IP / 地理位置
+              if domain in blocked_domains:
+                  result["skipped"] = True
+                  result["skip_reason"] = f"域名 {domain} 此前已被判定为受限（403/429/验证码），按爬虫礼仪跳过后续请求"
+                  log(f"跳过 {url}: {result['skip_reason']}")
+                  return result
+          
+              log(f"请求 {url} ...")
               try:
                   import requests
               except Exception as e:
-                  log(f"!! 无法 import requests: {e}")
-                  result["runner_ip_info_error"] = f"import requests 失败: {e}"
-                  requests = None
+                  result["error"] = f"import requests 失败: {e}"
+                  log(f"  !! {result['error']}")
+                  return result
           
-              if requests is not None:
-                  log("正在查询 runner 出口 IP 与地理位置 (ipinfo.io) ...")
-                  try:
-                      resp = requests.get(
-                          "https://ipinfo.io/json",
-                          headers={"User-Agent": COMMON_UA},
-                          timeout=REQUEST_TIMEOUT_SECONDS,
-                      )
-                      result["runner_ip_info"] = {
-                          "status_code": resp.status_code,
-                          "body": _try_json(resp),
-                      }
-                      log(f"  ipinfo.io 返回状态码 {resp.status_code}")
-                  except Exception as e:
-                      err = f"{type(e).__name__}: {e}"
-                      log(f"  !! 查询 ipinfo.io 失败: {err}")
-                      result["runner_ip_info_error"] = err
+              t0 = time.time()
+              try:
+                  resp = requests.get(url, headers=REQUEST_HEADERS, timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=True)
+                  elapsed = time.time() - t0
+                  result["status_code"] = resp.status_code
+                  result["elapsed_seconds"] = round(elapsed, 3)
+                  result["body_bytes"] = len(resp.content) if resp.content else 0
+                  log(f"  -> 状态码 {resp.status_code}，耗时 {elapsed:.2f}s，正文 {result['body_bytes']} 字节")
           
-                  time.sleep(DELAY_BETWEEN_REQUESTS_SECONDS)
+                  if resp.status_code in (403, 429):
+                      blocked_domains.add(domain)
+                      result["skip_reason"] = f"状态码 {resp.status_code}，按爬虫礼仪：判定该域名受限，停止对 {domain} 的后续请求"
+                      log(f"  !! {result['skip_reason']}")
           
-              # 2. 逐个测试目标 URL
-              if requests is not None:
-                  for url in TARGET_URLS:
-                      log(f"测试 {url} ...")
-                      check = {
-                          "url": url,
-                          "status_code": None,
-                          "elapsed_seconds": None,
-                          "response_headers": None,
-                          "body_preview": None,
-                          "body_length": None,
-                          "error": None,
-                          "reachable": False,
-                      }
-                      t0 = time.time()
-                      try:
-                          resp = requests.get(
-                              url,
-                              headers={"User-Agent": COMMON_UA},
-                              timeout=REQUEST_TIMEOUT_SECONDS,
-                              allow_redirects=True,
-                          )
-                          elapsed = time.time() - t0
-                          check["status_code"] = resp.status_code
-                          check["elapsed_seconds"] = round(elapsed, 3)
-                          check["response_headers"] = dict(resp.headers)
-                          check["body_length"] = len(resp.content) if resp.content else 0
-                          # 只保留前 2000 字符防止输出文件过大
-                          try:
-                              check["body_preview"] = resp.text[:2000]
-                          except Exception:
-                              check["body_preview"] = "<无法解码为文本>"
-                          check["reachable"] = resp.status_code is not None
-                          log(f"  -> 状态码 {resp.status_code}，耗时 {elapsed:.2f}s，正文长度 {check['body_length']}")
-                      except Exception as e:
-                          elapsed = time.time() - t0
-                          check["elapsed_seconds"] = round(elapsed, 3)
-                          check["error"] = f"{type(e).__name__}: {e}"
-                          log(f"  !! 请求失败 ({elapsed:.2f}s): {check['error']}")
+                  text, enc, notes = decode_response(resp)
+                  result["chosen_encoding"] = enc
+                  result["encoding_notes"] = notes
           
-                      result["url_checks"].append(check)
-                      time.sleep(DELAY_BETWEEN_REQUESTS_SECONDS)
-              else:
-                  result["url_checks"] = [
-                      {"url": u, "error": "requests 模块不可用，未测试", "reachable": False}
-                      for u in TARGET_URLS
-                  ]
+                  html_filename = f"{target['id']}_raw.html"
+                  write_text(html_filename, text)
+                  result["html_file"] = html_filename
           
-              write_json("A_connectivity.json", result)
-              log("阶段 A 完成。")
+                  block_hits = check_block_markers(text)
+                  result["block_markers_found"] = block_hits
+                  if block_hits:
+                      blocked_domains.add(domain)
+                      log(f"  !! 检测到疑似验证码/拦截关键词: {block_hits}，判定该域名受限，停止对 {domain} 的后续请求")
+          
+                  visible_text = get_body_visible_text(text)
+                  result["pagination_hints"] = find_pagination_hints(visible_text)
+                  write_text(f"{target['id']}_visible_text.txt", visible_text[:20000])
+          
+                  # 表格提取：pandas 优先，失败或空结果就退回 bs4
+                  pd_tables, pd_err = extract_tables_pandas(text)
+                  result["tables_pandas_error"] = pd_err
+                  if pd_tables:
+                      result["tables_pandas"] = pd_tables
+                      log(f"  pandas.read_html 提取到 {len(pd_tables)} 个表格")
+          
+                  bs4_tables, bs4_err = extract_tables_bs4(text)
+                  result["tables_bs4_error"] = bs4_err
+                  if bs4_tables:
+                      result["tables_bs4"] = bs4_tables
+                      log(f"  BeautifulSoup 提取到 {len(bs4_tables)} 个表格")
+          
+                  if pd_tables:
+                      result["table_extraction_method"] = "pandas"
+                  elif bs4_tables:
+                      result["table_extraction_method"] = "bs4"
+                  else:
+                      result["table_extraction_method"] = None
+                      log("  !! pandas 和 bs4 都没有提取到有效表格")
+          
+              except Exception as e:
+                  elapsed = time.time() - t0
+                  result["elapsed_seconds"] = round(elapsed, 3)
+                  result["error"] = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
+                  log(f"  !! 请求/处理失败 ({elapsed:.2f}s): {type(e).__name__}: {e}")
+          
               return result
           
           
-          def _try_json(resp):
-              try:
-                  return resp.json()
-              except Exception:
-                  try:
-                      return resp.text[:2000]
-                  except Exception:
-                      return None
-          
-          
           # ---------------------------------------------------------------------------
-          # 阶段 B：Playwright 渲染 + XHR/fetch 抓包
+          # 生成真实样本 CSV（style-202401 第1页）
           # ---------------------------------------------------------------------------
           
-          def stage_b_playwright(connectivity_result):
-              log("=" * 70)
-              log("阶段 B：Playwright 渲染与接口抓包")
-              log("=" * 70)
-          
-              stage_b_summary = {
-                  "stage": "B_playwright",
-                  "targets_attempted": [],
-              }
-          
-              # 根据阶段 A 的结果，判断哪些 PLAYWRIGHT_TARGETS 值得跑一下。
-              # 规则放宽：只要阶段 A 没有直接抛异常（即拿到了某个状态码，哪怕是 403/404/5xx），
-              # 就认为"网络层面可达"，仍然值得用浏览器打开看看——因为 requests 被拦截 (如 403)
-              # 不代表 Playwright 真实浏览器也一定被拦截，这本身也是有价值的信息。
-              reachable_urls = set()
-              checks_by_url = {c["url"]: c for c in connectivity_result.get("url_checks", [])}
-              for url, check in checks_by_url.items():
-                  if check.get("status_code") is not None:
-                      reachable_urls.add(url)
-          
-              try:
-                  from playwright.sync_api import sync_playwright
-              except Exception as e:
-                  log(f"!! 无法 import playwright: {e}")
-                  stage_b_summary["fatal_error"] = f"import playwright 失败: {e}"
-                  write_json("B_summary.json", stage_b_summary)
-                  return stage_b_summary
-          
-              for idx, url in enumerate(PLAYWRIGHT_TARGETS, start=1):
-                  target_result = {
-                      "url": url,
-                      "attempted": False,
-                      "skipped_reason": None,
-                      "error": None,
-                      "xhr_json_files": [],
-                      "xhr_all_count": 0,
-                      "html_file": None,
-                      "screenshot_file": None,
-                  }
-          
-                  if url not in reachable_urls:
-                      reason = (
-                          f"阶段 A 中该 URL 未记录到任何状态码（可能是网络层直接超时/拒绝），"
-                          f"跳过 Playwright 渲染。仍建议查看 A_connectivity.json 中该 URL 的 error 字段。"
-                      )
-                      log(f"跳过 {url}: {reason}")
-                      target_result["skipped_reason"] = reason
-                      stage_b_summary["targets_attempted"].append(target_result)
-                      continue
-          
-                  log(f"[{idx}/{len(PLAYWRIGHT_TARGETS)}] Playwright 打开 {url} ...")
-                  target_result["attempted"] = True
-          
-                  captured_responses = []  # 每个元素: dict(url, method, status, content_type, body_preview, is_json, json_body)
-          
-                  try:
-                      with sync_playwright() as p:
-                          browser = p.chromium.launch(headless=True)
-                          context = browser.new_context(
-                              user_agent=COMMON_UA,
-                              viewport={"width": 1440, "height": 900},
-                          )
-                          page = context.new_page()
-          
-                          def on_response(response):
-                              try:
-                                  req = response.request
-                                  # 只关心 XHR / fetch 类型的资源，忽略 document/图片/css/js/font 等
-                                  resource_type = req.resource_type
-                                  if resource_type not in ("xhr", "fetch"):
-                                      return
-                                  headers = response.headers
-                                  content_type = headers.get("content-type", "")
-                                  entry = {
-                                      "url": response.url,
-                                      "method": req.method,
-                                      "status": response.status,
-                                      "content_type": content_type,
-                                      "body_preview": None,
-                                      "body_length": None,
-                                      "is_json": "json" in content_type.lower(),
-                                      "error": None,
-                                  }
-                                  try:
-                                      body = response.text()
-                                      entry["body_length"] = len(body)
-                                      entry["body_preview"] = body[:3000]
-                                      if entry["is_json"]:
-                                          entry["_full_body"] = body  # 内部使用，之后会单独落盘并从摘要里剔除
-                                  except Exception as body_err:
-                                      entry["error"] = f"读取响应体失败: {body_err}"
-                                  captured_responses.append(entry)
-                              except Exception as cb_err:
-                                  # 回调本身绝不能抛出去影响 Playwright 主流程
-                                  captured_responses.append({
-                                      "url": "<回调异常>",
-                                      "error": f"{type(cb_err).__name__}: {cb_err}",
-                                  })
-          
-                          page.on("response", on_response)
-          
-                          nav_error = None
-                          try:
-                              page.goto(url, timeout=30000, wait_until="domcontentloaded")
-                          except Exception as e:
-                              nav_error = f"{type(e).__name__}: {e}"
-                              log(f"  !! page.goto 失败: {nav_error}")
-          
-                          if nav_error is None:
-                              log(f"  页面已加载，等待 {PLAYWRIGHT_POST_LOAD_WAIT_SECONDS}s 让异步请求跑完 ...")
-                              page.wait_for_timeout(PLAYWRIGHT_POST_LOAD_WAIT_SECONDS * 1000)
-          
-                              try:
-                                  log("  滚动到页面底部（触发懒加载）...")
-                                  page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-                              except Exception as scroll_err:
-                                  log(f"  !! 滚动失败: {scroll_err}")
-          
-                              page.wait_for_timeout(PLAYWRIGHT_POST_SCROLL_WAIT_SECONDS * 1000)
-          
-                              # 保存渲染后 HTML
-                              base_name = f"B_{idx:02d}_{safe_filename_from_url(url)}"
-                              try:
-                                  html = page.content()
-                                  write_text(f"{base_name}_rendered.html", html)
-                                  target_result["html_file"] = f"{base_name}_rendered.html"
-                              except Exception as e:
-                                  log(f"  !! 获取渲染后 HTML 失败: {e}")
-          
-                              # 截图
-                              try:
-                                  screenshot_path = os.path.join(OUTPUT_DIR, f"{base_name}_screenshot.png")
-                                  page.screenshot(path=screenshot_path, full_page=True)
-                                  target_result["screenshot_file"] = f"{base_name}_screenshot.png"
-                                  log(f"  写入 {base_name}_screenshot.png")
-                              except Exception as e:
-                                  log(f"  !! 截图失败: {e}")
-          
-                              # 阶段 C 需要用到 page，在这里顺手做，避免重复开浏览器
-                              stage_c_for_page(page, base_name)
-          
-                          else:
-                              target_result["error"] = nav_error
-          
-                          context.close()
-                          browser.close()
-          
-                  except Exception as e:
-                      err = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
-                      log(f"  !! Playwright 处理 {url} 整体失败: {err}")
-                      target_result["error"] = (target_result["error"] or "") + " | " + err
-          
-                  # 汇总 XHR/fetch 结果
-                  target_result["xhr_all_count"] = len(captured_responses)
-                  log(f"  捕获到 {len(captured_responses)} 个 XHR/fetch 响应")
-          
-                  json_idx = 0
-                  summary_responses = []
-                  for entry in captured_responses:
-                      full_body = entry.pop("_full_body", None)
-                      summary_responses.append(entry)
-                      if entry.get("is_json") and full_body is not None:
-                          json_idx += 1
-                          json_filename = f"B_xhr_{idx:02d}_{json_idx:02d}_{safe_filename_from_url(url)}.json"
-                          json_path = os.path.join(OUTPUT_DIR, json_filename)
-                          try:
-                              # 尝试格式化成 JSON；如果解析失败就原样存文本
-                              parsed = json.loads(full_body)
-                              with open(json_path, "w", encoding="utf-8") as f:
-                                  json.dump(
-                                      {
-                                          "source_url": entry["url"],
-                                          "method": entry["method"],
-                                          "status": entry["status"],
-                                          "content_type": entry["content_type"],
-                                          "body": parsed,
-                                      },
-                                      f,
-                                      ensure_ascii=False,
-                                      indent=2,
-                                  )
-                          except Exception:
-                              with open(json_path, "w", encoding="utf-8") as f:
-                                  f.write(full_body)
-                          log(f"  写入 JSON 接口响应 {json_filename}  (来自 {entry['url']})")
-                          target_result["xhr_json_files"].append({
-                              "file": json_filename,
-                              "source_url": entry["url"],
-                              "field_names": _extract_top_level_field_names(full_body),
-                          })
-          
-                  write_json(
-                      f"B_{idx:02d}_{safe_filename_from_url(url)}_xhr_all.json",
-                      summary_responses,
-                  )
-          
-                  stage_b_summary["targets_attempted"].append(target_result)
-                  time.sleep(DELAY_BETWEEN_REQUESTS_SECONDS)
-          
-              write_json("B_summary.json", stage_b_summary)
-              log("阶段 B 完成。")
-              return stage_b_summary
-          
-          
-          def _extract_top_level_field_names(body_text):
-              """尽力从一段 JSON 文本里提取字段名，用于报告里快速判断有没有我们要的维度。
-              只做浅层递归（最多 3 层），避免超大对象把报告撑爆。"""
-              try:
-                  data = json.loads(body_text)
-              except Exception:
+          def write_sample_csv(results):
+              target_result = next((r for r in results if r["id"] == SAMPLE_TARGET_ID), None)
+              if target_result is None:
+                  write_text(SAMPLE_CSV_NAME, "")
+                  log(f"!! 找不到 {SAMPLE_TARGET_ID} 的探测结果，样本 CSV 为空")
                   return None
           
-              fields = set()
+              method = target_result.get("table_extraction_method")
+              tables = None
+              if method == "pandas":
+                  tables = target_result.get("tables_pandas")
+              elif method == "bs4":
+                  tables = target_result.get("tables_bs4")
           
-              def walk(obj, depth):
-                  if depth > 3:
-                      return
-                  if isinstance(obj, dict):
-                      for k, v in obj.items():
-                          fields.add(k)
-                          walk(v, depth + 1)
-                  elif isinstance(obj, list):
-                      for item in obj[:3]:  # 只看列表前几个元素，够用来发现字段名了
-                          walk(item, depth + 1)
+              if not tables:
+                  write_text(SAMPLE_CSV_NAME, "")
+                  log(f"!! {SAMPLE_TARGET_ID} 没有成功提取出表格，样本 CSV 为空，请人工查看对应的 _raw.html")
+                  return None
           
-              walk(data, 0)
-              return sorted(fields)
+              # 挑行数最多的那个表格，通常就是销量榜主表
+              best = max(tables, key=lambda t: t.get("row_count", 0))
+              columns = best.get("columns", [])
+              head_rows = best.get("head_rows", [])
           
-          
-          # ---------------------------------------------------------------------------
-          # 阶段 C：页面可见内容提取（在阶段 B 的 Playwright 会话内顺手执行，见上面调用）
-          # ---------------------------------------------------------------------------
-          
-          def stage_c_for_page(page, base_name):
-              """在阶段 B 已经打开、加载完成的 page 上，提取可见文本与表格。
-              这里刻意不单独开一个新的浏览器会话，复用阶段 B 已经渲染好的页面，
-              避免重复请求同一个站点、浪费一次可能被限流的机会。"""
-              log(f"  阶段 C：提取 {base_name} 的可见文本与表格 ...")
+              path = os.path.join(OUTPUT_DIR, SAMPLE_CSV_NAME)
               try:
-                  visible_text = page.evaluate("document.body ? document.body.innerText : ''")
+                  import csv
+                  with open(path, "w", encoding="utf-8-sig", newline="") as f:
+                      writer = csv.DictWriter(f, fieldnames=columns, extrasaction="ignore")
+                      writer.writeheader()
+                      for row in head_rows:
+                          writer.writerow(row)
+                  log(f"写入样本 CSV: {SAMPLE_CSV_NAME} (来自 {method}，{len(head_rows)} 行预览，"
+                      f"该表格总行数 {best.get('row_count')})")
+                  return {"method": method, "columns": columns, "preview_row_count": len(head_rows),
+                          "table_total_rows": best.get("row_count")}
               except Exception as e:
-                  visible_text = f"<提取可见文本失败: {e}>"
-              write_text(f"C_{base_name}_page_text.txt", visible_text or "")
-          
-              try:
-                  tables = page.evaluate(
-                      """
-                      () => {
-                          const tables = Array.from(document.querySelectorAll('table'));
-                          return tables.map((t, i) => {
-                              const rows = Array.from(t.querySelectorAll('tr')).map(tr =>
-                                  Array.from(tr.querySelectorAll('th,td')).map(cell => cell.innerText.trim())
-                              );
-                              return { table_index: i, row_count: rows.length, rows: rows.slice(0, 50) };
-                          });
-                      }
-                      """
-                  )
-              except Exception as e:
-                  tables = {"error": f"提取表格失败: {e}"}
-          
-              write_json(f"C_{base_name}_tables.json", tables)
-              if isinstance(tables, list):
-                  log(f"    找到 {len(tables)} 个 <table> 元素")
-              else:
-                  log(f"    表格提取出现问题: {tables}")
+                  log(f"!! 写入样本 CSV 失败: {e}")
+                  write_text(SAMPLE_CSV_NAME, f"写入失败: {e}")
+                  return None
           
           
           # ---------------------------------------------------------------------------
-          # 阶段 D：生成结论报告
+          # 生成 REPORT.md
           # ---------------------------------------------------------------------------
           
-          def stage_d_report(connectivity_result, playwright_summary):
-              log("=" * 70)
-              log("阶段 D：生成结论报告")
-              log("=" * 70)
+          def fmt_table_brief(tables):
+              if not tables:
+                  return "（无）"
+              parts = []
+              for i, t in enumerate(tables):
+                  cols = t.get("columns", [])
+                  parts.append(f"表{i}: {t.get('row_count')} 行，列名 = {cols}")
+              return "; ".join(parts)
           
+          
+          def build_report(results, sample_info):
               lines = []
-              lines.append("# 国产车销量数据源探测报告")
+              lines.append("# 车主之家(16888)数据源探针报告 v3")
               lines.append("")
               lines.append(f"生成时间 (UTC): {datetime.now(timezone.utc).isoformat()}")
               lines.append("")
-              lines.append("本报告由 `scripts/probe_sources.py` 在 GitHub Actions runner 上自动生成，")
-              lines.append("目的是回答两个问题：runner 能不能访问目标网站？如果能，网站返回的数据长什么样？")
+              lines.append("本报告回答：`xl.16888.com` 能不能作为「2024-01至今 / 乘用车 / 车型级」")
+              lines.append("月度销量看板的数据源。所有结论来自本次 GitHub Actions 实际请求的结果，")
+              lines.append("不是推测。原始 HTML 全部保存在同目录下 `*_raw.html`，可人工核对。")
               lines.append("")
           
-              # runner 地理位置
-              lines.append("## Runner 出口信息")
+              lines.append("## 一、请求总览")
               lines.append("")
-              ip_info = connectivity_result.get("runner_ip_info")
-              ip_error = connectivity_result.get("runner_ip_info_error")
-              if ip_info and ip_info.get("body"):
-                  body = ip_info["body"]
-                  if isinstance(body, dict):
-                      lines.append(f"- IP: `{body.get('ip', '未知')}`")
-                      lines.append(f"- 地区: {body.get('city', '?')}, {body.get('region', '?')}, {body.get('country', '?')}")
-                      lines.append(f"- 组织/ISP: {body.get('org', '未知')}")
-                  else:
-                      lines.append(f"- ipinfo.io 返回了非 JSON 内容，原始预览: `{str(body)[:200]}`")
-              else:
-                  lines.append(f"- 查询失败: {ip_error or '未知原因'}")
-              lines.append("")
-              lines.append("（如果目标网站有地域限制，这个 IP/地区信息是判断是否被地域屏蔽的关键线索。）")
-              lines.append("")
-          
-              # 连通性表格
-              lines.append("## 阶段 A：URL 可达性")
-              lines.append("")
-              lines.append("| URL | 状态码 | 耗时(秒) | 正文长度 | 错误 |")
-              lines.append("|---|---|---|---|---|")
-              for c in connectivity_result.get("url_checks", []):
+              lines.append("| 分组 | id | URL | 状态码 | 耗时(s) | 字节数 | 编码 | 表格提取方式 | 拦截标记 |")
+              lines.append("|---|---|---|---|---|---|---|---|---|")
+              for r in results:
+                  if r["skipped"]:
+                      lines.append(f"| {r['group']} | {r['id']} | {r['url']} | 跳过 | - | - | - | - | {r['skip_reason']} |")
+                      continue
                   lines.append(
-                      f"| {c['url']} | {c.get('status_code', '-')} | {c.get('elapsed_seconds', '-')} "
-                      f"| {c.get('body_length', '-')} | {(c.get('error') or '').replace(chr(10), ' ')[:100]} |"
+                      f"| {r['group']} | {r['id']} | {r['url']} | {r.get('status_code','-')} | "
+                      f"{r.get('elapsed_seconds','-')} | {r.get('body_bytes','-')} | {r.get('chosen_encoding','-')} | "
+                      f"{r.get('table_extraction_method') or '失败'} | {', '.join(r.get('block_markers_found') or []) or '无'} |"
                   )
               lines.append("")
           
-              # Playwright / XHR 汇总
-              lines.append("## 阶段 B：Playwright 渲染与接口抓包")
+              lines.append("## 二、核心问题逐条回答")
               lines.append("")
-              targets = playwright_summary.get("targets_attempted", [])
-              if playwright_summary.get("fatal_error"):
-                  lines.append(f"**致命错误，Playwright 完全没跑起来**: {playwright_summary['fatal_error']}")
-                  lines.append("")
-              if not targets:
-                  lines.append("没有任何目标被尝试（可能阶段 A 里所有 URL 都彻底不可达）。")
-                  lines.append("")
-              for t in targets:
-                  lines.append(f"### {t['url']}")
-                  lines.append("")
-                  if t.get("skipped_reason"):
-                      lines.append(f"- 跳过: {t['skipped_reason']}")
-                      lines.append("")
-                      continue
-                  lines.append(f"- 是否尝试: {t['attempted']}")
-                  if t.get("error"):
-                      lines.append(f"- 错误: `{t['error'][:500]}`")
-                  lines.append(f"- 捕获到的 XHR/fetch 响应总数: {t.get('xhr_all_count', 0)}")
-                  lines.append(f"- 其中 JSON 接口数量: {len(t.get('xhr_json_files', []))}")
-                  if t.get("html_file"):
-                      lines.append(f"- 渲染后 HTML: `probe_output/{t['html_file']}`")
-                  if t.get("screenshot_file"):
-                      lines.append(f"- 截图: `probe_output/{t['screenshot_file']}`")
-                  lines.append("")
-                  if t.get("xhr_json_files"):
-                      lines.append("**捕获到的 JSON 接口及其字段名（用于判断能否拿到六个维度）：**")
-                      lines.append("")
-                      for jf in t["xhr_json_files"]:
-                          lines.append(f"- `{jf['file']}`")
-                          lines.append(f"  - 来源 URL: {jf['source_url']}")
-                          fields = jf.get("field_names")
-                          if fields:
-                              lines.append(f"  - 字段名: {', '.join(f'`{x}`' for x in fields)}")
-                          else:
-                              lines.append("  - 字段名: (未能解析出字段名，请直接查看该 JSON 文件)")
-                      lines.append("")
+          
+              def get(rid):
+                  return next((r for r in results if r["id"] == rid), None)
+          
+              lines.append("### 1. 每个 URL 的表格列名分别是什么？")
+              lines.append("")
+              for r in results:
+                  lines.append(f"**{r['id']}** ({r['desc']}) — `{r['url']}`")
+                  if r["skipped"]:
+                      lines.append(f"- 跳过：{r['skip_reason']}")
+                  elif r.get("error"):
+                      lines.append(f"- 请求/解析出现异常：`{str(r['error'])[:300]}`")
                   else:
-                      lines.append("（未捕获到任何 JSON 接口——要么页面确实没有走 XHR/fetch 接口，")
-                      lines.append("要么被验证码/登录墙拦下了，请查看对应的截图和渲染后 HTML 核实。）")
-                      lines.append("")
+                      method = r.get("table_extraction_method")
+                      tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
+                      lines.append(f"- 提取方式: {method or '两种方式均未提取到表格，见对应 _raw.html 人工核实'}")
+                      lines.append(f"- {fmt_table_brief(tables)}")
+                  lines.append("")
           
-              lines.append("## 需要人工核实的六个维度")
+              lines.append("### 2. 车型级页面（style-202401）一个月有多少行？分页共多少页？")
               lines.append("")
-              lines.append("年月 / 厂商集团 / 品牌 / 车体类型 / 车型 / 能源类型 / 销量")
-              lines.append("")
-              lines.append("请对照上面每个 JSON 接口的字段名列表，以及 `C_*_page_text.txt` / `C_*_tables.json`")
-              lines.append("里的可见文本和表格内容，人工判断这些维度是否齐全。")
+              p1 = get("01_style_202401_p1")
+              p2 = get("02_style_202401_p2")
+              if p1 and not p1["skipped"] and not p1.get("error"):
+                  method = p1.get("table_extraction_method")
+                  tables = p1.get("tables_pandas") if method == "pandas" else p1.get("tables_bs4")
+                  if tables:
+                      best = max(tables, key=lambda t: t.get("row_count", 0))
+                      lines.append(f"- 第1页表格行数: {best.get('row_count')}")
+                  lines.append(f"- 第1页页面中检测到的分页/条数提示文字: {p1.get('pagination_hints') or '未检测到明显的“共XX条/共XX页”字样，见 pagination_hints 原始记录或人工查看 visible_text'}")
+              else:
+                  lines.append("- 第1页请求失败或被跳过，无法判断，见上方总览表。")
+              if p2 and not p2["skipped"] and not p2.get("error"):
+                  method = p2.get("table_extraction_method")
+                  tables = p2.get("tables_pandas") if method == "pandas" else p2.get("tables_bs4")
+                  if tables:
+                      best = max(tables, key=lambda t: t.get("row_count", 0))
+                      head_rows = best.get("head_rows", [])
+                      lines.append(f"- 第2页表格行数: {best.get('row_count')}，前5行内容见下方 head_rows 摘要，"
+                                   f"**请人工核对第一行的排名字段是否从 51 开始**（用于验证分页是否是简单的 offset 50）。")
+                      lines.append(f"  - 第2页 head_rows: `{json.dumps(head_rows, ensure_ascii=False)[:1000]}`")
+              else:
+                  lines.append("- 第2页请求失败或被跳过，无法验证分页起始排名。")
               lines.append("")
           
-              lines.append("## 已知的不确定性 / 推测部分")
+              lines.append("### 3. 2018年、2022年的页面是否真有数据，还是“暂无数据”？")
               lines.append("")
-              lines.append("- 本探针的抓取逻辑是在**完全无法访问目标网站**的环境下编写的，")
-              lines.append("  因此接口路径、字段名的猜测**都没有被验证过**，脚本只是把 Playwright")
-              lines.append("  实际观察到的一切原样记录下来，并没有预设任何接口一定存在。")
-              lines.append("- 如果某个站点有验证码、登录墙或地域屏蔽，脚本不会尝试绕过，只会如实记录截图和 HTML。")
-              lines.append("- `caam.org.cn` 用的是 `http://` 而非 `https://`（原始需求如此），如果该站点强制跳转到")
-              lines.append("  https 或反过来，请求可能会有重定向，已记录在 `A_connectivity.json` 的 response_headers 里。")
+              for rid, label in [("08_style_202201_p1", "2022年1月"), ("09_style_201801_p1", "2018年1月")]:
+                  r = get(rid)
+                  lines.append(f"**{label}** (`{rid}`)")
+                  if r is None:
+                      lines.append("- 未找到探测结果")
+                  elif r["skipped"]:
+                      lines.append(f"- 跳过：{r['skip_reason']}")
+                  elif r.get("error"):
+                      lines.append(f"- 请求/解析异常：`{str(r['error'])[:300]}`")
+                  else:
+                      method = r.get("table_extraction_method")
+                      tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
+                      if tables:
+                          best = max(tables, key=lambda t: t.get("row_count", 0))
+                          lines.append(f"- 提取到表格，行数 = {best.get('row_count')}，"
+                                       f"**{'看起来有真实数据，需人工核对 head_rows 是否为具体车型和销量数字' if best.get('row_count',0) > 0 else '表格行数为0，很可能是空表/暂无数据'}**")
+                          lines.append(f"  - head_rows 摘要: `{json.dumps(best.get('head_rows', []), ensure_ascii=False)[:800]}`")
+                      else:
+                          lines.append("- 未提取到任何表格。请打开对应 `_raw.html` 人工确认页面上是否显示"
+                                       "“暂无数据”一类提示，或页面结构本身与 2024 年不同。")
+                  lines.append("")
+          
+              lines.append("### 4. 2026年7月有没有数据？（时效性）")
+              lines.append("")
+              r = get("03_style_202607_p1")
+              if r is None:
+                  lines.append("- 未找到探测结果")
+              elif r["skipped"]:
+                  lines.append(f"- 跳过：{r['skip_reason']}")
+              elif r.get("error"):
+                  lines.append(f"- 请求/解析异常：`{str(r['error'])[:300]}`")
+              else:
+                  method = r.get("table_extraction_method")
+                  tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
+                  if tables:
+                      best = max(tables, key=lambda t: t.get("row_count", 0))
+                      lines.append(f"- 提取到表格，行数 = {best.get('row_count')}。"
+                                   f"{'行数>0，初步说明2026年7月已有数据（需人工核对 head_rows 里的销量数字不是0或占位符）' if best.get('row_count',0) > 0 else '行数为0，可能7月数据尚未收录'}")
+                      lines.append(f"  - head_rows 摘要: `{json.dumps(best.get('head_rows', []), ensure_ascii=False)[:800]}`")
+                  else:
+                      lines.append("- 未提取到任何表格，请人工查看 `03_style_202607_p1_raw.html`。")
+              lines.append("")
+          
+              lines.append("### 5. body-5(SUV) 和 ev(新能源) 页面的表格结构，和 style 页面是否一致？")
+              lines.append("")
+              base = get("01_style_202401_p1")
+              base_cols = None
+              if base and not base["skipped"] and not base.get("error"):
+                  method = base.get("table_extraction_method")
+                  tables = base.get("tables_pandas") if method == "pandas" else base.get("tables_bs4")
+                  if tables:
+                      base_cols = max(tables, key=lambda t: t.get("row_count", 0)).get("columns")
+              lines.append(f"- style-202401 主表列名基准: `{base_cols}`")
+              for rid, label in [("05_body5_suv_202401_p1", "body-5 (SUV)"), ("07_ev_202401_p1", "ev (新能源)")]:
+                  r = get(rid)
+                  if r is None:
+                      lines.append(f"- {label}: 未找到探测结果")
+                      continue
+                  if r["skipped"] or r.get("error"):
+                      lines.append(f"- {label}: 跳过或异常，见上方总览表")
+                      continue
+                  method = r.get("table_extraction_method")
+                  tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
+                  if tables:
+                      cols = max(tables, key=lambda t: t.get("row_count", 0)).get("columns")
+                      same = (cols == base_cols)
+                      lines.append(f"- {label} 列名: `{cols}` —— {'与 style 页面**一致**' if same else '与 style 页面**不一致，需要人工核对两边字段的对应关系**'}")
+                  else:
+                      lines.append(f"- {label}: 未提取到表格")
+              lines.append("")
+          
+              lines.append("### 6. 交叉校验源（太平洋汽车）情况")
+              lines.append("")
+              r = get("10_pcauto_cross_check")
+              if r is None:
+                  lines.append("- 未找到探测结果")
+              elif r["skipped"]:
+                  lines.append(f"- 跳过：{r['skip_reason']}")
+              elif r.get("error"):
+                  lines.append(f"- 请求/解析异常：`{str(r['error'])[:300]}`")
+              else:
+                  method = r.get("table_extraction_method")
+                  tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
+                  lines.append(f"- 状态码 {r.get('status_code')}，提取方式 {method or '失败'}")
+                  lines.append(f"- {fmt_table_brief(tables)}")
+              lines.append("")
+          
+              lines.append("## 三、样本 CSV")
+              lines.append("")
+              if sample_info:
+                  lines.append(f"- 已生成 `{SAMPLE_CSV_NAME}`，来自 `{SAMPLE_TARGET_ID}`，提取方式 {sample_info['method']}，"
+                               f"该表格总行数 {sample_info['table_total_rows']}（CSV 里只存了前 {sample_info['preview_row_count']} 行预览）。")
+                  lines.append(f"- 列名: `{sample_info['columns']}`")
+              else:
+                  lines.append(f"- 样本 CSV 生成失败或为空，见 `{SAMPLE_TARGET_ID}_raw.html` 人工核对原始页面结构。")
+              lines.append("")
+          
+              lines.append("## 四、已知的不确定性 / 推测部分（务必人工复核）")
+              lines.append("")
+              lines.append("- 本脚本是在**完全无法访问 16888** 的环境下编写的，表格提取逻辑、编码猜测优先级、")
+              lines.append("  分页文字的正则表达式，全部是基于常见中文网站惯例的**推测**，没有被真实页面验证过。")
+              lines.append("- 如果 pandas/bs4 两种方式都没能提取到表格，大概率是页面把数据放进了 JS 变量而不是")
+              lines.append("  静态 `<table>`，或者列表实际上是 `<ul>/<li>` 结构——这种情况下请求本身是成功的，")
+              lines.append("  原始 HTML 已经存好了，需要人工重新设计解析逻辑，而不是本脚本能自动判断的。")
+              lines.append("- 编码判断优先用了 HTML `<meta charset>` 声明，其次 gb18030，最后才是 utf-8 兜底；")
+              lines.append("  **如果看到中文仍然是乱码，请直接查看 `*_raw.html` 原始字节对应的编码**，")
+              lines.append("  而不要相信本报告里 `chosen_encoding` 字段的猜测是100%正确的。")
+              lines.append("- “共XX条/共XX页”这类分页文字的正则是猜的常见写法，16888 实际用词可能不同")
+              lines.append("  （比如“共 500 款车型”“下一页”之类），`pagination_hints` 为空不代表页面没有分页信息，")
+              lines.append("  只代表没命中预设的几个正则，请打开 `_raw.html` 或 `_visible_text.txt` 人工搜索。")
+              lines.append("- 太平洋汽车 (`price.pcauto.com.cn`) 的 URL 路径是按经验猜测拼的，如果结构不对，")
+              lines.append("  大概率会拿到 404 或者一个跟销量无关的页面，需人工确认。")
               lines.append("")
           
               write_text("REPORT.md", "\n".join(lines))
-              log("阶段 D 完成，REPORT.md 已生成。")
+              log("REPORT.md 已生成。")
           
           
           # ---------------------------------------------------------------------------
@@ -636,33 +719,47 @@ jobs:
           
           def main():
               ensure_output_dir()
+              log("开始探测 16888 及交叉校验源。任何单个 URL 失败都不会中断后续 URL。")
+              log(f"本次共 {len(TARGETS)} 个目标，每个请求之间 sleep {DELAY_BETWEEN_REQUESTS_SECONDS} 秒。")
           
-              log("开始探测。任何阶段出错都不会中断后续阶段。")
+              blocked_domains = set()
+              results = []
+              for idx, target in enumerate(TARGETS, start=1):
+                  log("=" * 70)
+                  log(f"[{idx}/{len(TARGETS)}] {target['id']} — {target['desc']}")
+                  try:
+                      r = fetch_one(target, blocked_domains)
+                  except Exception as e:
+                      r = {
+                          "id": target["id"], "group": target["group"], "url": target["url"],
+                          "desc": target["desc"], "skipped": False,
+                          "error": f"fetch_one 整体异常: {e}\n{traceback.format_exc()}",
+                      }
+                      log(f"  !! fetch_one 整体异常: {e}")
+                  results.append(r)
+                  write_json(f"{target['id']}_result.json", r)
+                  if idx < len(TARGETS):
+                      time.sleep(DELAY_BETWEEN_REQUESTS_SECONDS)
           
-              # 阶段 A
+              write_json("all_results.json", results)
+          
+              log("=" * 70)
+              log("生成样本 CSV ...")
               try:
-                  connectivity_result = stage_a_connectivity()
+                  sample_info = write_sample_csv(results)
               except Exception as e:
-                  log(f"!! 阶段 A 整体异常: {e}\n{traceback.format_exc()}")
-                  connectivity_result = {"url_checks": [], "error": str(e)}
+                  log(f"!! 生成样本 CSV 整体异常: {e}\n{traceback.format_exc()}")
+                  sample_info = None
           
-              # 阶段 B（阶段 C 在其内部对每个成功渲染的页面顺带执行）
+              log("生成 REPORT.md ...")
               try:
-                  playwright_summary = stage_b_playwright(connectivity_result)
+                  build_report(results, sample_info)
               except Exception as e:
-                  log(f"!! 阶段 B 整体异常: {e}\n{traceback.format_exc()}")
-                  playwright_summary = {"targets_attempted": [], "fatal_error": str(e)}
-          
-              # 阶段 D
-              try:
-                  stage_d_report(connectivity_result, playwright_summary)
-              except Exception as e:
-                  log(f"!! 阶段 D 整体异常: {e}\n{traceback.format_exc()}")
-                  # 就算报告生成失败，也至少留一个错误文件
+                  log(f"!! 生成 REPORT.md 整体异常: {e}\n{traceback.format_exc()}")
                   write_text("REPORT_GENERATION_FAILED.txt", f"{e}\n{traceback.format_exc()}")
           
               log("=" * 70)
-              log("探测流程全部结束。请查看 probe_output/ 目录下的所有文件。")
+              log("探测流程全部结束。请查看 probe_v3_output/ 目录下的所有文件，尤其是 REPORT.md 和各 *_raw.html。")
               log("=" * 70)
           
           
@@ -670,8 +767,6 @@ jobs:
               try:
                   main()
               except Exception as e:
-                  # 最外层兜底：绝不允许脚本以未捕获异常的形式退出，
-                  # 保证 GitHub Actions 的 upload-artifact 步骤一定有东西可传。
                   try:
                       ensure_output_dir()
                       write_text(
@@ -681,23 +776,20 @@ jobs:
                   except Exception:
                       print("连兜底写文件都失败了，直接打印到 stdout：")
                       print(traceback.format_exc())
-                  # 依然以 0 退出，避免 job 因为"数据网站不可达"这种预期内的情况而标红
-                  # （工作流里也加了 continue-on-error 双重保险）
                   sys.exit(0)
-          
           PROBE_SCRIPT_EOF
 
       - name: Run probe script
         # 脚本内部已经用 try/except 兜住了几乎所有异常，
         # 这里再加一层 continue-on-error 保险，确保后面的 upload 步骤一定能跑
         continue-on-error: true
-        run: python3 probe_sources.py
+        run: python3 probe_v3.py
 
       - name: Drop oversized files before commit
         if: always()
         continue-on-error: true
         run: |
-          find probe_output/ -type f -size +5M -print -exec sh -c 'echo "文件过大已删除: $(basename "$1")" > "$1.toolarge.txt"; rm -f "$1"' _ {} \; || true
+          find probe_v3_output/ -type f -size +5M -print -exec sh -c 'echo "文件过大已删除: $(basename "$1")" > "$1.toolarge.txt"; rm -f "$1"' _ {} \; || true
 
       - name: Commit probe results back to repo
         if: always()
@@ -705,11 +797,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A probe_output/ || true
+          git add -A probe_v3_output/ || true
           if git diff --staged --quiet; then
             echo "没有变化，跳过提交"
           else
-            git commit -m "chore: probe results [skip ci]"
+            git commit -m "chore: probe v3 results (16888) [skip ci]"
             git push
           fi
 
@@ -719,7 +811,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: probe-output
-          path: probe_output/
+          name: probe-v3-output
+          path: probe_v3_output/
           if-no-files-found: warn
           retention-days: 30
