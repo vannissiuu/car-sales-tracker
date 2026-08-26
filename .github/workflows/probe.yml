@@ -7,10 +7,14 @@ on:
     branches:
       - main
       - master
+    paths:
+      - '.github/workflows/**'
 
 jobs:
   probe:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     # 就算脚本内部出了没兜住的异常，也不要让整个 job 显示失败——
     # "访问失败"本身就是我们要收集的结论，不是流程错误
     continue-on-error: true
@@ -688,6 +692,26 @@ jobs:
         # 这里再加一层 continue-on-error 保险，确保后面的 upload 步骤一定能跑
         continue-on-error: true
         run: python3 probe_sources.py
+
+      - name: Drop oversized files before commit
+        if: always()
+        continue-on-error: true
+        run: |
+          find probe_output/ -type f -size +5M -print -exec sh -c 'echo "文件过大已删除: $(basename "$1")" > "$1.toolarge.txt"; rm -f "$1"' _ {} \; || true
+
+      - name: Commit probe results back to repo
+        if: always()
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A probe_output/ || true
+          if git diff --staged --quiet; then
+            echo "没有变化，跳过提交"
+          else
+            git commit -m "chore: probe results [skip ci]"
+            git push
+          fi
 
       - name: Upload probe output
         # 关键：即使上面的步骤失败，也要执行这一步，
