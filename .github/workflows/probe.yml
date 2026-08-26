@@ -8,6 +8,10 @@ on:
         description: '本次最多处理几个月（0 = 不限制，跑完全部）'
         required: false
         default: '1'
+      force_refresh:
+        description: '重抓已存在的月份（true = 忽略已有数据全部重抓）'
+        required: false
+        default: 'false'
   push:
     branches:
       - main
@@ -381,11 +385,14 @@ jobs:
           # ---------------------------------------------------------------------------
 
           def _record_body_probe(report, year, month, body_id, http_status, name, total, parsed_rows, error):
-              report.setdefault("body_probe", []).append({
+              """记录一条 body 探测结果，返回这条记录本身（调用方可以在本月内复用，不用重新拼一遍）。"""
+              entry = {
                   "year": year, "month": month, "body_id": body_id,
                   "http_status": http_status, "name": name,
                   "total": total, "parsed_rows": parsed_rows, "error": error,
-              })
+              }
+              report.setdefault("body_probe", []).append(entry)
+              return entry
 
 
           def sync_month(session, year, month, report, body_names_cache):
@@ -397,7 +404,9 @@ jobs:
               if not ok or not style_rows:
                   raise MonthAbortedException(f"{yyyymm} 主榜抓取失败或为空")
 
-              body_type_map = {}  # (model, manufacturer) -> body_type name
+              body_lists = []  # [(body_id, body_name, rows), ...] —— 仅本月成功探测到、有数据的分类
+              this_month_probe = []  # 本月所有 body-1..8 的探测记录（含失败/不存在的），供对账用
+
               for body_id in BODY_IDS:
                   body_tpl = f"{BASE}/body-{body_id}-{yyyymm}-{yyyymm}-{{page}}.html"
                   label = f"{yyyymm} body-{body_id}"
@@ -425,12 +434,13 @@ jobs:
                       raise MonthAbortedException(f"{label} 抓取失败")
 
                   if not rows:
-                      _record_body_probe(
+                      entry = _record_body_probe(
                           report, year, month, body_id,
                           http_status=probe.get("http_status"), name=None,
                           total=probe.get("total"), parsed_rows=probe.get("parsed_rows") or 0,
                           error=probe.get("error") or "无数据",
                       )
+                      this_month_probe.append(entry)
                       continue
 
                   if body_id not in body_names_cache:
@@ -438,15 +448,18 @@ jobs:
                       body_names_cache[body_id] = name or f"未知分类{body_id}"
                   body_name = body_names_cache[body_id]
 
-                  _record_body_probe(
+                  entry = _record_body_probe(
                       report, year, month, body_id,
                       http_status=probe.get("http_status"), name=body_name,
                       total=probe.get("total"), parsed_rows=probe.get("parsed_rows"),
                       error=probe.get("error"),
                   )
+                  this_month_probe.append(entry)
+                  body_lists.append((body_id, body_name, rows))
 
-                  for r in rows:
-                      body_type_map[(r["model"], r["manufacturer"])] = body_name
+              body_type_map, conflicts = build_body_type_map(body_lists)
+              if conflicts:
+                  report.setdefault("body_type_conflicts", []).extend(f"{yyyymm}: {c}" for c in conflicts)
 
               ev_tpl = f"{BASE}/ev-{yyyymm}-{yyyymm}-{{page}}.html"
               ev_rows, ok, _page1_html, _probe = fetch_full_listing(
@@ -454,12 +467,20 @@ jobs:
               )
               if not ok:
                   raise MonthAbortedException(f"{yyyymm} ev 抓取失败")
-              ev_set = {(r["model"], r["manufacturer"]) for r in (ev_rows or [])}
+              ev_set = build_ev_set(ev_rows or [])
 
               out_rows, unmatched = label_rows(style_rows, body_type_map, ev_set, year, month)
 
-              log(f"完成 {yyyymm}: 主榜 {len(style_rows)} 行, 未匹配车体类型 {unmatched} 行, "
-                  f"新能源 {sum(1 for x in out_rows if x['energy_type']=='新能源')} 行")
+              recon = reconcile_body_types(out_rows, body_lists, this_month_probe)
+              report.setdefault("reconciliation", []).append({
+                  "year": year, "month": month,
+                  "results": recon["results"],
+                  "total_check": recon["total_check"],
+              })
+
+              log(f"完成 {yyyymm}: 主榜 {len(style_rows)} 行, 填「其他」{unmatched} 行, "
+                  f"新能源 {sum(1 for x in out_rows if x['energy_type']=='新能源')} 行, "
+                  f"对账{'通过' if recon['total_check']['ok'] else '不平'}")
 
               report["months_done"].append({
                   "year": year, "month": month,
@@ -468,20 +489,60 @@ jobs:
               return out_rows
 
 
+          def build_body_type_map(body_lists):
+              """
+              body_lists: [(body_id, body_name, rows), ...]，rows 里每个元素至少有 'model' 键。
+              关联键只用车型名（同一个月内车型名 100% 唯一，已由用户核实过，不再带厂商名一起比较——
+              厂商名在主榜和 body 分榜之间的写法可能不一致，之前就是这个原因丢了 17 条两厢车）。
+
+              返回 (body_type_map: model -> body_type中文名, conflicts: list[str] 冲突描述)：
+                - 同一个 body 榜单内同一个车型出现多次 -> 记一条冲突。
+                - 同一个车型出现在两个不同的 body 榜单里（比如既在两厢车又在SUV）-> 记一条冲突，
+                  以后出现的覆盖之前的（按 BODY_IDS 顺序，body_id 小的先处理）。
+              这是一个纯函数，不发请求，方便离线单测。
+              """
+              body_type_map = {}
+              conflicts = []
+              for body_id, body_name, rows in body_lists:
+                  counts_in_this_body = {}
+                  for r in rows:
+                      counts_in_this_body[r["model"]] = counts_in_this_body.get(r["model"], 0) + 1
+
+                  for model, c in counts_in_this_body.items():
+                      if c > 1:
+                          conflicts.append(f"body-{body_id}({body_name}) 榜单内车型「{model}」重复出现 {c} 次")
+
+                  for model in counts_in_this_body:
+                      if model in body_type_map and body_type_map[model] != body_name:
+                          conflicts.append(
+                              f"车型「{model}」同时出现在「{body_type_map[model]}」和「{body_name}」"
+                              f"(body-{body_id})，最终采用「{body_name}」"
+                          )
+                      body_type_map[model] = body_name
+
+              return body_type_map, conflicts
+
+
+          def build_ev_set(ev_rows):
+              """ev 榜单车型名集合（仅按车型名，理由同 build_body_type_map）。纯函数，方便单测。"""
+              return {r["model"] for r in ev_rows}
+
+
           def label_rows(style_rows, body_type_map, ev_set, year, month):
               """
-              以主榜 (style_rows) 为基准，左连接打上 body_type / energy_type 标签。
+              以主榜 (style_rows) 为基准，用「车型名」左连接打上 body_type / energy_type 标签。
+              真正不在任何 body 榜单里的车型，body_type 填「其他」（不留空，避免前端图表出现无名分类）。
               这是一个纯函数（不发请求），方便离线单测。
-              返回 (out_rows, unmatched_count)。
+              返回 (out_rows, other_count) —— other_count 是被填成「其他」的行数。
               """
-              unmatched = 0
+              other_count = 0
               out_rows = []
               for r in style_rows:
-                  key = (r["model"], r["manufacturer"])
-                  body_type = body_type_map.get(key, "")
-                  if not body_type:
-                      unmatched += 1
-                  energy_type = "新能源" if key in ev_set else "燃油"
+                  model = r["model"]
+                  body_type = body_type_map.get(model, "其他")
+                  if body_type == "其他":
+                      other_count += 1
+                  energy_type = "新能源" if model in ev_set else "燃油"
                   out_rows.append({
                       "year": year,
                       "month": month,
@@ -491,7 +552,58 @@ jobs:
                       "energy_type": energy_type,
                       "sales": r["sales"],
                   })
-              return out_rows, unmatched
+              return out_rows, other_count
+
+
+          def reconcile_body_types(out_rows, body_lists, body_probe_entries):
+              """
+              质量守门：对每个本月成功探测到的 body 分类，比较「body 页面声明的共X条」
+              和「out_rows 里实际打上该标签的行数」，不一致就报出来，并列出差异涉及的车型名
+              （最多 20 个，用页面车型集合和输出车型集合的对称差算出来，天然能覆盖
+              "被同名冲突覆盖掉" 和 "页面有但主榜没有" 两种情况）。
+
+              再做一次总量对账：各分类实际行数之和 + 「其他」行数 == 主榜(out_rows)总行数。
+              这个理论上必然成立（label_rows 给每一行恰好赋一个 body_type），加在这里是为了
+              防将来重构引入 bug 时能第一时间发现，而不是指望它真的抓到线上数据问题。
+
+              纯函数，不发请求，方便离线单测。
+              """
+              from collections import Counter
+
+              actual_counts = Counter(r["body_type"] for r in out_rows)
+              body_models = {bid: {r["model"] for r in rows} for bid, name, rows in body_lists}
+
+              results = []
+              for p in body_probe_entries:
+                  name = p.get("name")
+                  if not name:
+                      continue  # 该 body 编号本月不存在/失败，不参与对账
+                  body_id = p["body_id"]
+                  total = p.get("total")
+                  actual = actual_counts.get(name, 0)
+                  mismatch = (total is not None) and (actual != total)
+                  diff_models = []
+                  if mismatch:
+                      page_models = body_models.get(body_id, set())
+                      output_models = {r["model"] for r in out_rows if r["body_type"] == name}
+                      diff_models = sorted((page_models - output_models) | (output_models - page_models))[:20]
+                  results.append({
+                      "body_id": body_id, "name": name, "total": total, "actual": actual,
+                      "mismatch": mismatch, "diff_models": diff_models,
+                  })
+
+              other_count = actual_counts.get("其他", 0)
+              matched_sum = sum(r["actual"] for r in results)
+              total_rows = len(out_rows)
+              total_check_ok = (matched_sum + other_count) == total_rows
+
+              return {
+                  "results": results,
+                  "total_check": {
+                      "matched_sum": matched_sum, "other_count": other_count,
+                      "total_rows": total_rows, "ok": total_check_ok,
+                  },
+              }
 
 
           # ---------------------------------------------------------------------------
@@ -553,17 +665,19 @@ jobs:
 
           def compute_body_type_coverage(all_rows_sorted):
               """
-              车体类型覆盖率 = 有 body_type 的行数 / 总行数，外加最多 30 个未匹配上的车型样本
-              （按"厂商 - 车型"去重展示，方便人工核对到底是哪些车没打上标签）。
+              车体类型覆盖率 = 非「其他」的行数 / 总行数（「其他」现在是有意义的取值——代表
+              "真的不在任何 body 榜单里"，不再是空字符串，所以覆盖率的分子要相应排除它）。
+              额外给出「其他」的行数，以及最多 30 个「其他」车型样本（按"厂商 - 车型"去重展示）。
               """
               total = len(all_rows_sorted)
-              with_body_type = sum(1 for r in all_rows_sorted if r["body_type"])
-              rate = (with_body_type / total) if total else None
+              other_count = sum(1 for r in all_rows_sorted if r["body_type"] == "其他")
+              with_real_body_type = total - other_count
+              rate = (with_real_body_type / total) if total else None
 
               unmatched_pairs = []
               seen = set()
               for r in all_rows_sorted:
-                  if r["body_type"]:
+                  if r["body_type"] != "其他":
                       continue
                   key = (r["manufacturer"], r["model"])
                   if key in seen:
@@ -575,7 +689,8 @@ jobs:
 
               return {
                   "total_rows": total,
-                  "with_body_type": with_body_type,
+                  "with_real_body_type": with_real_body_type,
+                  "other_count": other_count,
                   "rate": rate,
                   "unmatched_samples": unmatched_pairs,
                   "unmatched_total_distinct": len(seen) if len(unmatched_pairs) < 30 else None,
@@ -588,9 +703,19 @@ jobs:
               lines.append(f"- 运行时间 (UTC): {report['started_at']} ~ {report['finished_at']}")
               lines.append(f"- 耗时: {report['elapsed_seconds']:.0f} 秒")
               lines.append(f"- max_months 本次生效值: {report.get('max_months_desc', '未知')}")
+              lines.append(
+                  f"- force_refresh 本次生效值: {report.get('force_refresh', False)} "
+                  f"({report.get('force_refresh_desc', '未知')})"
+              )
               lines.append(f"- 是否被拦截: {'是 - ' + report['blocked_reason'] if report.get('blocked_reason') else '否'}")
               lines.append(f"- 累计总行数 (sales.csv): {total_rows}")
               lines.append(f"- 累计厂商数 (manufacturers.txt): {total_manufacturers}")
+              overwritten = report.get("overwritten_months", [])
+              if overwritten:
+                  overwritten_str = ", ".join(f"{y}-{m:02d}" for y, m in overwritten)
+                  lines.append(f"- 本次重抓覆盖的月份 ({len(overwritten)} 个): {overwritten_str}")
+              else:
+                  lines.append("- 本次重抓覆盖的月份: (无)")
               lines.append("")
 
               lines.append("## 车体类型覆盖率\n")
@@ -599,19 +724,81 @@ jobs:
                   lines.append("(sales.csv 目前是空的，无法计算覆盖率)")
               else:
                   pct = rate * 100
-                  lines.append(f"- 有 body_type 的行数 / 总行数: {coverage['with_body_type']} / {coverage['total_rows']} ({pct:.1f}%)")
+                  lines.append(
+                      f"- 非「其他」的行数 / 总行数: {coverage['with_real_body_type']} / {coverage['total_rows']} ({pct:.1f}%)"
+                  )
+                  lines.append(f"- 「其他」(真的不在任何 body 榜单里) 行数: {coverage['other_count']}")
                   if rate < 0.9:
                       lines.append("")
-                      lines.append("**⚠️ 覆盖率异常，请勿继续全量回补** —— 先确认 body-1..8 的探测表格，"
-                                    "看看是不是有分类 404/探测失败，导致大量车型的 body_type 打了空。")
+                      lines.append("**⚠️ 覆盖率异常，请勿继续全量回补** —— 先确认 body-1..8 的探测表格和下面的「车体类型对账」，"
+                                    "看看是不是有分类 404/探测失败/对账不平，导致大量车型的 body_type 打成了「其他」。")
                   lines.append("")
                   if coverage["unmatched_samples"]:
-                      lines.append(f"未匹配到 body_type 的车型样本（最多列 30 个，按 厂商-车型 去重）：\n")
+                      lines.append(f"「其他」车型样本（最多列 30 个，按 厂商-车型 去重）：\n")
                       for s in coverage["unmatched_samples"]:
                           lines.append(f"- {s}")
                       if coverage.get("unmatched_total_distinct") is None:
                           lines.append("- ...（还有更多，此列表截断到 30 个）")
               lines.append("")
+
+              lines.append("## 车体类型对账\n")
+              lines.append("以后每月自动跑的时候，这是发现数据源变化（比如某个 body 分类的编号/含义变了、"
+                            "车型名在不同榜单间对不上）的第一道防线。")
+              lines.append("")
+              reconciliation = report.get("reconciliation", [])
+              if not reconciliation:
+                  lines.append("(本次运行没有成功完成任何一个月份，无对账数据)")
+              else:
+                  for rec in sorted(reconciliation, key=lambda x: (x["year"], x["month"])):
+                      yyyymm_label = f"{rec['year']}-{rec['month']:02d}"
+                      lines.append(f"### {yyyymm_label}\n")
+                      results = rec["results"]
+                      if results:
+                          lines.append("| body 编号 | 分类名 | 页面共X条 | 实际标上 | 差 | 状态 |")
+                          lines.append("|---|---|---|---|---|---|")
+                          for r in results:
+                              total_ = r["total"] if r["total"] is not None else "-"
+                              diff = (r["total"] - r["actual"]) if r["total"] is not None else "-"
+                              status = "❌ 不平" if r["mismatch"] else "✅"
+                              lines.append(
+                                  f"| body-{r['body_id']} | {r['name']} | {total_} | {r['actual']} | {diff} | {status} |"
+                              )
+                          mismatched = [r for r in results if r["mismatch"]]
+                          for r in mismatched:
+                              diff = r["total"] - r["actual"]
+                              lines.append("")
+                              lines.append(
+                                  f"⚠️ **{r['name']} 对账不平：页面 {r['total']} 条，实际标上 {r['actual']} 条，"
+                                  f"差 {diff} 条**"
+                              )
+                              if r["diff_models"]:
+                                  lines.append(f"差异涉及的车型（最多列 20 个）：{ '、'.join(r['diff_models']) }")
+                      else:
+                          lines.append("(本月没有任何成功探测到的 body 分类，无法对账)")
+
+                      tc = rec["total_check"]
+                      lines.append("")
+                      if tc["ok"]:
+                          lines.append(
+                              f"✅ 总量对账通过：各分类实际行数之和 {tc['matched_sum']} + 「其他」{tc['other_count']} "
+                              f"== 主榜总行数 {tc['total_rows']}"
+                          )
+                      else:
+                          lines.append(
+                              f"⚠️ **总量对账不平：各分类实际行数之和 {tc['matched_sum']} + 「其他」{tc['other_count']} "
+                              f"= {tc['matched_sum'] + tc['other_count']}，与主榜总行数 {tc['total_rows']} 不一致**"
+                          )
+                      lines.append("")
+
+              conflicts = report.get("body_type_conflicts", [])
+              if conflicts:
+                  lines.append("### 关联冲突\n")
+                  lines.append("同一个车型在同一个 body 榜单内重复出现，或者同时出现在两个不同的 body 榜单里——"
+                                "正常情况不该发生，出现了说明数据源有异常：")
+                  lines.append("")
+                  for c in conflicts:
+                      lines.append(f"- {c}")
+                  lines.append("")
 
               lines.append(f"## body-1..8 探测结果（本次试运行的核心产出）\n")
               body_probe = report.get("body_probe", [])
@@ -695,6 +882,51 @@ jobs:
               return val, f"MAX_MONTHS={val} -> 本次最多跑 {val} 个月"
 
 
+          def parse_force_refresh(raw):
+              """
+              解析 FORCE_REFRESH 环境变量。和 parse_max_months 一样保守优先：
+              只有明确写了 true/1/yes（大小写不敏感、去首尾空格）才是 True，
+              其余一切——未设置、空字符串、'false'、拼写错误——都落到 False。
+              push 触发时没有 inputs，FORCE_REFRESH 会是空字符串，必须落到 False（不重抓）。
+              返回 (force_refresh: bool, desc: str)。
+              """
+              if raw is None or raw.strip() == "":
+                  return False, "未设置/空 (push 触发或未传参) -> 默认不重抓"
+              normalized = raw.strip().lower()
+              truthy = {"true", "1", "yes"}
+              if normalized in truthy:
+                  return True, f"FORCE_REFRESH='{raw}' -> True，忽略已有月份，本次范围内月份全部重抓"
+              return False, f"FORCE_REFRESH='{raw}' 不在 true/1/yes 之列 -> 保守按 False（不重抓）处理"
+
+
+          def compute_effective_months_done(months_done, force_refresh):
+              """
+              force_refresh=True 时，把"已经抓过的月份"这个概念清空，让范围内所有月份
+              都重新进入待抓取列表；force_refresh=False 时维持原有的幂等跳过逻辑。
+              纯函数，方便单测。
+              """
+              return set() if force_refresh else set(months_done)
+
+
+          def merge_existing_and_new(existing_rows, all_new_rows, synced_this_run):
+              """
+              按月粒度 upsert，而不是整表覆盖：
+                - existing_rows 里凡是属于本次成功同步月份 (synced_this_run) 的行，一律丢弃——
+                  因为 all_new_rows 里已经有这些月份的新版本了，留着旧的会重复。
+                - 不在 synced_this_run 里的月份（本次没跑、或者本次跑了但失败/被放弃）的旧数据
+                  原样保留，绝不因为本次运行不完整就被抹掉。
+              这一条函数同时覆盖两种场景：
+                - force_refresh=False 时，synced_this_run 只可能是"以前没抓过的新月份"，
+                  和 existing_rows 天然不交叉，这里的过滤等价于原来的"existing + new"逻辑，不变。
+                - force_refresh=True 时，synced_this_run 可能和 existing_rows 有交叉，
+                  交叉的部分被新数据替换；本次抓取失败被放弃的月份不在 synced_this_run 里，
+                  原样保留，不受影响。
+              纯函数，不发请求，方便离线单测（尤其是"半途放弃不能抹掉旧数据"这条）。
+              """
+              kept = [r for r in existing_rows if (r["year"], r["month"]) not in synced_this_run]
+              return kept + all_new_rows
+
+
           def main():
               import requests
 
@@ -707,16 +939,24 @@ jobs:
                   "blocked_reason": None,
                   "body_names": {},
                   "body_probe": [],
+                  "reconciliation": [],
+                  "body_type_conflicts": [],
               }
 
               max_months, max_months_desc = parse_max_months(os.environ.get("MAX_MONTHS"))
               report["max_months_desc"] = max_months_desc
               log(f"max_months 设置: {max_months_desc}")
 
+              force_refresh, force_refresh_desc = parse_force_refresh(os.environ.get("FORCE_REFRESH"))
+              report["force_refresh"] = force_refresh
+              report["force_refresh_desc"] = force_refresh_desc
+              log(f"force_refresh 设置: {force_refresh} ({force_refresh_desc})")
+
               existing_rows, months_done = load_existing_sales()
               log(f"已有 {len(existing_rows)} 行历史数据，覆盖 {len(months_done)} 个月份")
 
-              all_targets = [ym for ym in months_from_2024_01_to_now() if ym not in months_done]
+              effective_months_done = compute_effective_months_done(months_done, force_refresh)
+              all_targets = [ym for ym in months_from_2024_01_to_now() if ym not in effective_months_done]
               if max_months > 0:
                   targets = all_targets[:max_months]
               else:
@@ -752,7 +992,12 @@ jobs:
               report["finished_at"] = datetime.now(timezone.utc).isoformat()
               report["elapsed_seconds"] = time.time() - start_time
 
-              combined = existing_rows + all_new_rows
+              # synced_this_run 是"本次真正成功产出了数据的月份"——只有这些月份的旧数据会被替换，
+              # 本次没碰到、或者碰到了但失败/放弃/被拦截的月份，一律保留原样，见 merge_existing_and_new。
+              synced_this_run = {(m["year"], m["month"]) for m in report["months_done"]}
+              report["overwritten_months"] = sorted(synced_this_run & months_done)
+
+              combined = merge_existing_and_new(existing_rows, all_new_rows, synced_this_run)
               write_outputs(combined, report)
 
               log("同步结束")
@@ -777,10 +1022,11 @@ jobs:
         # 这里再加一层 continue-on-error 保险，确保后面的 commit/upload 步骤一定能跑
         continue-on-error: true
         env:
-          # push 触发时没有 inputs.max_months，这里会是空字符串——
-          # sync.py 里的 parse_max_months() 把空字符串按"只跑1个月"处理（保守优先），
-          # 不会因为一次 push 就误跑全量 32 个月。
+          # push 触发时没有 inputs.max_months/force_refresh，两个都会是空字符串——
+          # sync.py 里 parse_max_months()/parse_force_refresh() 把空字符串分别按
+          # "只跑1个月"/"不重抓" 处理（保守优先），不会因为一次 push 就误跑全量或误重抓。
           MAX_MONTHS: ${{ inputs.max_months }}
+          FORCE_REFRESH: ${{ inputs.force_refresh }}
         run: python3 sync.py
 
       - name: Drop oversized files before commit
