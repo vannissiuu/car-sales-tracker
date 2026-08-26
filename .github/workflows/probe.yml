@@ -1,8 +1,13 @@
-name: Probe Car Sales Sources v3 (16888)
+name: Sync Car Sales Data (16888)
 
 # 手动点击触发，或者 push 代码时自动跑一次
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      max_months:
+        description: '本次最多处理几个月（0 = 不限制，跑完全部）'
+        required: false
+        default: '1'
   push:
     branches:
       - main
@@ -11,12 +16,13 @@ on:
       - '.github/workflows/**'
 
 jobs:
-  probe:
+  sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     permissions:
       contents: write
     # 就算脚本内部出了没兜住的异常，也不要让整个 job 显示失败——
-    # "访问失败"本身就是我们要收集的结论，不是流程错误
+    # 抓取失败/被拦截本身就是我们要收集的结论，不是流程错误
     continue-on-error: true
     steps:
       - name: Checkout repository
@@ -28,790 +34,782 @@ jobs:
           python-version: "3.11"
 
       - name: Install Python dependencies
-        # v3 目标是服务端渲染的静态 HTML（xl.16888.com），不需要 Playwright/浏览器渲染，
-        # 依赖只要 requests + 两种表格解析方式（pandas.read_html 用 lxml 做解析器）+ bs4
         run: pip install requests beautifulsoup4 lxml pandas
 
-      - name: Write probe script
+      - name: Write sync script
         run: |
-          cat > probe_v3.py << 'PROBE_SCRIPT_EOF'
+          cat > sync.py << 'SYNC_SCRIPT_EOF'
           #!/usr/bin/env python3
           # -*- coding: utf-8 -*-
           """
-          探针脚本 v3：验证车主之家 xl.16888.com 能否作为「2024-01 至今 / 乘用车 / 车型级」
-          月度销量数据源。
-          
-          背景（上一轮已验证的事实，本脚本不再重复验证）：
-            - GitHub Actions runner 出口 IP 在美国弗吉尼亚，访问中国网站无地域封锁
-            - 懂车帝 /sales 有滑块验证码 + 签名参数，且只保留最近 6 个月数据
-            - 乘联会 requests 直连 403，中汽协直连 200
-          
-          本轮目标：
-            - 16888 是否服务端渲染、requests 能否直接拿到表格
-            - 编码是否是 GBK/GB2312 家族，处理不对会全是乱码
-            - 车型级页面一个月有多少行、分页情况
-            - 2018 年 / 2022 年是否真有历史数据
-            - 2026 年 7 月是否已有数据（时效性）
-            - body-5(SUV) / ev(新能源) 页面表格结构是否和 style 页面一致
-            - 太平洋汽车作为交叉校验源是否可用
-          
-          设计原则：探针只探测列表里这 10 个 URL，不自动翻页扩量。任何一步失败都不能
-          让脚本崩掉——网络失败、解析失败本身就是我们要收集的结论。
+          P1 数据管道：从车主之家 xl.16888.com 抓取 2024-01 至今的乘用车月度销量数据，
+          产出 data/sales.csv / data/manufacturers.txt / data/sync_report.md。
+
+          设计依据见任务说明（已实测验证的事实、用户拍板口径），本文件不重复背景介绍。
+
+          关键设计点：
+            - 幂等：启动时读取已有 data/sales.csv，跳过已经完整抓取过的 (year, month)。
+            - 每个月只有在「主榜 + body-1..8 + ev」全部页面都抓取成功后才提交（append）到结果里；
+              半途被拦截/超时的月份不写入，保证下次重跑不会因为"已存在该月份"而误跳过残缺数据。
+            - 拦截检测（403/429/验证码关键词）：立即停止对该站点的所有后续请求，把已经跑完的
+              完整月份数据保存下来，在报告里说明情况。
+            - body_type 的分类名称（比如 body-5 到底叫"SUV"还是别的）是从页面 <title> 里现取的，
+              不是硬编码猜的；body-1..8 里任何一个 404 / 没有结果就跳过该分类。
+            - energy_type 严格二元：车型出现在 ev 榜单里 -> 新能源，否则 -> 燃油。不做任何按名字的推断。
           """
-          
+
+          import csv
           import io
-          import json
           import os
           import re
           import sys
           import time
           import traceback
           from datetime import datetime, timezone
-          from urllib.parse import urlparse
-          
-          # ---------------------------------------------------------------------------
-          # 基础设置
-          # ---------------------------------------------------------------------------
-          
-          OUTPUT_DIR = os.path.join(os.getcwd(), "probe_v3_output")
-          
+
+          BASE = "https://xl.16888.com"
+
           COMMON_UA = (
               "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
               "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
           )
-          
+
           REQUEST_HEADERS = {
               "User-Agent": COMMON_UA,
               "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
               "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
           }
-          
+
           REQUEST_TIMEOUT_SECONDS = 20
-          DELAY_BETWEEN_REQUESTS_SECONDS = 3
-          
-          # 阶段 A/B/C：这 10 个 URL 就是本次探针的全部目标，不做任何自动翻页扩展
-          TARGETS = [
-              {"id": "01_style_202401_p1", "group": "A",
-               "url": "https://xl.16888.com/style-202401-202401-1.html",
-               "desc": "车型级 2024年1月 第1页"},
-              {"id": "02_style_202401_p2", "group": "A",
-               "url": "https://xl.16888.com/style-202401-202401-2.html",
-               "desc": "车型级 2024年1月 第2页（验证分页，排名应从51开始）"},
-              {"id": "03_style_202607_p1", "group": "A",
-               "url": "https://xl.16888.com/style-202607-202607-1.html",
-               "desc": "车型级 2026年7月（验证数据时效性，最新月份有没有）"},
-              {"id": "04_factory_202401_p1", "group": "A",
-               "url": "https://xl.16888.com/factory-202401-202401-1.html",
-               "desc": "厂商级 2024年1月（验证厂商维度）"},
-              {"id": "05_body5_suv_202401_p1", "group": "A",
-               "url": "https://xl.16888.com/body-5-202401-202401-1.html",
-               "desc": "SUV 2024年1月（验证车体类型维度）"},
-              {"id": "06_body3_mpv_202401_p1", "group": "A",
-               "url": "https://xl.16888.com/body-3-202401-202401-1.html",
-               "desc": "MPV 2024年1月"},
-              {"id": "07_ev_202401_p1", "group": "A",
-               "url": "https://xl.16888.com/ev-202401-202401-1.html",
-               "desc": "新能源 2024年1月（验证能源类型维度）"},
-              {"id": "08_style_202201_p1", "group": "B",
-               "url": "https://xl.16888.com/style-202201-202201-1.html",
-               "desc": "2022年1月（更早的历史，边界探测）"},
-              {"id": "09_style_201801_p1", "group": "B",
-               "url": "https://xl.16888.com/style-201801-201801-1.html",
-               "desc": "2018年1月（历史深度边界探测）"},
-              {"id": "10_pcauto_cross_check", "group": "C",
-               "url": "https://price.pcauto.com.cn/top/sales/s1-t1.html",
-               "desc": "太平洋汽车当月榜（交叉校验对照，非 16888）"},
-          ]
-          
-          SAMPLE_TARGET_ID = "01_style_202401_p1"
-          SAMPLE_CSV_NAME = "sample_202401.csv"
-          
-          # 命中这些字样，判定为验证码/人机校验/访问受限
+          SLEEP_BETWEEN_REQUESTS_SECONDS = 2
+          RETRY_SLEEPS = [5, 15]  # 失败重试 2 次，间隔 5s / 15s
+          ROWS_PER_PAGE = 50
+
           BLOCK_MARKERS = [
               "验证码", "captcha", "人机验证", "安全验证", "访问异常",
               "拒绝访问", "禁止访问", "blocked", "Access Denied",
           ]
-          
-          # 猜测「共 XX 条 / 共 XX 页」之类的分页提示文字
+
           PAGINATION_PATTERNS = [
               r"共\s*(\d+)\s*条",
-              r"共\s*(\d+)\s*页",
               r"共计\s*(\d+)\s*条",
-              r"/\s*(\d+)\s*页",
-              r"(\d+)\s*条数据",
           ]
-          
-          
+
+          # body-1 .. body-8 全部探测；含义未知的先占位，实际名称从页面标题里取
+          BODY_IDS = list(range(1, 9))
+
+          DATA_DIR = os.path.join(os.getcwd(), "data")
+          SALES_CSV = os.path.join(DATA_DIR, "sales.csv")
+          MANUFACTURERS_TXT = os.path.join(DATA_DIR, "manufacturers.txt")
+          REPORT_MD = os.path.join(DATA_DIR, "sync_report.md")
+
+          CSV_FIELDS = ["year", "month", "manufacturer", "model", "body_type", "energy_type", "sales"]
+
+          # 单次 job 的软性时间预算（留出余量给 commit / upload 步骤），超过后停止抓新的月份
+          MAX_RUNTIME_SECONDS = 5.5 * 3600
+
+
           def log(msg):
               ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
               print(f"[{ts}] {msg}", flush=True)
-          
-          
-          def ensure_output_dir():
-              os.makedirs(OUTPUT_DIR, exist_ok=True)
-              log(f"输出目录: {OUTPUT_DIR}")
-          
-          
-          def write_text(filename, text):
-              path = os.path.join(OUTPUT_DIR, filename)
-              try:
-                  with open(path, "w", encoding="utf-8") as f:
-                      f.write(text if text is not None else "")
-                  log(f"  写入 {filename} ({len(text or '')} 字符)")
-              except Exception as e:
-                  log(f"  !! 写入 {filename} 失败: {e}")
-          
-          
-          def write_json(filename, data):
-              path = os.path.join(OUTPUT_DIR, filename)
-              try:
-                  with open(path, "w", encoding="utf-8") as f:
-                      json.dump(data, f, ensure_ascii=False, indent=2, default=str)
-                  log(f"  写入 {filename}")
-              except Exception as e:
-                  log(f"  !! 写入 {filename} 失败: {e}")
-          
-          
-          def safe_id(s):
-              s = re.sub(r"[^a-zA-Z0-9._-]+", "_", s)
-              return s.strip("_") or "unknown"
-          
-          
+
+
+          class BlockedException(Exception):
+              """站点判定为拦截（403/429/验证码关键词），调用方需立即停止一切后续请求。"""
+
+
+          class MonthAbortedException(Exception):
+              """当前月份抓取半途失败（非拦截，比如反复重试仍失败的页面），放弃这一个月，不写入结果。"""
+
+
           # ---------------------------------------------------------------------------
-          # 编码处理：16888 很可能是 GBK/GB2312/GB18030 家族，处理不对就是满屏乱码
+          # 编码处理
           # ---------------------------------------------------------------------------
-          
+
           def decode_response(resp):
-              """
-              返回 (最终采用的正文文本, 最终采用的编码名, 调试笔记列表)。
-              策略优先级：
-                1. HTML <meta charset=...> 里显式声明的编码（最可信）
-                2. gb18030（GBK/GB2312 的超集，猜中文站十有八九不会错）
-                3. requests 自己的 apparent_encoding（chardet/charset_normalizer 猜测）
-                4. utf-8 兜底
-              每一步都记录下来，方便事后人工核对是不是真的没乱码。
-              """
-              notes = []
               raw = resp.content
-              notes.append(f"requests声明的encoding(resp.encoding): {resp.encoding}")
-          
-              try:
-                  apparent = resp.apparent_encoding
-              except Exception as e:
-                  apparent = None
-                  notes.append(f"apparent_encoding 获取失败: {e}")
-              notes.append(f"apparent_encoding: {apparent}")
-          
               meta_charset = None
               try:
                   m = re.search(rb'charset\s*=\s*["\']?\s*([a-zA-Z0-9_-]+)', raw[:4096])
                   if m:
                       meta_charset = m.group(1).decode("ascii", errors="ignore").strip().lower().strip('"\'/')
-                      notes.append(f"HTML <meta> 声明的 charset: {meta_charset}")
-              except Exception as e:
-                  notes.append(f"meta charset 嗅探失败: {e}")
-          
-              def try_decode(enc):
-                  try:
-                      return raw.decode(enc, errors="replace")
-                  except Exception as e:
-                      notes.append(f"用 {enc} 解码失败: {e}")
-                      return None
-          
-              candidates = []  # (enc, text) 按优先级排列，取第一个能拿到文本的
+              except Exception:
+                  pass
+
+              candidates = []
               if meta_charset:
                   candidates.append(meta_charset)
               candidates.append("gb18030")
-              if apparent:
-                  candidates.append(apparent)
+              try:
+                  if resp.apparent_encoding:
+                      candidates.append(resp.apparent_encoding)
+              except Exception:
+                  pass
               candidates.append("utf-8")
-          
-              chosen_enc = None
-              chosen_text = None
+
               for enc in candidates:
-                  text = try_decode(enc)
-                  if text is not None:
-                      chosen_enc = enc
-                      chosen_text = text
-                      break
-          
-              notes.append(f"最终采用编码: {chosen_enc}")
-              return chosen_text or "", chosen_enc, notes
-          
-          
-          def find_pagination_hints(text):
-              hits = []
+                  try:
+                      return raw.decode(enc, errors="replace")
+                  except Exception:
+                      continue
+              return raw.decode("utf-8", errors="replace")
+
+
+          # ---------------------------------------------------------------------------
+          # 解析：条数 / 表格 / 分类中文名
+          # ---------------------------------------------------------------------------
+
+          def extract_total_count(html_text):
+              """从页面文字里提取「共XXX条」的 XXX。找不到返回 None。"""
               for pat in PAGINATION_PATTERNS:
-                  for m in re.finditer(pat, text):
-                      snippet_start = max(0, m.start() - 15)
-                      snippet_end = min(len(text), m.end() + 15)
-                      hits.append({
-                          "pattern": pat,
-                          "matched": m.group(0),
-                          "context": text[snippet_start:snippet_end].replace("\n", " ").strip(),
-                      })
-              # 去重，最多保留 20 条，避免报告被灌爆
-              seen = set()
-              uniq = []
-              for h in hits:
-                  key = (h["pattern"], h["matched"])
-                  if key not in seen:
-                      seen.add(key)
-                      uniq.append(h)
-              return uniq[:20]
-          
-          
-          def check_block_markers(text):
-              hits = [m for m in BLOCK_MARKERS if m.lower() in text.lower()]
-              return hits
-          
-          
-          # ---------------------------------------------------------------------------
-          # 表格提取：pandas.read_html 和 BeautifulSoup 都试，哪个成功用哪个
-          # ---------------------------------------------------------------------------
-          
-          def extract_tables_pandas(html_text):
-              """返回 (表格列表[每个是 list-of-dict 形式的 DataFrame.to_dict], 错误信息或None)"""
+                  m = re.search(pat, html_text)
+                  if m:
+                      try:
+                          return int(m.group(1))
+                      except (ValueError, IndexError):
+                          continue
+              return None
+
+
+          def extract_body_type_name(html_text):
+              """
+              从 <title> 里提取车体类型的中文名称，比如：
+                "2024年1月SUV销量排行榜，SUV汽车销量查询..." -> "SUV"
+                "2024年1月MPV销量排行榜，..."                -> "MPV"
+              取不到返回 None（调用方应跳过，不要瞎猜）。
+              """
+              m = re.search(r"<title>(.*?)</title>", html_text, re.S)
+              if not m:
+                  return None
+              title = m.group(1).strip()
+              m2 = re.search(r"\d+年\d+月(.+?)销量排行榜", title)
+              if m2:
+                  name = m2.group(1).strip()
+                  if name:
+                      return name
+              return None
+
+
+          def parse_style_like_table(html_text):
+              """
+              解析「主榜 / body-N / ev」这类页面的表格。
+              列名固定是 ['排名', '车型', '销量', '厂商', '售价（万元）', '车型相关']。
+              返回 list[dict]，每个 dict 至少有 model / manufacturer / sales / rank 四个键。
+              解析不到表格、或者列名对不上，返回空列表（调用方按"这页没数据"处理）。
+              """
               try:
                   import pandas as pd
               except Exception as e:
-                  return None, f"import pandas 失败: {e}"
+                  log(f"  !! import pandas 失败: {e}")
+                  return []
+
               try:
                   dfs = pd.read_html(io.StringIO(html_text))
               except Exception as e:
-                  return None, f"pd.read_html 失败: {type(e).__name__}: {e}"
-              tables = []
-              for df in dfs:
-                  # 列名统一转成字符串，防止 MultiIndex / 数字列名导致 json 序列化出错
+                  log(f"  !! pd.read_html 失败: {type(e).__name__}: {e}")
+                  return []
+
+              if not dfs:
+                  return []
+
+              df = dfs[0]
+              df.columns = [str(c) for c in df.columns]
+
+              expected = {"排名", "车型", "销量", "厂商"}
+              if not expected.issubset(set(df.columns)):
+                  log(f"  !! 表格列名不符合预期，实际列名: {list(df.columns)}")
+                  return []
+
+              rows = []
+              for _, r in df.iterrows():
                   try:
-                      df.columns = [str(c) for c in df.columns]
-                  except Exception:
-                      pass
-                  tables.append({
-                      "columns": [str(c) for c in df.columns.tolist()],
-                      "row_count": int(df.shape[0]),
-                      "head_rows": json.loads(df.head(5).to_json(orient="records", force_ascii=False)),
+                      model = str(r["车型"]).strip()
+                      manufacturer = str(r["厂商"]).strip()
+                      sales = int(r["销量"])
+                      rank = int(r["排名"])
+                  except (ValueError, TypeError, KeyError):
+                      continue
+                  if not model or model.lower() == "nan":
+                      continue
+                  rows.append({
+                      "rank": rank,
+                      "model": model,
+                      "manufacturer": manufacturer,
+                      "sales": sales,
                   })
-              return tables, None
-          
-          
-          def extract_tables_bs4(html_text):
-              """返回 (表格列表, 错误信息或None)。手工解析 <table>，作为 pandas 失败时的后备方案。"""
-              try:
-                  from bs4 import BeautifulSoup
-              except Exception as e:
-                  return None, f"import bs4 失败: {e}"
-              try:
-                  soup = BeautifulSoup(html_text, "lxml")
-              except Exception:
+              return rows
+
+
+          # ---------------------------------------------------------------------------
+          # 网络：抓取单页 / 抓取一个榜单的全部页
+          # ---------------------------------------------------------------------------
+
+          def fetch_page(session, url, allow_404_as_empty=False):
+              """
+              抓取单个页面，内置失败重试（2 次，5s/15s 间隔）。
+              返回 (html_text, status, http_code)：
+                - status 为 None 表示成功；'empty' 表示 allow_404_as_empty=True 时遇到 404
+                  （用于探测 body-N 是否存在）；其他字符串是失败原因描述。
+                - http_code 是最后一次实际拿到的 HTTP 状态码（int），请求异常（连不上/超时）时为 None。
+                  这个值主要是给报告用的，不影响控制流。
+                - 命中 403/429/验证码关键词会直接抛出 BlockedException，不走正常返回路径。
+              """
+              import requests
+
+              last_err = None
+              last_http_code = None
+              attempts = 1 + len(RETRY_SLEEPS)
+              for attempt in range(attempts):
                   try:
-                      soup = BeautifulSoup(html_text, "html.parser")
+                      resp = session.get(url, headers=REQUEST_HEADERS, timeout=REQUEST_TIMEOUT_SECONDS)
                   except Exception as e:
-                      return None, f"BeautifulSoup 解析失败: {e}"
-          
-              tables = []
-              try:
-                  raw_tables = soup.find_all("table")
-              except Exception as e:
-                  return None, f"查找 <table> 失败: {e}"
-          
-              for t in raw_tables:
-                  rows = []
-                  for tr in t.find_all("tr"):
-                      cells = [c.get_text(strip=True) for c in tr.find_all(["th", "td"])]
-                      if cells:
-                          rows.append(cells)
-                  if not rows:
-                      continue
-                  header = rows[0]
-                  body_rows = rows[1:]
-                  head_rows = []
-                  for r in body_rows[:5]:
-                      row_dict = {}
-                      for i, val in enumerate(r):
-                          key = header[i] if i < len(header) else f"col_{i}"
-                          row_dict[key] = val
-                      head_rows.append(row_dict)
-                  tables.append({
-                      "columns": header,
-                      "row_count": len(body_rows),
-                      "head_rows": head_rows,
-                  })
-              return tables, None
-          
-          
-          def get_body_visible_text(html_text):
-              try:
-                  from bs4 import BeautifulSoup
-                  try:
-                      soup = BeautifulSoup(html_text, "lxml")
-                  except Exception:
-                      soup = BeautifulSoup(html_text, "html.parser")
-                  return soup.get_text(separator="\n")
-              except Exception:
-                  # 连 bs4 都没有，退化成正则粗暴去标签
-                  return re.sub(r"<[^>]+>", " ", html_text)
-          
-          
-          # ---------------------------------------------------------------------------
-          # 单个 URL 的完整探测流程
-          # ---------------------------------------------------------------------------
-          
-          def fetch_one(target, blocked_domains):
-              url = target["url"]
-              domain = urlparse(url).netloc
-              result = {
-                  "id": target["id"],
-                  "group": target["group"],
-                  "url": url,
-                  "desc": target["desc"],
-                  "domain": domain,
-                  "skipped": False,
-                  "skip_reason": None,
-                  "status_code": None,
-                  "elapsed_seconds": None,
-                  "body_bytes": None,
-                  "encoding_notes": [],
-                  "chosen_encoding": None,
-                  "block_markers_found": [],
-                  "pagination_hints": [],
-                  "table_extraction_method": None,
-                  "tables_pandas": None,
-                  "tables_pandas_error": None,
-                  "tables_bs4": None,
-                  "tables_bs4_error": None,
-                  "html_file": None,
-                  "error": None,
-              }
-          
-              if domain in blocked_domains:
-                  result["skipped"] = True
-                  result["skip_reason"] = f"域名 {domain} 此前已被判定为受限（403/429/验证码），按爬虫礼仪跳过后续请求"
-                  log(f"跳过 {url}: {result['skip_reason']}")
-                  return result
-          
-              log(f"请求 {url} ...")
-              try:
-                  import requests
-              except Exception as e:
-                  result["error"] = f"import requests 失败: {e}"
-                  log(f"  !! {result['error']}")
-                  return result
-          
-              t0 = time.time()
-              try:
-                  resp = requests.get(url, headers=REQUEST_HEADERS, timeout=REQUEST_TIMEOUT_SECONDS, allow_redirects=True)
-                  elapsed = time.time() - t0
-                  result["status_code"] = resp.status_code
-                  result["elapsed_seconds"] = round(elapsed, 3)
-                  result["body_bytes"] = len(resp.content) if resp.content else 0
-                  log(f"  -> 状态码 {resp.status_code}，耗时 {elapsed:.2f}s，正文 {result['body_bytes']} 字节")
-          
+                      last_err = f"请求异常: {e}"
+                      last_http_code = None
+                      if attempt < attempts - 1:
+                          time.sleep(RETRY_SLEEPS[attempt])
+                          continue
+                      return None, last_err, last_http_code
+
+                  last_http_code = resp.status_code
+
                   if resp.status_code in (403, 429):
-                      blocked_domains.add(domain)
-                      result["skip_reason"] = f"状态码 {resp.status_code}，按爬虫礼仪：判定该域名受限，停止对 {domain} 的后续请求"
-                      log(f"  !! {result['skip_reason']}")
-          
-                  text, enc, notes = decode_response(resp)
-                  result["chosen_encoding"] = enc
-                  result["encoding_notes"] = notes
-          
-                  html_filename = f"{target['id']}_raw.html"
-                  write_text(html_filename, text)
-                  result["html_file"] = html_filename
-          
-                  block_hits = check_block_markers(text)
-                  result["block_markers_found"] = block_hits
-                  if block_hits:
-                      blocked_domains.add(domain)
-                      log(f"  !! 检测到疑似验证码/拦截关键词: {block_hits}，判定该域名受限，停止对 {domain} 的后续请求")
-          
-                  visible_text = get_body_visible_text(text)
-                  result["pagination_hints"] = find_pagination_hints(visible_text)
-                  write_text(f"{target['id']}_visible_text.txt", visible_text[:20000])
-          
-                  # 表格提取：pandas 优先，失败或空结果就退回 bs4
-                  pd_tables, pd_err = extract_tables_pandas(text)
-                  result["tables_pandas_error"] = pd_err
-                  if pd_tables:
-                      result["tables_pandas"] = pd_tables
-                      log(f"  pandas.read_html 提取到 {len(pd_tables)} 个表格")
-          
-                  bs4_tables, bs4_err = extract_tables_bs4(text)
-                  result["tables_bs4_error"] = bs4_err
-                  if bs4_tables:
-                      result["tables_bs4"] = bs4_tables
-                      log(f"  BeautifulSoup 提取到 {len(bs4_tables)} 个表格")
-          
-                  if pd_tables:
-                      result["table_extraction_method"] = "pandas"
-                  elif bs4_tables:
-                      result["table_extraction_method"] = "bs4"
-                  else:
-                      result["table_extraction_method"] = None
-                      log("  !! pandas 和 bs4 都没有提取到有效表格")
-          
-              except Exception as e:
-                  elapsed = time.time() - t0
-                  result["elapsed_seconds"] = round(elapsed, 3)
-                  result["error"] = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
-                  log(f"  !! 请求/处理失败 ({elapsed:.2f}s): {type(e).__name__}: {e}")
-          
-              return result
-          
-          
+                      raise BlockedException(f"HTTP {resp.status_code} on {url}")
+
+                  if resp.status_code == 404:
+                      if allow_404_as_empty:
+                          return None, "empty", last_http_code
+                      last_err = "HTTP 404"
+                      if attempt < attempts - 1:
+                          time.sleep(RETRY_SLEEPS[attempt])
+                          continue
+                      return None, last_err, last_http_code
+
+                  if resp.status_code != 200:
+                      last_err = f"HTTP {resp.status_code}"
+                      if attempt < attempts - 1:
+                          time.sleep(RETRY_SLEEPS[attempt])
+                          continue
+                      return None, last_err, last_http_code
+
+                  text = decode_response(resp)
+                  if any(marker.lower() in text.lower() for marker in BLOCK_MARKERS):
+                      raise BlockedException(f"命中拦截关键词 on {url}")
+
+                  time.sleep(SLEEP_BETWEEN_REQUESTS_SECONDS)
+                  return text, None, last_http_code
+
+              return None, last_err or "重试耗尽", last_http_code
+
+
+          def fetch_full_listing(session, url_template, report, label, allow_missing=False):
+              """
+              抓取一个榜单（主榜 / 某个 body-N / ev）在某个月份的全部页面，拼成一个 rows 列表。
+              url_template 是形如 "https://xl.16888.com/style-202401-202401-{page}.html" 的字符串。
+
+              返回 (rows, ok, page1_html, probe)：
+                - allow_missing=True 且第 1 页 404：视为该分类当月不存在，返回 ([], True, None, probe) —— 不算失败，直接跳过。
+                - 抓取过程中反复失败：返回 (None, False, None, probe)，调用方应放弃整个月份。
+                - page1_html 是第 1 页的原始文本，调用方可以用它顺便提取分类中文名，不用再多发一次请求。
+                - probe 是一个 dict：{"http_status": int或None, "total": int或None, "parsed_rows": int或None,
+                  "error": str或None}，专门给 body-1..8 探测报告用，不影响任何控制流。
+              """
+              probe = {"http_status": None, "total": None, "parsed_rows": None, "error": None}
+
+              page1_url = url_template.format(page=1)
+              html, status, http_code = fetch_page(session, page1_url, allow_404_as_empty=allow_missing)
+              page1_html = html
+              probe["http_status"] = http_code
+
+              if status == "empty":
+                  log(f"  [{label}] 第1页 404，视为该分类不存在，跳过")
+                  probe["error"] = "第1页 404（该分类当月不存在）"
+                  return [], True, None, probe
+
+              if html is None:
+                  report["failures"].append(f"{label} 第1页失败: {status} ({page1_url})")
+                  probe["error"] = status
+                  return None, False, None, probe
+
+              total = extract_total_count(html)
+              probe["total"] = total
+              rows = parse_style_like_table(html)
+              if not rows and total is None:
+                  # 页面能打开但既没有表格也没有条数提示，当作"这个分类当月没有数据"
+                  log(f"  [{label}] 第1页无表格无条数提示，视为空")
+                  probe["error"] = "第1页无表格无条数提示"
+                  probe["parsed_rows"] = 0
+                  return [], True, page1_html, probe
+
+              if total is not None:
+                  total_pages = (total + ROWS_PER_PAGE - 1) // ROWS_PER_PAGE
+              else:
+                  # 没抓到"共N条"，退化成"抓到空页就停"，加一个安全上限防止死循环
+                  total_pages = 40
+
+              all_rows = list(rows)
+              page = 2
+              while page <= total_pages:
+                  url = url_template.format(page=page)
+                  html, status, _http_code = fetch_page(session, url)
+                  if html is None:
+                      report["failures"].append(f"{label} 第{page}页失败: {status} ({url})")
+                      probe["error"] = f"第{page}页失败: {status}"
+                      probe["parsed_rows"] = len(all_rows)
+                      return None, False, None, probe
+                  page_rows = parse_style_like_table(html)
+                  if not page_rows:
+                      if total is None:
+                          break  # 退化模式下，空页即结束
+                      # 有 total 却解析不到行，记为失败页但不中断整月（数据仍不完整，谨慎起见整月放弃）
+                      report["failures"].append(f"{label} 第{page}页解析为空但预期有数据 ({url})")
+                      probe["error"] = f"第{page}页解析为空但预期有数据"
+                      probe["parsed_rows"] = len(all_rows)
+                      return None, False, None, probe
+                  all_rows.extend(page_rows)
+                  page += 1
+
+              if total is not None and len(all_rows) != total:
+                  log(f"  [{label}] 警告: 抓到 {len(all_rows)} 行，页面声明共 {total} 条")
+                  probe["error"] = f"抓到{len(all_rows)}行 != 声明{total}条"
+
+              probe["parsed_rows"] = len(all_rows)
+              return all_rows, True, page1_html, probe
+
+
           # ---------------------------------------------------------------------------
-          # 生成真实样本 CSV（style-202401 第1页）
+          # 单月同步
           # ---------------------------------------------------------------------------
-          
-          def write_sample_csv(results):
-              target_result = next((r for r in results if r["id"] == SAMPLE_TARGET_ID), None)
-              if target_result is None:
-                  write_text(SAMPLE_CSV_NAME, "")
-                  log(f"!! 找不到 {SAMPLE_TARGET_ID} 的探测结果，样本 CSV 为空")
-                  return None
-          
-              method = target_result.get("table_extraction_method")
-              tables = None
-              if method == "pandas":
-                  tables = target_result.get("tables_pandas")
-              elif method == "bs4":
-                  tables = target_result.get("tables_bs4")
-          
-              if not tables:
-                  write_text(SAMPLE_CSV_NAME, "")
-                  log(f"!! {SAMPLE_TARGET_ID} 没有成功提取出表格，样本 CSV 为空，请人工查看对应的 _raw.html")
-                  return None
-          
-              # 挑行数最多的那个表格，通常就是销量榜主表
-              best = max(tables, key=lambda t: t.get("row_count", 0))
-              columns = best.get("columns", [])
-              head_rows = best.get("head_rows", [])
-          
-              path = os.path.join(OUTPUT_DIR, SAMPLE_CSV_NAME)
-              try:
-                  import csv
-                  with open(path, "w", encoding="utf-8-sig", newline="") as f:
-                      writer = csv.DictWriter(f, fieldnames=columns, extrasaction="ignore")
-                      writer.writeheader()
-                      for row in head_rows:
-                          writer.writerow(row)
-                  log(f"写入样本 CSV: {SAMPLE_CSV_NAME} (来自 {method}，{len(head_rows)} 行预览，"
-                      f"该表格总行数 {best.get('row_count')})")
-                  return {"method": method, "columns": columns, "preview_row_count": len(head_rows),
-                          "table_total_rows": best.get("row_count")}
-              except Exception as e:
-                  log(f"!! 写入样本 CSV 失败: {e}")
-                  write_text(SAMPLE_CSV_NAME, f"写入失败: {e}")
-                  return None
-          
-          
-          # ---------------------------------------------------------------------------
-          # 生成 REPORT.md
-          # ---------------------------------------------------------------------------
-          
-          def fmt_table_brief(tables):
-              if not tables:
-                  return "（无）"
-              parts = []
-              for i, t in enumerate(tables):
-                  cols = t.get("columns", [])
-                  parts.append(f"表{i}: {t.get('row_count')} 行，列名 = {cols}")
-              return "; ".join(parts)
-          
-          
-          def build_report(results, sample_info):
-              lines = []
-              lines.append("# 车主之家(16888)数据源探针报告 v3")
-              lines.append("")
-              lines.append(f"生成时间 (UTC): {datetime.now(timezone.utc).isoformat()}")
-              lines.append("")
-              lines.append("本报告回答：`xl.16888.com` 能不能作为「2024-01至今 / 乘用车 / 车型级」")
-              lines.append("月度销量看板的数据源。所有结论来自本次 GitHub Actions 实际请求的结果，")
-              lines.append("不是推测。原始 HTML 全部保存在同目录下 `*_raw.html`，可人工核对。")
-              lines.append("")
-          
-              lines.append("## 一、请求总览")
-              lines.append("")
-              lines.append("| 分组 | id | URL | 状态码 | 耗时(s) | 字节数 | 编码 | 表格提取方式 | 拦截标记 |")
-              lines.append("|---|---|---|---|---|---|---|---|---|")
-              for r in results:
-                  if r["skipped"]:
-                      lines.append(f"| {r['group']} | {r['id']} | {r['url']} | 跳过 | - | - | - | - | {r['skip_reason']} |")
+
+          def _record_body_probe(report, year, month, body_id, http_status, name, total, parsed_rows, error):
+              report.setdefault("body_probe", []).append({
+                  "year": year, "month": month, "body_id": body_id,
+                  "http_status": http_status, "name": name,
+                  "total": total, "parsed_rows": parsed_rows, "error": error,
+              })
+
+
+          def sync_month(session, year, month, report, body_names_cache):
+              yyyymm = f"{year:04d}{month:02d}"
+              log(f"开始抓取 {year}-{month:02d}")
+
+              style_tpl = f"{BASE}/style-{yyyymm}-{yyyymm}-{{page}}.html"
+              style_rows, ok, _page1_html, _probe = fetch_full_listing(session, style_tpl, report, f"{yyyymm} 主榜")
+              if not ok or not style_rows:
+                  raise MonthAbortedException(f"{yyyymm} 主榜抓取失败或为空")
+
+              body_type_map = {}  # (model, manufacturer) -> body_type name
+              for body_id in BODY_IDS:
+                  body_tpl = f"{BASE}/body-{body_id}-{yyyymm}-{yyyymm}-{{page}}.html"
+                  label = f"{yyyymm} body-{body_id}"
+                  try:
+                      rows, ok, page1_html, probe = fetch_full_listing(
+                          session, body_tpl, report, label, allow_missing=True
+                      )
+                  except BlockedException:
+                      # 探测报告里也要留一行，说明这个 body 编号是因为被拦截才没探测到，
+                      # 而不是"这个分类不存在"——这两者语义完全不同，不能让报告误导用户。
+                      _record_body_probe(
+                          report, year, month, body_id,
+                          http_status=None, name=None, total=None, parsed_rows=None,
+                          error="触发站点拦截 (403/429/验证码)，抓取被中止",
+                      )
+                      raise
+
+                  if not ok:
+                      _record_body_probe(
+                          report, year, month, body_id,
+                          http_status=probe.get("http_status"), name=None,
+                          total=probe.get("total"), parsed_rows=probe.get("parsed_rows"),
+                          error=probe.get("error") or "抓取失败",
+                      )
+                      raise MonthAbortedException(f"{label} 抓取失败")
+
+                  if not rows:
+                      _record_body_probe(
+                          report, year, month, body_id,
+                          http_status=probe.get("http_status"), name=None,
+                          total=probe.get("total"), parsed_rows=probe.get("parsed_rows") or 0,
+                          error=probe.get("error") or "无数据",
+                      )
                       continue
-                  lines.append(
-                      f"| {r['group']} | {r['id']} | {r['url']} | {r.get('status_code','-')} | "
-                      f"{r.get('elapsed_seconds','-')} | {r.get('body_bytes','-')} | {r.get('chosen_encoding','-')} | "
-                      f"{r.get('table_extraction_method') or '失败'} | {', '.join(r.get('block_markers_found') or []) or '无'} |"
+
+                  if body_id not in body_names_cache:
+                      name = extract_body_type_name(page1_html) if page1_html else None
+                      body_names_cache[body_id] = name or f"未知分类{body_id}"
+                  body_name = body_names_cache[body_id]
+
+                  _record_body_probe(
+                      report, year, month, body_id,
+                      http_status=probe.get("http_status"), name=body_name,
+                      total=probe.get("total"), parsed_rows=probe.get("parsed_rows"),
+                      error=probe.get("error"),
                   )
-              lines.append("")
-          
-              lines.append("## 二、核心问题逐条回答")
-              lines.append("")
-          
-              def get(rid):
-                  return next((r for r in results if r["id"] == rid), None)
-          
-              lines.append("### 1. 每个 URL 的表格列名分别是什么？")
-              lines.append("")
-              for r in results:
-                  lines.append(f"**{r['id']}** ({r['desc']}) — `{r['url']}`")
-                  if r["skipped"]:
-                      lines.append(f"- 跳过：{r['skip_reason']}")
-                  elif r.get("error"):
-                      lines.append(f"- 请求/解析出现异常：`{str(r['error'])[:300]}`")
-                  else:
-                      method = r.get("table_extraction_method")
-                      tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
-                      lines.append(f"- 提取方式: {method or '两种方式均未提取到表格，见对应 _raw.html 人工核实'}")
-                      lines.append(f"- {fmt_table_brief(tables)}")
-                  lines.append("")
-          
-              lines.append("### 2. 车型级页面（style-202401）一个月有多少行？分页共多少页？")
-              lines.append("")
-              p1 = get("01_style_202401_p1")
-              p2 = get("02_style_202401_p2")
-              if p1 and not p1["skipped"] and not p1.get("error"):
-                  method = p1.get("table_extraction_method")
-                  tables = p1.get("tables_pandas") if method == "pandas" else p1.get("tables_bs4")
-                  if tables:
-                      best = max(tables, key=lambda t: t.get("row_count", 0))
-                      lines.append(f"- 第1页表格行数: {best.get('row_count')}")
-                  lines.append(f"- 第1页页面中检测到的分页/条数提示文字: {p1.get('pagination_hints') or '未检测到明显的“共XX条/共XX页”字样，见 pagination_hints 原始记录或人工查看 visible_text'}")
-              else:
-                  lines.append("- 第1页请求失败或被跳过，无法判断，见上方总览表。")
-              if p2 and not p2["skipped"] and not p2.get("error"):
-                  method = p2.get("table_extraction_method")
-                  tables = p2.get("tables_pandas") if method == "pandas" else p2.get("tables_bs4")
-                  if tables:
-                      best = max(tables, key=lambda t: t.get("row_count", 0))
-                      head_rows = best.get("head_rows", [])
-                      lines.append(f"- 第2页表格行数: {best.get('row_count')}，前5行内容见下方 head_rows 摘要，"
-                                   f"**请人工核对第一行的排名字段是否从 51 开始**（用于验证分页是否是简单的 offset 50）。")
-                      lines.append(f"  - 第2页 head_rows: `{json.dumps(head_rows, ensure_ascii=False)[:1000]}`")
-              else:
-                  lines.append("- 第2页请求失败或被跳过，无法验证分页起始排名。")
-              lines.append("")
-          
-              lines.append("### 3. 2018年、2022年的页面是否真有数据，还是“暂无数据”？")
-              lines.append("")
-              for rid, label in [("08_style_202201_p1", "2022年1月"), ("09_style_201801_p1", "2018年1月")]:
-                  r = get(rid)
-                  lines.append(f"**{label}** (`{rid}`)")
-                  if r is None:
-                      lines.append("- 未找到探测结果")
-                  elif r["skipped"]:
-                      lines.append(f"- 跳过：{r['skip_reason']}")
-                  elif r.get("error"):
-                      lines.append(f"- 请求/解析异常：`{str(r['error'])[:300]}`")
-                  else:
-                      method = r.get("table_extraction_method")
-                      tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
-                      if tables:
-                          best = max(tables, key=lambda t: t.get("row_count", 0))
-                          lines.append(f"- 提取到表格，行数 = {best.get('row_count')}，"
-                                       f"**{'看起来有真实数据，需人工核对 head_rows 是否为具体车型和销量数字' if best.get('row_count',0) > 0 else '表格行数为0，很可能是空表/暂无数据'}**")
-                          lines.append(f"  - head_rows 摘要: `{json.dumps(best.get('head_rows', []), ensure_ascii=False)[:800]}`")
-                      else:
-                          lines.append("- 未提取到任何表格。请打开对应 `_raw.html` 人工确认页面上是否显示"
-                                       "“暂无数据”一类提示，或页面结构本身与 2024 年不同。")
-                  lines.append("")
-          
-              lines.append("### 4. 2026年7月有没有数据？（时效性）")
-              lines.append("")
-              r = get("03_style_202607_p1")
-              if r is None:
-                  lines.append("- 未找到探测结果")
-              elif r["skipped"]:
-                  lines.append(f"- 跳过：{r['skip_reason']}")
-              elif r.get("error"):
-                  lines.append(f"- 请求/解析异常：`{str(r['error'])[:300]}`")
-              else:
-                  method = r.get("table_extraction_method")
-                  tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
-                  if tables:
-                      best = max(tables, key=lambda t: t.get("row_count", 0))
-                      lines.append(f"- 提取到表格，行数 = {best.get('row_count')}。"
-                                   f"{'行数>0，初步说明2026年7月已有数据（需人工核对 head_rows 里的销量数字不是0或占位符）' if best.get('row_count',0) > 0 else '行数为0，可能7月数据尚未收录'}")
-                      lines.append(f"  - head_rows 摘要: `{json.dumps(best.get('head_rows', []), ensure_ascii=False)[:800]}`")
-                  else:
-                      lines.append("- 未提取到任何表格，请人工查看 `03_style_202607_p1_raw.html`。")
-              lines.append("")
-          
-              lines.append("### 5. body-5(SUV) 和 ev(新能源) 页面的表格结构，和 style 页面是否一致？")
-              lines.append("")
-              base = get("01_style_202401_p1")
-              base_cols = None
-              if base and not base["skipped"] and not base.get("error"):
-                  method = base.get("table_extraction_method")
-                  tables = base.get("tables_pandas") if method == "pandas" else base.get("tables_bs4")
-                  if tables:
-                      base_cols = max(tables, key=lambda t: t.get("row_count", 0)).get("columns")
-              lines.append(f"- style-202401 主表列名基准: `{base_cols}`")
-              for rid, label in [("05_body5_suv_202401_p1", "body-5 (SUV)"), ("07_ev_202401_p1", "ev (新能源)")]:
-                  r = get(rid)
-                  if r is None:
-                      lines.append(f"- {label}: 未找到探测结果")
+
+                  for r in rows:
+                      body_type_map[(r["model"], r["manufacturer"])] = body_name
+
+              ev_tpl = f"{BASE}/ev-{yyyymm}-{yyyymm}-{{page}}.html"
+              ev_rows, ok, _page1_html, _probe = fetch_full_listing(
+                  session, ev_tpl, report, f"{yyyymm} ev", allow_missing=True
+              )
+              if not ok:
+                  raise MonthAbortedException(f"{yyyymm} ev 抓取失败")
+              ev_set = {(r["model"], r["manufacturer"]) for r in (ev_rows or [])}
+
+              out_rows, unmatched = label_rows(style_rows, body_type_map, ev_set, year, month)
+
+              log(f"完成 {yyyymm}: 主榜 {len(style_rows)} 行, 未匹配车体类型 {unmatched} 行, "
+                  f"新能源 {sum(1 for x in out_rows if x['energy_type']=='新能源')} 行")
+
+              report["months_done"].append({
+                  "year": year, "month": month,
+                  "rows": len(out_rows), "unmatched_body_type": unmatched,
+              })
+              return out_rows
+
+
+          def label_rows(style_rows, body_type_map, ev_set, year, month):
+              """
+              以主榜 (style_rows) 为基准，左连接打上 body_type / energy_type 标签。
+              这是一个纯函数（不发请求），方便离线单测。
+              返回 (out_rows, unmatched_count)。
+              """
+              unmatched = 0
+              out_rows = []
+              for r in style_rows:
+                  key = (r["model"], r["manufacturer"])
+                  body_type = body_type_map.get(key, "")
+                  if not body_type:
+                      unmatched += 1
+                  energy_type = "新能源" if key in ev_set else "燃油"
+                  out_rows.append({
+                      "year": year,
+                      "month": month,
+                      "manufacturer": r["manufacturer"],
+                      "model": r["model"],
+                      "body_type": body_type,
+                      "energy_type": energy_type,
+                      "sales": r["sales"],
+                  })
+              return out_rows, unmatched
+
+
+          # ---------------------------------------------------------------------------
+          # 幂等：读取已有 sales.csv
+          # ---------------------------------------------------------------------------
+
+          def load_existing_sales():
+              if not os.path.exists(SALES_CSV):
+                  return [], set()
+              rows = []
+              months_done = set()
+              with open(SALES_CSV, "r", encoding="utf-8", newline="") as f:
+                  reader = csv.DictReader(f)
+                  for row in reader:
+                      try:
+                          row["year"] = int(row["year"])
+                          row["month"] = int(row["month"])
+                          row["sales"] = int(row["sales"])
+                      except (KeyError, ValueError):
+                          continue
+                      rows.append(row)
+                      months_done.add((row["year"], row["month"]))
+              return rows, months_done
+
+
+          def months_from_2024_01_to_now():
+              now = datetime.now(timezone.utc)
+              months = []
+              y, m = 2024, 1
+              while (y, m) <= (now.year, now.month):
+                  months.append((y, m))
+                  m += 1
+                  if m > 12:
+                      m = 1
+                      y += 1
+              return months
+
+
+          def write_outputs(all_rows, report):
+              os.makedirs(DATA_DIR, exist_ok=True)
+
+              all_rows_sorted = sorted(all_rows, key=lambda r: (r["year"], r["month"], -r["sales"]))
+              with open(SALES_CSV, "w", encoding="utf-8", newline="") as f:
+                  writer = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+                  writer.writeheader()
+                  for r in all_rows_sorted:
+                      writer.writerow({k: r[k] for k in CSV_FIELDS})
+              log(f"写入 {SALES_CSV} ({len(all_rows_sorted)} 行)")
+
+              manufacturers = sorted({r["manufacturer"] for r in all_rows_sorted if r["manufacturer"]})
+              with open(MANUFACTURERS_TXT, "w", encoding="utf-8") as f:
+                  for m in manufacturers:
+                      f.write(m + "\n")
+              log(f"写入 {MANUFACTURERS_TXT} ({len(manufacturers)} 个厂商)")
+
+              coverage = compute_body_type_coverage(all_rows_sorted)
+              write_report(report, len(all_rows_sorted), len(manufacturers), coverage)
+
+
+          def compute_body_type_coverage(all_rows_sorted):
+              """
+              车体类型覆盖率 = 有 body_type 的行数 / 总行数，外加最多 30 个未匹配上的车型样本
+              （按"厂商 - 车型"去重展示，方便人工核对到底是哪些车没打上标签）。
+              """
+              total = len(all_rows_sorted)
+              with_body_type = sum(1 for r in all_rows_sorted if r["body_type"])
+              rate = (with_body_type / total) if total else None
+
+              unmatched_pairs = []
+              seen = set()
+              for r in all_rows_sorted:
+                  if r["body_type"]:
                       continue
-                  if r["skipped"] or r.get("error"):
-                      lines.append(f"- {label}: 跳过或异常，见上方总览表")
+                  key = (r["manufacturer"], r["model"])
+                  if key in seen:
                       continue
-                  method = r.get("table_extraction_method")
-                  tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
-                  if tables:
-                      cols = max(tables, key=lambda t: t.get("row_count", 0)).get("columns")
-                      same = (cols == base_cols)
-                      lines.append(f"- {label} 列名: `{cols}` —— {'与 style 页面**一致**' if same else '与 style 页面**不一致，需要人工核对两边字段的对应关系**'}")
-                  else:
-                      lines.append(f"- {label}: 未提取到表格")
+                  seen.add(key)
+                  unmatched_pairs.append(f"{r['manufacturer']} - {r['model']}")
+                  if len(unmatched_pairs) >= 30:
+                      break
+
+              return {
+                  "total_rows": total,
+                  "with_body_type": with_body_type,
+                  "rate": rate,
+                  "unmatched_samples": unmatched_pairs,
+                  "unmatched_total_distinct": len(seen) if len(unmatched_pairs) < 30 else None,
+              }
+
+
+          def write_report(report, total_rows, total_manufacturers, coverage):
+              lines = []
+              lines.append("# 同步报告\n")
+              lines.append(f"- 运行时间 (UTC): {report['started_at']} ~ {report['finished_at']}")
+              lines.append(f"- 耗时: {report['elapsed_seconds']:.0f} 秒")
+              lines.append(f"- max_months 本次生效值: {report.get('max_months_desc', '未知')}")
+              lines.append(f"- 是否被拦截: {'是 - ' + report['blocked_reason'] if report.get('blocked_reason') else '否'}")
+              lines.append(f"- 累计总行数 (sales.csv): {total_rows}")
+              lines.append(f"- 累计厂商数 (manufacturers.txt): {total_manufacturers}")
               lines.append("")
-          
-              lines.append("### 6. 交叉校验源（太平洋汽车）情况")
-              lines.append("")
-              r = get("10_pcauto_cross_check")
-              if r is None:
-                  lines.append("- 未找到探测结果")
-              elif r["skipped"]:
-                  lines.append(f"- 跳过：{r['skip_reason']}")
-              elif r.get("error"):
-                  lines.append(f"- 请求/解析异常：`{str(r['error'])[:300]}`")
+
+              lines.append("## 车体类型覆盖率\n")
+              rate = coverage["rate"]
+              if rate is None:
+                  lines.append("(sales.csv 目前是空的，无法计算覆盖率)")
               else:
-                  method = r.get("table_extraction_method")
-                  tables = r.get("tables_pandas") if method == "pandas" else r.get("tables_bs4")
-                  lines.append(f"- 状态码 {r.get('status_code')}，提取方式 {method or '失败'}")
-                  lines.append(f"- {fmt_table_brief(tables)}")
+                  pct = rate * 100
+                  lines.append(f"- 有 body_type 的行数 / 总行数: {coverage['with_body_type']} / {coverage['total_rows']} ({pct:.1f}%)")
+                  if rate < 0.9:
+                      lines.append("")
+                      lines.append("**⚠️ 覆盖率异常，请勿继续全量回补** —— 先确认 body-1..8 的探测表格，"
+                                    "看看是不是有分类 404/探测失败，导致大量车型的 body_type 打了空。")
+                  lines.append("")
+                  if coverage["unmatched_samples"]:
+                      lines.append(f"未匹配到 body_type 的车型样本（最多列 30 个，按 厂商-车型 去重）：\n")
+                      for s in coverage["unmatched_samples"]:
+                          lines.append(f"- {s}")
+                      if coverage.get("unmatched_total_distinct") is None:
+                          lines.append("- ...（还有更多，此列表截断到 30 个）")
               lines.append("")
-          
-              lines.append("## 三、样本 CSV")
-              lines.append("")
-              if sample_info:
-                  lines.append(f"- 已生成 `{SAMPLE_CSV_NAME}`，来自 `{SAMPLE_TARGET_ID}`，提取方式 {sample_info['method']}，"
-                               f"该表格总行数 {sample_info['table_total_rows']}（CSV 里只存了前 {sample_info['preview_row_count']} 行预览）。")
-                  lines.append(f"- 列名: `{sample_info['columns']}`")
+
+              lines.append(f"## body-1..8 探测结果（本次试运行的核心产出）\n")
+              body_probe = report.get("body_probe", [])
+              if body_probe:
+                  lines.append("| 年月 | body 编号 | HTTP状态 | 提取到的中文分类名 | 共X条 | 实际解析行数 | 备注 |")
+                  lines.append("|---|---|---|---|---|---|---|")
+                  for p in sorted(body_probe, key=lambda x: (x["year"], x["month"], x["body_id"])):
+                      http_status = p["http_status"] if p["http_status"] is not None else "-"
+                      name = p["name"] if p["name"] else "(未提取到/不存在)"
+                      total_ = p["total"] if p["total"] is not None else "-"
+                      parsed = p["parsed_rows"] if p["parsed_rows"] is not None else "-"
+                      note = p["error"] if p["error"] else ""
+                      lines.append(
+                          f"| {p['year']}-{p['month']:02d} | body-{p['body_id']} | {http_status} | "
+                          f"{name} | {total_} | {parsed} | {note} |"
+                      )
               else:
-                  lines.append(f"- 样本 CSV 生成失败或为空，见 `{SAMPLE_TARGET_ID}_raw.html` 人工核对原始页面结构。")
+                  lines.append("(本次运行没有成功进入任何一个月份的 body 探测阶段，见下方「放弃的月份」/「拦截」说明)")
               lines.append("")
-          
-              lines.append("## 四、已知的不确定性 / 推测部分（务必人工复核）")
+
+              lines.append(f"## body-1..8 探测到的分类名称汇总\n")
+              for bid, name in sorted(report.get("body_names", {}).items()):
+                  lines.append(f"- body-{bid}: {name}")
+              if not report.get("body_names"):
+                  lines.append("(本次运行没有成功探测到任何 body 分类名称)")
               lines.append("")
-              lines.append("- 本脚本是在**完全无法访问 16888** 的环境下编写的，表格提取逻辑、编码猜测优先级、")
-              lines.append("  分页文字的正则表达式，全部是基于常见中文网站惯例的**推测**，没有被真实页面验证过。")
-              lines.append("- 如果 pandas/bs4 两种方式都没能提取到表格，大概率是页面把数据放进了 JS 变量而不是")
-              lines.append("  静态 `<table>`，或者列表实际上是 `<ul>/<li>` 结构——这种情况下请求本身是成功的，")
-              lines.append("  原始 HTML 已经存好了，需要人工重新设计解析逻辑，而不是本脚本能自动判断的。")
-              lines.append("- 编码判断优先用了 HTML `<meta charset>` 声明，其次 gb18030，最后才是 utf-8 兜底；")
-              lines.append("  **如果看到中文仍然是乱码，请直接查看 `*_raw.html` 原始字节对应的编码**，")
-              lines.append("  而不要相信本报告里 `chosen_encoding` 字段的猜测是100%正确的。")
-              lines.append("- “共XX条/共XX页”这类分页文字的正则是猜的常见写法，16888 实际用词可能不同")
-              lines.append("  （比如“共 500 款车型”“下一页”之类），`pagination_hints` 为空不代表页面没有分页信息，")
-              lines.append("  只代表没命中预设的几个正则，请打开 `_raw.html` 或 `_visible_text.txt` 人工搜索。")
-              lines.append("- 太平洋汽车 (`price.pcauto.com.cn`) 的 URL 路径是按经验猜测拼的，如果结构不对，")
-              lines.append("  大概率会拿到 404 或者一个跟销量无关的页面，需人工确认。")
+
+              lines.append(f"## 本次运行新抓取的月份 ({len(report['months_done'])} 个)\n")
+              if report["months_done"]:
+                  lines.append("| 年月 | 行数 | 未匹配车体类型行数 |")
+                  lines.append("|---|---|---|")
+                  for m in report["months_done"]:
+                      lines.append(f"| {m['year']}-{m['month']:02d} | {m['rows']} | {m['unmatched_body_type']} |")
+              else:
+                  lines.append("(无 — 可能所有目标月份此前已抓取完毕，或本次运行未成功完成任何一个月)")
               lines.append("")
-          
-              write_text("REPORT.md", "\n".join(lines))
-              log("REPORT.md 已生成。")
-          
-          
+              lines.append(f"## 本次运行放弃的月份 ({len(report['months_aborted'])} 个)\n")
+              for m in report["months_aborted"]:
+                  lines.append(f"- {m}")
+              lines.append("")
+              lines.append(f"## 请求失败记录 ({len(report['failures'])} 条)\n")
+              for f_ in report["failures"][:200]:
+                  lines.append(f"- {f_}")
+              if len(report["failures"]) > 200:
+                  lines.append(f"- ... 还有 {len(report['failures']) - 200} 条未列出")
+              lines.append("")
+
+              with open(REPORT_MD, "w", encoding="utf-8") as f:
+                  f.write("\n".join(lines))
+              log(f"写入 {REPORT_MD}")
+
+
           # ---------------------------------------------------------------------------
           # 主流程
           # ---------------------------------------------------------------------------
-          
+
+          def parse_max_months(raw):
+              """
+              解析 MAX_MONTHS 环境变量。
+
+              约定（安全阀，保守优先）：
+                - 未设置 / 空字符串（典型场景：push 触发，没有 workflow_dispatch inputs）-> 默认只跑 1 个月。
+                  注意这里 **不能** 用 `int(raw or 0)` 这种写法——那样空字符串会被当成 0（不限制），
+                  等于 push 一次就跑全量，正好是我们要防的事故，所以这里是显式的 if/else，不是那个写法。
+                - '0' -> 不限制，跑完全部待抓取月份。
+                - 正整数字符串 -> 最多跑这么多个月。
+                - 解析不出数字 / 负数 -> 同样保守地按 1 个月处理，不报错、不跑全量。
+              返回 (max_months:int, desc:str) —— desc 是给报告用的人类可读说明。
+              """
+              if raw is None or raw.strip() == "":
+                  return 1, "未设置/空 (push 触发或未传参) -> 保守默认只跑 1 个月"
+              raw = raw.strip()
+              try:
+                  val = int(raw)
+              except ValueError:
+                  return 1, f"MAX_MONTHS='{raw}' 不是合法整数 -> 保守按 1 个月处理"
+              if val < 0:
+                  return 1, f"MAX_MONTHS={val} 是负数，不合法 -> 保守按 1 个月处理"
+              if val == 0:
+                  return 0, "MAX_MONTHS=0 -> 不限制，本次尝试跑完全部待抓取月份"
+              return val, f"MAX_MONTHS={val} -> 本次最多跑 {val} 个月"
+
+
           def main():
-              ensure_output_dir()
-              log("开始探测 16888 及交叉校验源。任何单个 URL 失败都不会中断后续 URL。")
-              log(f"本次共 {len(TARGETS)} 个目标，每个请求之间 sleep {DELAY_BETWEEN_REQUESTS_SECONDS} 秒。")
-          
-              blocked_domains = set()
-              results = []
-              for idx, target in enumerate(TARGETS, start=1):
-                  log("=" * 70)
-                  log(f"[{idx}/{len(TARGETS)}] {target['id']} — {target['desc']}")
+              import requests
+
+              start_time = time.time()
+              report = {
+                  "started_at": datetime.now(timezone.utc).isoformat(),
+                  "months_done": [],
+                  "months_aborted": [],
+                  "failures": [],
+                  "blocked_reason": None,
+                  "body_names": {},
+                  "body_probe": [],
+              }
+
+              max_months, max_months_desc = parse_max_months(os.environ.get("MAX_MONTHS"))
+              report["max_months_desc"] = max_months_desc
+              log(f"max_months 设置: {max_months_desc}")
+
+              existing_rows, months_done = load_existing_sales()
+              log(f"已有 {len(existing_rows)} 行历史数据，覆盖 {len(months_done)} 个月份")
+
+              all_targets = [ym for ym in months_from_2024_01_to_now() if ym not in months_done]
+              if max_months > 0:
+                  targets = all_targets[:max_months]
+              else:
+                  targets = all_targets
+              log(f"本次待抓取月份 (共 {len(all_targets)} 个待抓，本次实际尝试 {len(targets)} 个): {targets}")
+
+              all_new_rows = []
+              body_names_cache = {}
+              session = requests.Session()
+
+              for (year, month) in targets:
+                  if time.time() - start_time > MAX_RUNTIME_SECONDS:
+                      log("接近时间预算上限，停止抓取新的月份")
+                      break
                   try:
-                      r = fetch_one(target, blocked_domains)
+                      rows = sync_month(session, year, month, report, body_names_cache)
+                      all_new_rows.extend(rows)
+                  except MonthAbortedException as e:
+                      log(f"!! 放弃 {year}-{month:02d}: {e}")
+                      report["months_aborted"].append(f"{year}-{month:02d}: {e}")
+                      continue
+                  except BlockedException as e:
+                      log(f"!! 触发拦截，停止全部后续请求: {e}")
+                      report["blocked_reason"] = str(e)
+                      break
                   except Exception as e:
-                      r = {
-                          "id": target["id"], "group": target["group"], "url": target["url"],
-                          "desc": target["desc"], "skipped": False,
-                          "error": f"fetch_one 整体异常: {e}\n{traceback.format_exc()}",
-                      }
-                      log(f"  !! fetch_one 整体异常: {e}")
-                  results.append(r)
-                  write_json(f"{target['id']}_result.json", r)
-                  if idx < len(TARGETS):
-                      time.sleep(DELAY_BETWEEN_REQUESTS_SECONDS)
-          
-              write_json("all_results.json", results)
-          
-              log("=" * 70)
-              log("生成样本 CSV ...")
-              try:
-                  sample_info = write_sample_csv(results)
-              except Exception as e:
-                  log(f"!! 生成样本 CSV 整体异常: {e}\n{traceback.format_exc()}")
-                  sample_info = None
-          
-              log("生成 REPORT.md ...")
-              try:
-                  build_report(results, sample_info)
-              except Exception as e:
-                  log(f"!! 生成 REPORT.md 整体异常: {e}\n{traceback.format_exc()}")
-                  write_text("REPORT_GENERATION_FAILED.txt", f"{e}\n{traceback.format_exc()}")
-          
-              log("=" * 70)
-              log("探测流程全部结束。请查看 probe_v3_output/ 目录下的所有文件，尤其是 REPORT.md 和各 *_raw.html。")
-              log("=" * 70)
-          
-          
+                      log(f"!! {year}-{month:02d} 出现未预期异常: {e}")
+                      report["months_aborted"].append(f"{year}-{month:02d}: 未预期异常 {e}")
+                      report["failures"].append(traceback.format_exc())
+                      continue
+
+              report["body_names"] = body_names_cache
+              report["finished_at"] = datetime.now(timezone.utc).isoformat()
+              report["elapsed_seconds"] = time.time() - start_time
+
+              combined = existing_rows + all_new_rows
+              write_outputs(combined, report)
+
+              log("同步结束")
+
+
           if __name__ == "__main__":
               try:
                   main()
               except Exception as e:
                   try:
-                      ensure_output_dir()
-                      write_text(
-                          "FATAL_ERROR.txt",
-                          f"探针脚本发生未预期的顶层异常：\n{e}\n\n{traceback.format_exc()}",
-                      )
+                      os.makedirs(DATA_DIR, exist_ok=True)
+                      with open(os.path.join(DATA_DIR, "FATAL_ERROR.txt"), "w", encoding="utf-8") as f:
+                          f.write(f"顶层未预期异常:\n{e}\n\n{traceback.format_exc()}")
                   except Exception:
-                      print("连兜底写文件都失败了，直接打印到 stdout：")
                       print(traceback.format_exc())
                   sys.exit(0)
-          PROBE_SCRIPT_EOF
 
-      - name: Run probe script
+          SYNC_SCRIPT_EOF
+
+      - name: Run sync script
         # 脚本内部已经用 try/except 兜住了几乎所有异常，
-        # 这里再加一层 continue-on-error 保险，确保后面的 upload 步骤一定能跑
+        # 这里再加一层 continue-on-error 保险，确保后面的 commit/upload 步骤一定能跑
         continue-on-error: true
-        run: python3 probe_v3.py
+        env:
+          # push 触发时没有 inputs.max_months，这里会是空字符串——
+          # sync.py 里的 parse_max_months() 把空字符串按"只跑1个月"处理（保守优先），
+          # 不会因为一次 push 就误跑全量 32 个月。
+          MAX_MONTHS: ${{ inputs.max_months }}
+        run: python3 sync.py
 
       - name: Drop oversized files before commit
         if: always()
         continue-on-error: true
         run: |
-          find probe_v3_output/ -type f -size +5M -print -exec sh -c 'echo "文件过大已删除: $(basename "$1")" > "$1.toolarge.txt"; rm -f "$1"' _ {} \; || true
+          find data/ -type f -size +50M -print -exec sh -c 'echo "文件过大已删除: $(basename "$1")" > "$1.toolarge.txt"; rm -f "$1"' _ {} \; || true
 
-      - name: Commit probe results back to repo
+      - name: Commit sync results back to repo
         if: always()
         continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A probe_v3_output/ || true
+          git add -A data/ || true
           if git diff --staged --quiet; then
             echo "没有变化，跳过提交"
           else
-            git commit -m "chore: probe v3 results (16888) [skip ci]"
+            git commit -m "chore: sync car sales data (16888) [skip ci]"
             git push
           fi
 
-      - name: Upload probe output
+      - name: Upload sync output
         # 关键：即使上面的步骤失败，也要执行这一步，
         # 否则运行失败时我们什么产出都拿不到
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: probe-v3-output
-          path: probe_v3_output/
+          name: sales-data
+          path: data/
           if-no-files-found: warn
           retention-days: 30
