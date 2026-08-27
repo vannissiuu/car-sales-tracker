@@ -62,8 +62,10 @@ jobs:
             - energy_type 严格二元：车型出现在 ev 榜单里 -> 新能源，否则 -> 燃油。不做任何按名字的推断。
           """
 
+          import base64
           import csv
           import io
+          import json
           import os
           import re
           import sys
@@ -102,12 +104,286 @@ jobs:
           # body-1 .. body-8 全部探测；含义未知的先占位，实际名称从页面标题里取
           BODY_IDS = list(range(1, 9))
 
+          # 用户定死的最终口径：16888 原始的 5 个 body 分类 -> 用户要的 3+1 个类别。
+          # 两厢车/三厢车合并成轿车；MPV/SUV 原样；运动汽车数量太少(实测100行)，单独留一类
+          # 比塞进"其他"更诚实；不在这个表里的原始分类名（理论上不该出现，因为 body-6/7/8
+          # 实测不存在）原样透传，不静默吞掉，方便被人发现。
+          RAW_BODY_TYPE_TO_FINAL_CATEGORY = {
+              "两厢车": "轿车",
+              "三厢车": "轿车",
+              "MPV": "MPV",
+              "SUV": "SUV",
+              "运动汽车": "运动汽车",
+          }
+
+          # 一个车型同时出现在多个 body 榜单、且映射到不同最终类别时的裁决优先级（从高到低）。
+          # SUV/MPV 是明确的车身形态，优先；两厢/三厢同款车合并后都是轿车，优先级对它们不产生
+          # 影响；运动汽车垫底。理由见 sync_script 使用处的说明。
+          CATEGORY_PRIORITY = ["SUV", "MPV", "轿车", "运动汽车"]
+
           DATA_DIR = os.path.join(os.getcwd(), "data")
           SALES_CSV = os.path.join(DATA_DIR, "sales.csv")
           MANUFACTURERS_TXT = os.path.join(DATA_DIR, "manufacturers.txt")
           REPORT_MD = os.path.join(DATA_DIR, "sync_report.md")
+          MAPPING_JSON_PATH = os.path.join(DATA_DIR, "mapping.json")
 
-          CSV_FIELDS = ["year", "month", "manufacturer", "model", "body_type", "energy_type", "sales"]
+          CSV_FIELDS = ["year", "month", "manufacturer", "brand", "model", "body_type", "energy_type", "sales"]
+
+          # ===== MAPPING_JSON_BEGIN =====
+          # 厂商/车型 -> 品牌 映射字典（定稿版，117 家厂商全覆盖 + 87 条车型级覆盖，见下方 _meta）。
+          # 维护在仓库的 data/mapping.json 里，用户/coordinator 可以直接在 GitHub 网页上编辑它，
+          # 不需要重新粘贴整个 workflow。
+          # 这里的内容只是"仓库里还没有 data/mapping.json 时"的一次性自举默认值——
+          # 脚本发现文件不存在才会把这份内容写出去，文件已存在时绝不覆盖（哪怕内容和这里不一样）。
+          # 这一段可以用 /tmp/p1-sync/inject_mapping.py 自动生成/替换，人工编辑也可以，
+          # 但要保证 DEFAULT_MAPPING_JSON 最终是一个合法 JSON 字符串。
+          DEFAULT_MAPPING_JSON = r'''
+          {
+            "_meta": {
+              "description": "厂商/车型 → 品牌 映射字典，用于中国汽车销量看板的『厂商/品牌』视角切换",
+              "version": "1.0",
+              "resolution_order": "model_to_brand 优先（按车型名精确匹配），其次 manufacturer_to_brand，都没有则回退为 manufacturer 原值（本数据集18814行中，回退发生次数应为0，见 self-check）",
+              "generated_from": "data/manufacturers.txt (117 家), data/sales.csv (18814 行, 2024-01 至 2026-07 共31个月, 累计57,124,329辆)",
+              "rules": "1. 品牌 = 消费者认知里的那个车标/emblem，不是母公司或合资公司名。如 上汽大众/一汽-大众 → 大众；上汽大众斯柯达 → 斯柯达；一汽-大众捷达 → 捷达（2019年已独立成品牌）。2. 同一合资公司下的多个独立品牌要拆开：上汽通用别克/雪佛兰/凯迪拉克 → 三个独立品牌；长安福特/长安马自达/长安林肯 → 福特/马自达/林肯。3. 自主品牌集团下已独立运营的子品牌要拆开：长安启源→启源、广汽埃安→埃安；同一车标的不同生产主体要合并：五菱新能源 和 上汽通用五菱 都→五菱；一汽海马 和 海马汽车 都→海马。4. 合资公司的外方品牌名统一为中文通行译名：一汽奥迪/上汽奥迪→奥迪，广汽本田/东风本田→本田。5. 比亚迪子品牌方程豹/腾势/仰望：经用户拍板，按独立品牌处理，不并入比亚迪（决定2）。6. 华为鸿蒙智行『界』系列（问界/智界/享界/尊界/尚界）：厂商名与品牌名基本一一对应，直接采用（问界/智界经确认采纳）。7. 【核心规则，决定1】当一个厂商条目内混合多个消费者认知品牌（不同车标/渠道/定位）时，manufacturer_to_brand 只给一个保守的『哨兵/兜底』值（通常等于厂商原名，蔚来除外——蔚来主品牌本身也叫『蔚来』故兜底值恰好正确），真正的品牌归类通过 model_to_brand 按车型名精确匹配实现，解析时 model_to_brand 优先级高于 manufacturer_to_brand。适用：长城汽车（哈弗/坦克/魏牌）、蔚来（蔚来/乐道/萤火虫）、上汽集团（荣威/MG/飞凡/科莱威）、奇瑞捷豹路虎（捷豹/路虎）；此外星途（星途/星纪元）、北京汽车制造厂（锐胜/勇士/元宝/家宝/212）、江汽集团（江淮/瑞风/钇为/爱跑/花仙子）、江铃集团新能源（易至/羿）也按同一机制处理，只是这些厂商没有强制要求做到100%精细拆分，manufacturer_to_brand的默认值已覆盖大部分销量。8. 兜底值选择原则：优先选'哪怕未来出现字典未覆盖的新车型，这个值也大概率仍然正确'的选项——蔚来主品牌用『蔚来』；无法判断哪个子品牌最具代表性、或用主品牌名会造成后续新车型被误分类风险的（长城汽车/上汽集团/奇瑞捷豹路虎），选择厂商原名作为哨兵值，使其在品牌视角下清晰地表现为'未分类，需要更新model_to_brand'，而不是悄悄地被错误合并进某个具体子品牌。9. 拿不准、样本量小、无法用现有知识确认的车型/厂商，一律记录进 _unresolved_notes 并给出已采用的近似处理方式，不藏在字典里假装确定。"
+            },
+            "manufacturer_to_brand": {
+              "DS汽车": "DS",
+              "LEVC": "LEVC",
+              "MAEXTRO 尊界": "尊界",
+              "Polestar": "极星",
+              "ROX极石": "极石",
+              "SAIC 尚界": "尚界",
+              "STELATO 享界": "享界",
+              "SWM斯威汽车": "斯威",
+              "smart": "smart",
+              "一汽-大众": "大众",
+              "一汽-大众捷达": "捷达",
+              "一汽丰田": "丰田",
+              "一汽吉林": "森雅",
+              "一汽奔腾": "奔腾",
+              "一汽奥迪": "奥迪",
+              "一汽海马": "海马",
+              "一汽红旗": "红旗",
+              "上汽大众": "大众",
+              "上汽大众斯柯达": "斯柯达",
+              "上汽大通": "大通",
+              "上汽奥迪": "奥迪",
+              "上汽通用五菱": "五菱",
+              "上汽通用凯迪拉克": "凯迪拉克",
+              "上汽通用别克": "别克",
+              "上汽通用雪佛兰": "雪佛兰",
+              "东风乘用车": "风神",
+              "东风小康": "风光",
+              "东风日产": "日产",
+              "东风本田": "本田",
+              "东风标致": "标致",
+              "东风汽车": "纳米",
+              "东风英菲尼迪": "英菲尼迪",
+              "东风雪铁龙": "雪铁龙",
+              "东风风行": "风行",
+              "中国重汽VGV": "VGV",
+              "二一二越野车": "212",
+              "五菱新能源": "五菱",
+              "凯翼汽车": "凯翼",
+              "创维汽车": "创维",
+              "北京奔驰": "奔驰",
+              "北京汽车": "北京",
+              "北京现代": "现代",
+              "北京越野": "北京越野",
+              "北汽新能源": "极狐",
+              "华人运通": "高合",
+              "华晨宝马": "宝马",
+              "合众汽车": "哪吒",
+              "合创汽车": "合创",
+              "吉利几何": "几何",
+              "吉利新能源": "吉利",
+              "吉利汽车": "吉利",
+              "吉麦新能源": "吉麦",
+              "大运汽车": "大运",
+              "奇瑞新能源": "奇瑞",
+              "奇瑞汽车": "奇瑞",
+              "奕派科技": "奕派",
+              "小米汽车": "小米",
+              "小虎汽车": "小虎",
+              "小鹏汽车": "小鹏",
+              "岚图汽车": "岚图",
+              "广汽丰田": "丰田",
+              "广汽乘用车": "传祺",
+              "广汽埃安": "埃安",
+              "广汽本田": "本田",
+              "广汽本田新能源": "本田",
+              "开瑞汽车": "开瑞",
+              "悦达起亚": "起亚",
+              "昊铂": "昊铂",
+              "智己汽车": "智己",
+              "曹操汽车": "曹操",
+              "极氪": "极氪",
+              "极越汽车": "极越",
+              "比亚迪": "比亚迪",
+              "江铃福特": "福特",
+              "沃尔沃亚太": "沃尔沃",
+              "海马汽车": "海马",
+              "深蓝汽车": "深蓝",
+              "特斯拉中国": "特斯拉",
+              "猛士科技": "猛士",
+              "理想": "理想",
+              "瑞驰新能源": "瑞驰",
+              "睿蓝汽车": "睿蓝",
+              "知豆电动车": "知豆",
+              "神龙汽车": "雪铁龙",
+              "福建奔驰": "奔驰",
+              "福汽新龙马": "启腾",
+              "赛力斯蓝电": "蓝电",
+              "远航汽车": "远航",
+              "郑州日产": "日产",
+              "金康赛力斯": "赛力斯",
+              "鑫源汽车": "鑫源",
+              "长城新能源": "欧拉",
+              "长安凯程": "凯程",
+              "长安启源": "启源",
+              "长安林肯": "林肯",
+              "长安汽车": "长安",
+              "长安福特": "福特",
+              "长安马自达": "马自达",
+              "阿维塔科技": "阿维塔",
+              "零跑汽车": "零跑",
+              "领克": "领克",
+              "领途汽车": "领途",
+              "方程豹": "方程豹",
+              "腾势汽车": "腾势",
+              "仰望": "仰望",
+              "AITO 问界": "问界",
+              "LUXCEED 智界": "智界",
+              "大众汽车安徽": "与众",
+              "光束汽车": "MINI",
+              "江汽集团": "江淮",
+              "江铃集团新能源": "易至",
+              "北京汽车制造厂": "锐胜",
+              "星途": "星途",
+              "长城汽车": "长城汽车",
+              "蔚来": "蔚来",
+              "上汽集团": "上汽集团",
+              "奇瑞捷豹路虎": "奇瑞捷豹路虎"
+            },
+            "model_to_brand": {
+              "哈弗大狗": "哈弗",
+              "哈弗H6": "哈弗",
+              "哈弗猛龙新能源": "哈弗",
+              "哈弗枭龙MAX": "哈弗",
+              "哈弗猛龙": "哈弗",
+              "哈弗H9": "哈弗",
+              "哈弗H5": "哈弗",
+              "哈弗M6": "哈弗",
+              "哈弗大狗 PLUS 新能源": "哈弗",
+              "哈弗赤兔": "哈弗",
+              "哈弗神兽": "哈弗",
+              "哈弗H6新能源": "哈弗",
+              "哈弗酷狗": "哈弗",
+              "坦克300": "坦克",
+              "坦克500新能源": "坦克",
+              "坦克400新能源": "坦克",
+              "坦克300新能源": "坦克",
+              "坦克700新能源": "坦克",
+              "坦克400": "坦克",
+              "坦克500": "坦克",
+              "魏牌 高山": "魏牌",
+              "魏牌 蓝山": "魏牌",
+              "魏牌 V9X": "魏牌",
+              "魏牌 摩卡新能源": "魏牌",
+              "魏牌 拿铁DHT-PHEV": "魏牌",
+              "蔚来ES8": "蔚来",
+              "蔚来ES6": "蔚来",
+              "蔚来ET5T": "蔚来",
+              "蔚来EC6": "蔚来",
+              "蔚来ET5": "蔚来",
+              "蔚来ES9": "蔚来",
+              "蔚来ET7": "蔚来",
+              "蔚来EC7": "蔚来",
+              "蔚来ET9": "蔚来",
+              "蔚来ES7": "蔚来",
+              "乐道L60": "乐道",
+              "乐道L90": "乐道",
+              "乐道L80": "乐道",
+              "firefly萤火虫": "萤火虫",
+              "荣威i5": "荣威",
+              "荣威D7": "荣威",
+              "荣威RX5": "荣威",
+              "荣威D6": "荣威",
+              "荣威i6 MAX新能源": "荣威",
+              "荣威M7 DMH": "荣威",
+              "荣威D5X DMH": "荣威",
+              "荣威iMAX8新能源": "荣威",
+              "荣威RX5新能源": "荣威",
+              "荣威i6": "荣威",
+              "荣威Ei5": "荣威",
+              "荣威iMAX8": "荣威",
+              "荣威RX9": "荣威",
+              "MG4": "MG",
+              "MG5": "MG",
+              "MG7": "MG",
+              "MG 4X": "MG",
+              "MG ES5": "MG",
+              "MG ONE": "MG",
+              "MG6": "MG",
+              "MG Cyberster": "MG",
+              "名爵ZS": "MG",
+              "飞凡F7": "飞凡",
+              "飞凡R7": "飞凡",
+              "科莱威CLEVER": "科莱威",
+              "捷豹XFL": "捷豹",
+              "捷豹XEL": "捷豹",
+              "捷豹E-PACE": "捷豹",
+              "揽胜极光": "路虎",
+              "发现运动": "路虎",
+              "发现运动版新能源": "路虎",
+              "揽胜极光新能源": "路虎",
+              "星纪元 ET": "星纪元",
+              "勇士": "勇士",
+              "元宝": "元宝",
+              "家宝": "家宝",
+              "212经典": "212",
+              "瑞风M3": "瑞风",
+              "瑞风E3": "瑞风",
+              "瑞风RF8 PHEV": "瑞风",
+              "瑞风RF8": "瑞风",
+              "钇为3": "钇为",
+              "爱跑": "爱跑",
+              "花仙子": "花仙子",
+              "羿": "羿",
+              "羿驰05": "羿",
+              "羿驰01": "羿",
+              "羿驰05S": "羿"
+            },
+            "_unresolved_notes": [
+              {
+                "item": "北京汽车制造厂 / 北汽L6H",
+                "note": "销量很小（122辆，占该厂商总量的0.27%）。命名规律与'锐胜王牌M7/M8'系列不同，无法确认它是锐胜品牌下的另一款卡车，还是北汽制造厂旗下未识别的其他子品牌。未列入 model_to_brand，会按 manufacturer_to_brand 默认值回退为'锐胜'——这是一个未经证实的猜测，不是确定归类，请知悉。"
+              },
+              {
+                "item": "东风汽车 / 示界06",
+                "note": "销量较小（2,053辆，占该厂商总量的1.72%）。厂商'东风汽车'旗下车型以'纳米'品牌(纳米01/06/BOX)为主，但'示界06'命名方式不同，无法确认它是否仍属于纳米品牌，还是东风旗下另一个未识别的新子品牌。未列入 model_to_brand，会按manufacturer_to_brand 默认值回退为'纳米'——这是一个未经证实的猜测，请知悉。"
+              },
+              {
+                "item": "上汽集团 / 科莱威CLEVER",
+                "note": "'科莱威CLEVER'（838辆）已映射为独立品牌'科莱威'。这是上汽旗下一个知名度较低的微型电动车品牌，我对它的品牌独立性有一定把握，但不如荣威/MG/飞凡确定，供留意。"
+              },
+              {
+                "item": "江汽集团 / 爱跑、花仙子",
+                "note": "'爱跑'（5,012辆）和'花仙子'（4,076辆）已各自映射为同名独立品牌。这两个是江淮旗下知名度较低的微型电动车产品线，我对它们是否应算'独立品牌'还是应并入'江淮'或'钇为'把握不是特别足（体量小，江淮系微型车的品牌层级本身对外宣传也不算清晰），供确认。"
+              },
+              {
+                "item": "广汽本田新能源 / 绎乐",
+                "note": "销量极小（2辆）。'绎乐'可能属于本田在华新推出的电动车子品牌'烨'(Ye)，而不是传统本田品牌，但因样本量为2辆、且我对'烨'品牌在这份数据里的具体命名规则把握不足，暂时保留映射为'本田'（原有规则：广汽本田新能源→本田），未额外拆分，供留意，影响可忽略。"
+              },
+              {
+                "item": "大众汽车安徽 / 与众全系（与众06/07/08）",
+                "note": "已按上次建议定为独立品牌'与众'（不并入'大众'）。销量很小（2,149辆，占比0.004%），但我对'与众'这个新品牌在消费者认知里独立于大众VW车标的程度依然把握不是100%，供留意，实际影响可忽略。"
+              }
+            ],
+            "uncertain": []
+          }
+          '''
+          # ===== MAPPING_JSON_END =====
 
           # 单次 job 的软性时间预算（留出余量给 commit / upload 步骤），超过后停止抓新的月份
           MAX_RUNTIME_SECONDS = 5.5 * 3600
@@ -395,7 +671,25 @@ jobs:
               return entry
 
 
-          def sync_month(session, year, month, report, body_names_cache):
+          def _record_cross_category_models(report, year, month, cross_category_models):
+              """
+              把本月 build_body_type_map 发现的"出现在 >=2 个 body 榜单里的车型"合并进全局汇总
+              （按车型名去重——同一款车每个月都会出现在同样的榜单组合里，没必要按月重复列，
+              报告里改成显示"出现过的月份数"）。这是给人看的诊断信息，不是告警。
+              """
+              global_map = report.setdefault("cross_category_models", {})
+              for item in cross_category_models:
+                  model = item["model"]
+                  entry = global_map.setdefault(model, {
+                      "model": model, "occurrences": item["occurrences"],
+                      "final_category": item["final_category"], "months_seen": [],
+                  })
+                  entry["occurrences"] = item["occurrences"]
+                  entry["final_category"] = item["final_category"]
+                  entry["months_seen"].append(f"{year}-{month:02d}")
+
+
+          def sync_month(session, year, month, report, body_names_cache, mapping):
               yyyymm = f"{year:04d}{month:02d}"
               log(f"开始抓取 {year}-{month:02d}")
 
@@ -457,9 +751,10 @@ jobs:
                   this_month_probe.append(entry)
                   body_lists.append((body_id, body_name, rows))
 
-              body_type_map, conflicts = build_body_type_map(body_lists)
+              body_type_map, conflicts, cross_category_models = build_body_type_map(body_lists)
               if conflicts:
                   report.setdefault("body_type_conflicts", []).extend(f"{yyyymm}: {c}" for c in conflicts)
+              _record_cross_category_models(report, year, month, cross_category_models)
 
               ev_tpl = f"{BASE}/ev-{yyyymm}-{yyyymm}-{{page}}.html"
               ev_rows, ok, _page1_html, _probe = fetch_full_listing(
@@ -469,9 +764,9 @@ jobs:
                   raise MonthAbortedException(f"{yyyymm} ev 抓取失败")
               ev_set = build_ev_set(ev_rows or [])
 
-              out_rows, unmatched = label_rows(style_rows, body_type_map, ev_set, year, month)
+              out_rows, unmatched = label_rows(style_rows, body_type_map, ev_set, mapping, year, month)
 
-              recon = reconcile_body_types(out_rows, body_lists, this_month_probe)
+              recon = reconcile_categories(out_rows, body_lists)
               report.setdefault("reconciliation", []).append({
                   "year": year, "month": month,
                   "results": recon["results"],
@@ -489,38 +784,72 @@ jobs:
               return out_rows
 
 
+          def map_to_final_category(raw_body_name):
+              """原始 body 分类名 -> 用户口径的最终类别。未知原始名原样透传，不静默吞掉。"""
+              return RAW_BODY_TYPE_TO_FINAL_CATEGORY.get(raw_body_name, raw_body_name)
+
+
+          def resolve_category_priority(final_categories_seen):
+              """
+              一个车型同时落在多个最终类别里时（比如既在SUV榜又在三厢车榜），按
+              CATEGORY_PRIORITY 裁决用哪个。理论上不该出现 CATEGORY_PRIORITY 之外的类别
+              （已知 5 个原始分类全部覆盖），万一将来数据源新增了没见过的类别，不要抛异常，
+              按字典序兜底选一个，保证流程不中断，异常情况会在跨分类车型报告里被人看到。
+              """
+              for cat in CATEGORY_PRIORITY:
+                  if cat in final_categories_seen:
+                      return cat
+              if final_categories_seen:
+                  return sorted(final_categories_seen)[0]
+              return "其他"
+
+
           def build_body_type_map(body_lists):
               """
-              body_lists: [(body_id, body_name, rows), ...]，rows 里每个元素至少有 'model' 键。
-              关联键只用车型名（同一个月内车型名 100% 唯一，已由用户核实过，不再带厂商名一起比较——
-              厂商名在主榜和 body 分榜之间的写法可能不一致，之前就是这个原因丢了 17 条两厢车）。
+              body_lists: [(body_id, raw_body_name, rows), ...]，rows 里每个元素至少有 'model' 键。
+              关联键只用车型名（同一个月内车型名 100% 唯一，已由用户核实过，不再带厂商名一起比较）。
 
-              返回 (body_type_map: model -> body_type中文名, conflicts: list[str] 冲突描述)：
-                - 同一个 body 榜单内同一个车型出现多次 -> 记一条冲突。
-                - 同一个车型出现在两个不同的 body 榜单里（比如既在两厢车又在SUV）-> 记一条冲突，
-                  以后出现的覆盖之前的（按 BODY_IDS 顺序，body_id 小的先处理）。
+              先把每个车型在各个 body 榜单里出现过的原始分类名（映射成最终类别后）全部收集起来，
+              再按 CATEGORY_PRIORITY 裁决出唯一的最终类别——不再依赖"后处理的 body 覆盖先处理的
+              body"这种隐式的、依赖 BODY_IDS 遍历顺序的写法。
+
+              返回 (body_type_map: model -> 最终类别, conflicts: list[str], cross_category_models: list[dict])：
+                - conflicts：同一个 body 榜单内同一个车型出现多次（真正的数据异常，不是两厢/三厢
+                  同款这种正常情况）。
+                - cross_category_models：出现在 >=2 个不同 body 榜单里的车型，不管裁决后是否
+                  同一个最终类别（两厢+三厢合并成轿车的车，比如朗逸，也会出现在这里，这是预期的、
+                  诚实的记录，不是异常告警——真正需要人工关注的是它旁边列出的"最终类别"是不是
+                  SUV/MPV 这类优先级生效的情况）。
               这是一个纯函数，不发请求，方便离线单测。
               """
-              body_type_map = {}
+              occurrences = {}  # model -> [(body_id, raw_body_name), ...]
               conflicts = []
-              for body_id, body_name, rows in body_lists:
+              for body_id, raw_body_name, rows in body_lists:
                   counts_in_this_body = {}
                   for r in rows:
                       counts_in_this_body[r["model"]] = counts_in_this_body.get(r["model"], 0) + 1
 
                   for model, c in counts_in_this_body.items():
                       if c > 1:
-                          conflicts.append(f"body-{body_id}({body_name}) 榜单内车型「{model}」重复出现 {c} 次")
+                          conflicts.append(f"body-{body_id}({raw_body_name}) 榜单内车型「{model}」重复出现 {c} 次")
 
                   for model in counts_in_this_body:
-                      if model in body_type_map and body_type_map[model] != body_name:
-                          conflicts.append(
-                              f"车型「{model}」同时出现在「{body_type_map[model]}」和「{body_name}」"
-                              f"(body-{body_id})，最终采用「{body_name}」"
-                          )
-                      body_type_map[model] = body_name
+                      occurrences.setdefault(model, []).append((body_id, raw_body_name))
 
-              return body_type_map, conflicts
+              body_type_map = {}
+              cross_category_models = []
+              for model, occ_list in occurrences.items():
+                  final_categories_seen = {map_to_final_category(raw_name) for _bid, raw_name in occ_list}
+                  final_category = resolve_category_priority(final_categories_seen)
+                  body_type_map[model] = final_category
+                  if len(occ_list) >= 2:
+                      cross_category_models.append({
+                          "model": model,
+                          "occurrences": list(occ_list),
+                          "final_category": final_category,
+                      })
+
+              return body_type_map, conflicts, cross_category_models
 
 
           def build_ev_set(ev_rows):
@@ -528,10 +857,38 @@ jobs:
               return {r["model"] for r in ev_rows}
 
 
-          def label_rows(style_rows, body_type_map, ev_set, year, month):
+          def resolve_brand_with_source(model, manufacturer, mapping):
               """
-              以主榜 (style_rows) 为基准，用「车型名」左连接打上 body_type / energy_type 标签。
+              品牌解析优先级（和另一个代理产出的字典契约一致）：
+                1. model_to_brand（按车型名）——长城/蔚来/上汽集团/奇瑞捷豹路虎这类一个厂商装
+                   多个品牌的情况，只有按车型才能分清楚。
+                2. manufacturer_to_brand（按厂商名）。
+                3. 都没命中 -> 直接用 manufacturer 原值兜底，绝不返回空字符串。
+              返回 (brand, source)，source 是 "model" / "manufacturer" / "fallback" 之一，
+              只用于报告统计，不影响实际写进 sales.csv 的 brand 值。
+              纯函数，不发请求，方便离线单测。
+              """
+              model_map = mapping.get("model_to_brand") or {}
+              manufacturer_map = mapping.get("manufacturer_to_brand") or {}
+
+              if model in model_map:
+                  return model_map[model], "model"
+              if manufacturer in manufacturer_map:
+                  return manufacturer_map[manufacturer], "manufacturer"
+              return manufacturer, "fallback"
+
+
+          def resolve_brand(model, manufacturer, mapping):
+              brand, _source = resolve_brand_with_source(model, manufacturer, mapping)
+              return brand
+
+
+          def label_rows(style_rows, body_type_map, ev_set, mapping, year, month):
+              """
+              以主榜 (style_rows) 为基准，用「车型名」左连接打上 body_type / brand / energy_type 标签。
               真正不在任何 body 榜单里的车型，body_type 填「其他」（不留空，避免前端图表出现无名分类）。
+              body_type_map 传进来的时候已经是最终类别（轿车/MPV/SUV/运动汽车），不是原始 body 分类名。
+              brand 按 resolve_brand_with_source 的优先级解析，同样绝不为空。
               这是一个纯函数（不发请求），方便离线单测。
               返回 (out_rows, other_count) —— other_count 是被填成「其他」的行数。
               """
@@ -539,15 +896,18 @@ jobs:
               out_rows = []
               for r in style_rows:
                   model = r["model"]
+                  manufacturer = r["manufacturer"]
                   body_type = body_type_map.get(model, "其他")
                   if body_type == "其他":
                       other_count += 1
                   energy_type = "新能源" if model in ev_set else "燃油"
+                  brand = resolve_brand(model, manufacturer, mapping)
                   out_rows.append({
                       "year": year,
                       "month": month,
-                      "manufacturer": r["manufacturer"],
-                      "model": r["model"],
+                      "manufacturer": manufacturer,
+                      "brand": brand,
+                      "model": model,
                       "body_type": body_type,
                       "energy_type": energy_type,
                       "sales": r["sales"],
@@ -555,40 +915,166 @@ jobs:
               return out_rows, other_count
 
 
-          def reconcile_body_types(out_rows, body_lists, body_probe_entries):
+          def normalize_legacy_body_types(rows):
               """
-              质量守门：对每个本月成功探测到的 body 分类，比较「body 页面声明的共X条」
-              和「out_rows 里实际打上该标签的行数」，不一致就报出来，并列出差异涉及的车型名
-              （最多 20 个，用页面车型集合和输出车型集合的对称差算出来，天然能覆盖
-              "被同名冲突覆盖掉" 和 "页面有但主榜没有" 两种情况）。
+              对已经在 sales.csv 里的存量行做原地规范化：旧版本用原始 body 分类名（两厢车/三厢车）
+              存的行，改写成用户口径的「轿车」；其余取值（SUV/MPV/运动汽车/其他，以及已经是
+              「轿车」的行）原样不动。
 
-              再做一次总量对账：各分类实际行数之和 + 「其他」行数 == 主榜(out_rows)总行数。
-              这个理论上必然成立（label_rows 给每一行恰好赋一个 body_type），加在这里是为了
-              防将来重构引入 bug 时能第一时间发现，而不是指望它真的抓到线上数据问题。
+              幂等：跑多少次结果都一样——第二次跑的时候已经没有"两厢车"/"三厢车"这两个取值了，
+              条件不命中，直接原样返回。不修改传入的 dict（返回新的列表+新的行 dict），避免
+              意外的原地副作用。
+
+              纯函数，不发请求，方便离线单测。返回 (normalized_rows, changed_count)。
+              """
+              legacy_values = {"两厢车", "三厢车"}
+              normalized = []
+              changed = 0
+              for r in rows:
+                  if r.get("body_type") in legacy_values:
+                      new_r = dict(r)
+                      new_r["body_type"] = "轿车"
+                      normalized.append(new_r)
+                      changed += 1
+                  else:
+                      normalized.append(r)
+              return normalized, changed
+
+
+          def normalize_legacy_brand_column(rows, mapping):
+              """
+              对存量行做原地规范化：老版本 sales.csv 根本没有 brand 这一列，csv.DictReader 读出来的
+              行字典里压根没有 "brand" 这个 key；已经有 brand 的行（不管是这次新抓的、还是上次已经
+              补过的）原样不动。
+
+              幂等：第二次跑的时候所有行都已经有非空 brand 了，r.get("brand") 为真，条件不命中，
+              直接原样返回。不修改传入的 dict。
+
+              纯函数，不发请求，方便离线单测。返回 (normalized_rows, changed_count)。
+              """
+              normalized = []
+              changed = 0
+              for r in rows:
+                  if not r.get("brand"):
+                      new_r = dict(r)
+                      new_r["brand"] = resolve_brand(new_r.get("model", ""), new_r.get("manufacturer", ""), mapping)
+                      normalized.append(new_r)
+                      changed += 1
+                  else:
+                      normalized.append(r)
+              return normalized, changed
+
+
+          def load_or_bootstrap_mapping():
+              """
+              读取品牌映射字典 data/mapping.json。
+                - 文件存在 -> 直接读它（用户/coordinator 可能已经手工改过，绝不覆盖）。
+                - 文件不存在 -> 用内置的 DEFAULT_MAPPING_JSON 写出一份占位字典，然后用它。
+              解析失败时不让整个脚本崩掉，退回一个空字典（model_to_brand/manufacturer_to_brand
+              都是空的，效果等价于"所有品牌都回退成厂商原值"），并把原因记到日志里。
+              返回解析后的 dict，保证一定带有 "manufacturer_to_brand" / "model_to_brand" 两个键。
+              """
+              if os.path.exists(MAPPING_JSON_PATH):
+                  with open(MAPPING_JSON_PATH, "r", encoding="utf-8") as f:
+                      text = f.read()
+                  log(f"读取已有品牌映射字典: {MAPPING_JSON_PATH}")
+              else:
+                  os.makedirs(DATA_DIR, exist_ok=True)
+                  text = DEFAULT_MAPPING_JSON.strip() + "\n"
+                  with open(MAPPING_JSON_PATH, "w", encoding="utf-8") as f:
+                      f.write(text)
+                  log(f"品牌映射字典不存在，已写出内置占位字典到 {MAPPING_JSON_PATH}（以后可以直接在仓库里编辑它）")
+
+              try:
+                  data = json.loads(text)
+              except json.JSONDecodeError as e:
+                  log(f"!! 品牌映射字典解析失败，本次运行回退为空字典（所有品牌都会回退成厂商原值）: {e}")
+                  data = {}
+
+              if not isinstance(data, dict):
+                  data = {}
+              data.setdefault("manufacturer_to_brand", {})
+              data.setdefault("model_to_brand", {})
+              return data
+
+
+          def compute_brand_stats(all_rows_sorted, mapping):
+              """
+              品牌映射统计：命中 model_to_brand / manufacturer_to_brand 的行数、回退为厂商原值的行数
+              （附具体是哪些厂商，按行数从多到少排），合并后的品牌总数，品牌销量 Top20。
+
+              直接用当前 mapping 对每一行重新判定命中来源，不依赖 CSV 里已经写好的 brand 值——
+              这样报告反映的永远是"这次运行实际生效的字典"，不会因为字典更新了、但报告逻辑
+              读的是旧标签而对不上。
 
               纯函数，不发请求，方便离线单测。
               """
               from collections import Counter
 
+              source_counts = Counter()
+              fallback_manufacturers = Counter()
+              brand_sales = Counter()
+
+              for r in all_rows_sorted:
+                  brand, source = resolve_brand_with_source(r["model"], r["manufacturer"], mapping)
+                  source_counts[source] += 1
+                  if source == "fallback":
+                      fallback_manufacturers[r["manufacturer"]] += 1
+                  brand_sales[brand] += r["sales"]
+
+              return {
+                  "model_hits": source_counts.get("model", 0),
+                  "manufacturer_hits": source_counts.get("manufacturer", 0),
+                  "fallback_hits": source_counts.get("fallback", 0),
+                  "fallback_manufacturers": fallback_manufacturers.most_common(),
+                  "brand_count": len(brand_sales),
+                  "top20": brand_sales.most_common(20),
+              }
+
+
+          def reconcile_categories(out_rows, body_lists):
+              """
+              质量守门 v2：用户口径的最终类别数（轿车/MPV/SUV/运动汽车）比原始 body 分类数少——
+              两厢车+三厢车都并进轿车——所以对账基准不能再是"某一个 body 页面声明的共N条"，
+              改成"该最终类别下，所有贡献它的 body 榜单实际解析出的车型名集合的并集大小"（去重），
+              再和 out_rows 里这个类别实际的行数比较。
+
+              比如轿车 = 两厢车榜单车型集合 ∪ 三厢车榜单车型集合；两边各自解析出5个车型、
+              重叠2个，对账基准是 8（并集大小），不是 10（简单相加）。
+
+              再做一次总量对账：各类别实际行数之和 + 「其他」行数 == 主榜(out_rows)总行数。
+
+              返回 (results, total_check)。results 每条:
+                {"final_category", "contributing": [(body_id, raw_name), ...],
+                 "page_side": 并集大小, "actual": out_rows里该类别实际行数,
+                 "mismatch": bool, "diff_models": [...]}
+
+              纯函数，不发请求，方便离线单测（尤其是并集去重这条，是这次改动最容易写错的地方）。
+              """
+              from collections import Counter
+
               actual_counts = Counter(r["body_type"] for r in out_rows)
-              body_models = {bid: {r["model"] for r in rows} for bid, name, rows in body_lists}
+
+              groups = {}  # final_category -> {"contributing": [...], "models": set()}
+              for body_id, raw_body_name, rows in body_lists:
+                  final_category = map_to_final_category(raw_body_name)
+                  g = groups.setdefault(final_category, {"contributing": [], "models": set()})
+                  g["contributing"].append((body_id, raw_body_name))
+                  g["models"].update(r["model"] for r in rows)
 
               results = []
-              for p in body_probe_entries:
-                  name = p.get("name")
-                  if not name:
-                      continue  # 该 body 编号本月不存在/失败，不参与对账
-                  body_id = p["body_id"]
-                  total = p.get("total")
-                  actual = actual_counts.get(name, 0)
-                  mismatch = (total is not None) and (actual != total)
+              for final_category, g in groups.items():
+                  page_side = len(g["models"])  # 并集大小，去重后
+                  actual = actual_counts.get(final_category, 0)
+                  mismatch = page_side != actual
                   diff_models = []
                   if mismatch:
-                      page_models = body_models.get(body_id, set())
-                      output_models = {r["model"] for r in out_rows if r["body_type"] == name}
-                      diff_models = sorted((page_models - output_models) | (output_models - page_models))[:20]
+                      output_models = {r["model"] for r in out_rows if r["body_type"] == final_category}
+                      diff_models = sorted((g["models"] - output_models) | (output_models - g["models"]))[:20]
                   results.append({
-                      "body_id": body_id, "name": name, "total": total, "actual": actual,
+                      "final_category": final_category,
+                      "contributing": g["contributing"],
+                      "page_side": page_side, "actual": actual,
                       "mismatch": mismatch, "diff_models": diff_models,
                   })
 
@@ -642,7 +1128,7 @@ jobs:
               return months
 
 
-          def write_outputs(all_rows, report):
+          def write_outputs(all_rows, report, mapping):
               os.makedirs(DATA_DIR, exist_ok=True)
 
               all_rows_sorted = sorted(all_rows, key=lambda r: (r["year"], r["month"], -r["sales"]))
@@ -660,7 +1146,8 @@ jobs:
               log(f"写入 {MANUFACTURERS_TXT} ({len(manufacturers)} 个厂商)")
 
               coverage = compute_body_type_coverage(all_rows_sorted)
-              write_report(report, len(all_rows_sorted), len(manufacturers), coverage)
+              brand_stats = compute_brand_stats(all_rows_sorted, mapping)
+              write_report(report, len(all_rows_sorted), len(manufacturers), coverage, brand_stats)
 
 
           def compute_body_type_coverage(all_rows_sorted):
@@ -697,7 +1184,7 @@ jobs:
               }
 
 
-          def write_report(report, total_rows, total_manufacturers, coverage):
+          def write_report(report, total_rows, total_manufacturers, coverage, brand_stats):
               lines = []
               lines.append("# 同步报告\n")
               lines.append(f"- 运行时间 (UTC): {report['started_at']} ~ {report['finished_at']}")
@@ -716,6 +1203,36 @@ jobs:
                   lines.append(f"- 本次重抓覆盖的月份 ({len(overwritten)} 个): {overwritten_str}")
               else:
                   lines.append("- 本次重抓覆盖的月份: (无)")
+              legacy_n = report.get("legacy_normalized_count", 0)
+              lines.append(f"- 存量数据规范化：将 {legacy_n} 行「两厢车/三厢车」合并为「轿车」")
+              legacy_brand_n = report.get("legacy_brand_backfilled_count", 0)
+              lines.append(f"- 存量品牌补列：为 {legacy_brand_n} 行补上了 brand 列")
+              lines.append("")
+
+              lines.append("## 品牌映射\n")
+              lines.append(f"- 命中 model_to_brand: {brand_stats['model_hits']} 行")
+              lines.append(f"- 命中 manufacturer_to_brand: {brand_stats['manufacturer_hits']} 行")
+              lines.append(f"- 回退为厂商原值: {brand_stats['fallback_hits']} 行")
+              fallback_manus = brand_stats.get("fallback_manufacturers", [])
+              if fallback_manus:
+                  lines.append("")
+                  lines.append(
+                      f"ℹ️ 有 {len(fallback_manus)} 个厂商未在字典中，已回退为厂商原值，建议补充字典："
+                  )
+                  for manu, cnt in fallback_manus:
+                      lines.append(f"- {manu} ({cnt} 行)")
+              lines.append("")
+              lines.append(f"- 合并后品牌总数: {brand_stats['brand_count']}")
+              lines.append("")
+              lines.append("### 品牌销量 Top 20\n")
+              top20 = brand_stats.get("top20", [])
+              if top20:
+                  lines.append("| 排名 | 品牌 | 销量 |")
+                  lines.append("|---|---|---|")
+                  for i, (brand, sales) in enumerate(top20, 1):
+                      lines.append(f"| {i} | {brand} | {sales} |")
+              else:
+                  lines.append("(无数据)")
               lines.append("")
 
               lines.append("## 车体类型覆盖率\n")
@@ -754,22 +1271,24 @@ jobs:
                       lines.append(f"### {yyyymm_label}\n")
                       results = rec["results"]
                       if results:
-                          lines.append("| body 编号 | 分类名 | 页面共X条 | 实际标上 | 差 | 状态 |")
+                          lines.append("| 最终类别 | 贡献的 body 榜单 | 页面并集条数(去重) | 实际标上 | 差 | 状态 |")
                           lines.append("|---|---|---|---|---|---|")
-                          for r in results:
-                              total_ = r["total"] if r["total"] is not None else "-"
-                              diff = (r["total"] - r["actual"]) if r["total"] is not None else "-"
+                          for r in sorted(results, key=lambda x: x["final_category"]):
+                              contributing_str = "+".join(f"body-{bid}({rn})" for bid, rn in r["contributing"])
+                              diff = r["page_side"] - r["actual"]
                               status = "❌ 不平" if r["mismatch"] else "✅"
                               lines.append(
-                                  f"| body-{r['body_id']} | {r['name']} | {total_} | {r['actual']} | {diff} | {status} |"
+                                  f"| {r['final_category']} | {contributing_str} | {r['page_side']} | "
+                                  f"{r['actual']} | {diff} | {status} |"
                               )
                           mismatched = [r for r in results if r["mismatch"]]
                           for r in mismatched:
-                              diff = r["total"] - r["actual"]
+                              diff = r["page_side"] - r["actual"]
+                              contributing_str = "+".join(f"body-{bid}({rn})" for bid, rn in r["contributing"])
                               lines.append("")
                               lines.append(
-                                  f"⚠️ **{r['name']} 对账不平：页面 {r['total']} 条，实际标上 {r['actual']} 条，"
-                                  f"差 {diff} 条**"
+                                  f"⚠️ **{r['final_category']} 对账不平（{contributing_str}）：页面并集(去重) "
+                                  f"{r['page_side']} 条，实际标上 {r['actual']} 条，差 {diff} 条**"
                               )
                               if r["diff_models"]:
                                   lines.append(f"差异涉及的车型（最多列 20 个）：{ '、'.join(r['diff_models']) }")
@@ -793,12 +1312,32 @@ jobs:
               conflicts = report.get("body_type_conflicts", [])
               if conflicts:
                   lines.append("### 关联冲突\n")
-                  lines.append("同一个车型在同一个 body 榜单内重复出现，或者同时出现在两个不同的 body 榜单里——"
-                                "正常情况不该发生，出现了说明数据源有异常：")
+                  lines.append("同一个车型在同一个 body 榜单内重复出现——正常情况不该发生，"
+                                "出现了说明数据源有异常（这不包括两厢/三厢/多形态同款车同时出现在多个 "
+                                "body 榜单的情况，那个是预期行为，见下面「跨分类车型」）：")
                   lines.append("")
                   for c in conflicts:
                       lines.append(f"- {c}")
                   lines.append("")
+
+              lines.append("## 跨分类车型\n")
+              lines.append("出现在 2 个及以上 body 榜单里的车型（比如两厢版+三厢版同款车，或者少数真正"
+                            "跨车身形态收录的车型），以及优先级裁决 (SUV > MPV > 轿车 > 运动汽车) 后"
+                            "最终给了哪一类。以后数据源变了（比如多出一种新的跨榜方式），这里能第一时间看到。")
+              lines.append("")
+              cross_models = report.get("cross_category_models", {})
+              if cross_models:
+                  lines.append("| 车型 | 出现在哪些榜 | 最终类别 | 出现月份数 |")
+                  lines.append("|---|---|---|---|")
+                  for model in sorted(cross_models):
+                      item = cross_models[model]
+                      occ_str = "、".join(f"body-{bid}({rn})" for bid, rn in item["occurrences"])
+                      lines.append(
+                          f"| {model} | {occ_str} | {item['final_category']} | {len(item['months_seen'])} |"
+                      )
+              else:
+                  lines.append("(本次运行没有发现任何跨分类车型)")
+              lines.append("")
 
               lines.append(f"## body-1..8 探测结果（本次试运行的核心产出）\n")
               body_probe = report.get("body_probe", [])
@@ -941,6 +1480,9 @@ jobs:
                   "body_probe": [],
                   "reconciliation": [],
                   "body_type_conflicts": [],
+                  "cross_category_models": {},
+                  "legacy_normalized_count": 0,
+                  "legacy_brand_backfilled_count": 0,
               }
 
               max_months, max_months_desc = parse_max_months(os.environ.get("MAX_MONTHS"))
@@ -952,8 +1494,27 @@ jobs:
               report["force_refresh_desc"] = force_refresh_desc
               log(f"force_refresh 设置: {force_refresh} ({force_refresh_desc})")
 
+              # 品牌映射字典：存在就读，不存在就用内置占位字典自举写出一份（绝不覆盖已存在的文件）。
+              mapping = load_or_bootstrap_mapping()
+              log(f"品牌映射字典: manufacturer_to_brand {len(mapping.get('manufacturer_to_brand', {}))} 条, "
+                  f"model_to_brand {len(mapping.get('model_to_brand', {}))} 条")
+
               existing_rows, months_done = load_existing_sales()
               log(f"已有 {len(existing_rows)} 行历史数据，覆盖 {len(months_done)} 个月份")
+
+              # 存量数据规范化：旧版本抓的行里 body_type 可能还是原始 body 分类名(两厢车/三厢车)，
+              # 这里原地改写成用户口径的"轿车"。幂等，不需要用户 force_refresh 重跑 44 分钟。
+              existing_rows, legacy_normalized_count = normalize_legacy_body_types(existing_rows)
+              report["legacy_normalized_count"] = legacy_normalized_count
+              if legacy_normalized_count:
+                  log(f"存量数据规范化: 将 {legacy_normalized_count} 行「两厢车/三厢车」合并为「轿车」")
+
+              # 存量数据补 brand 列：旧版本 sales.csv 根本没有这一列，用当前字典原地补上。
+              # 同样幂等，不需要用户 force_refresh 重跑。
+              existing_rows, legacy_brand_backfilled_count = normalize_legacy_brand_column(existing_rows, mapping)
+              report["legacy_brand_backfilled_count"] = legacy_brand_backfilled_count
+              if legacy_brand_backfilled_count:
+                  log(f"存量数据补列: 为 {legacy_brand_backfilled_count} 行补上了 brand 列")
 
               effective_months_done = compute_effective_months_done(months_done, force_refresh)
               all_targets = [ym for ym in months_from_2024_01_to_now() if ym not in effective_months_done]
@@ -972,7 +1533,7 @@ jobs:
                       log("接近时间预算上限，停止抓取新的月份")
                       break
                   try:
-                      rows = sync_month(session, year, month, report, body_names_cache)
+                      rows = sync_month(session, year, month, report, body_names_cache, mapping)
                       all_new_rows.extend(rows)
                   except MonthAbortedException as e:
                       log(f"!! 放弃 {year}-{month:02d}: {e}")
@@ -998,7 +1559,7 @@ jobs:
               report["overwritten_months"] = sorted(synced_this_run & months_done)
 
               combined = merge_existing_and_new(existing_rows, all_new_rows, synced_this_run)
-              write_outputs(combined, report)
+              write_outputs(combined, report, mapping)
 
               log("同步结束")
 
