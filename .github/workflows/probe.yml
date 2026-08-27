@@ -52,7 +52,20 @@ jobs:
 
       - name: Write sync script
         run: |
-          cat > sync.py << 'SYNC_SCRIPT_EOF'
+          mkdir -p src
+          cat > src/README.md << 'SRC_README_EOF'
+          # src/ —— 运行时自动生成的源码归档
+
+          本目录下的文件由 GitHub Actions 工作流每次运行时，从 workflow YAML 里内嵌的脚本
+          自动重新写出，目的是让源码在仓库里有独立、可读、可 diff 的历史，不必打开 YAML
+          文件翻找 heredoc 才能看代码。
+
+          - 本目录**只供阅读和 diff**，直接修改这里的文件不会影响任何工作流的实际行为——
+            下一次运行时会被内嵌在 workflow 里的版本原样重写覆盖。
+          - 想要真正修改脚本行为，请改动 workflow YAML 文件里对应的内嵌脚本内容，
+            改动流程见仓库根 README 第七节。
+          SRC_README_EOF
+          cat > src/sync_script.py << 'SYNC_SCRIPT_EOF'
           #!/usr/bin/env python3
           # -*- coding: utf-8 -*-
           """
@@ -1658,7 +1671,7 @@ jobs:
           FORCE_REFRESH: ${{ inputs.force_refresh }}
           # 报告里记一笔这次是怎么触发的（schedule / workflow_dispatch / push），方便事后追查。
           TRIGGER_EVENT: ${{ github.event_name }}
-        run: python3 sync.py
+        run: python3 src/sync_script.py
 
       - name: Drop oversized files before commit
         if: always()
@@ -1678,7 +1691,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A data/ || true
+          git add -A data/ src/ || true
           if git diff --staged --quiet; then
             echo "没有变化，跳过提交"
           else
@@ -1715,7 +1728,8 @@ jobs:
       - name: Write Feishu notify script
         if: always()
         run: |
-          cat > notify_feishu.py << 'NOTIFY_SCRIPT_EOF'
+          mkdir -p src
+          cat > src/notify_feishu.py << 'NOTIFY_SCRIPT_EOF'
           #!/usr/bin/env python3
           # -*- coding: utf-8 -*-
           """
@@ -2340,4 +2354,4 @@ jobs:
           SYNC_OUTCOME: ${{ steps.run_sync.outcome }}
           SYNC_NOTEWORTHY: ${{ steps.run_sync.outputs.noteworthy }}
           GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: python3 notify_feishu.py
+        run: python3 src/notify_feishu.py
