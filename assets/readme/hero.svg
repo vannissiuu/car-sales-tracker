@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="hero-title hero-desc">
+  <title id="hero-title">中国汽车销量看板</title>
+  <desc id="hero-desc">把月度车型销量整理成可按厂商、品牌、车体类型和能源类型筛选的趋势看板。</desc>
+
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#202326" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="chart-fill" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#2A78D6" stop-opacity=".30"/>
+      <stop offset="1" stop-color="#2A78D6" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="360" rx="24" fill="#0B0B0B"/>
+  <rect width="1200" height="360" rx="24" fill="url(#grid)" opacity=".72"/>
+  <path d="M56 304H1144" stroke="#3A3D40" stroke-width="1"/>
+  <path d="M690 52V308" stroke="#3A3D40" stroke-width="1"/>
+
+  <g transform="translate(56 48)" fill="#F7F7F2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif">
+    <text x="0" y="16" fill="#7E858C" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="16" letter-spacing="2">CAR SALES / MONTHLY SERIES</text>
+    <text x="0" y="78" font-size="48" font-weight="750" letter-spacing="-1">中国汽车销量看板</text>
+    <text x="0" y="118" fill="#C6CBD0" font-size="22">从车型明细到品牌与厂商趋势，</text>
+    <text x="0" y="150" fill="#C6CBD0" font-size="22">用一张可核对的图表读懂市场变化。</text>
+
+    <g transform="translate(0 190)">
+      <rect width="126" height="32" rx="16" fill="#2A78D6"/>
+      <text x="63" y="22" fill="#FFFFFF" font-size="15" text-anchor="middle">数据驱动</text>
+      <rect x="138" width="126" height="32" rx="16" fill="#202326" stroke="#4A4E52"/>
+      <text x="201" y="22" fill="#D9DDE0" font-size="15" text-anchor="middle">口径透明</text>
+      <rect x="276" width="126" height="32" rx="16" fill="#202326" stroke="#4A4E52"/>
+      <text x="339" y="22" fill="#D9DDE0" font-size="15" text-anchor="middle">单文件部署</text>
+    </g>
+
+    <g transform="translate(0 256)" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="14">
+      <text x="0" y="0" fill="#7E858C">2024.01 → 2026.07</text>
+      <text x="188" y="0" fill="#7E858C">18,814 rows</text>
+      <text x="334" y="0" fill="#7E858C">117 makers</text>
+    </g>
+  </g>
+
+  <g transform="translate(742 48)">
+    <rect width="402" height="258" rx="18" fill="#151719" stroke="#42464A"/>
+    <text x="26" y="32" fill="#F7F7F2" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="18" font-weight="650">品牌趋势 · 2026 年累计</text>
+    <text x="26" y="55" fill="#858C92" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="13">筛选 / 品牌 / 能源类型 / 图表模式</text>
+
+    <g transform="translate(26 76)" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC',sans-serif" font-size="13">
+      <rect width="66" height="27" rx="7" fill="#2A78D6"/>
+      <text x="33" y="19" fill="#FFFFFF" text-anchor="middle">品牌</text>
+      <rect x="74" width="66" height="27" rx="7" fill="#292C2F" stroke="#4B5054"/>
+      <text x="107" y="19" fill="#D9DDE0" text-anchor="middle">厂商</text>
+      <rect x="148" width="66" height="27" rx="7" fill="#292C2F" stroke="#4B5054"/>
+      <text x="181" y="19" fill="#D9DDE0" text-anchor="middle">车型</text>
+      <rect x="222" width="78" height="27" rx="7" fill="#292C2F" stroke="#4B5054"/>
+      <text x="261" y="19" fill="#D9DDE0" text-anchor="middle">新能源</text>
+    </g>
+
+    <g transform="translate(26 124)">
+      <path d="M0 80H350M0 42H350M0 4H350" stroke="#303438" stroke-width="1"/>
+      <path d="M0 72 C32 64 44 68 66 54 S108 59 128 43 S168 48 190 29 S232 37 252 21 S304 27 350 8 L350 80 L0 80Z" fill="url(#chart-fill)"/>
+      <path d="M0 72 C32 64 44 68 66 54 S108 59 128 43 S168 48 190 29 S232 37 252 21 S304 27 350 8" fill="none" stroke="#2A78D6" stroke-width="4" stroke-linecap="round"/>
+      <path d="M0 78 C38 75 50 72 76 69 S118 74 142 60 S182 68 208 53 S246 61 274 48 S316 52 350 40" fill="none" stroke="#EB6834" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="350" cy="8" r="5" fill="#2A78D6"/>
+      <circle cx="350" cy="40" r="5" fill="#EB6834"/>
+      <text x="0" y="104" fill="#858C92" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">JAN</text>
+      <text x="164" y="104" fill="#858C92" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">APR</text>
+      <text x="324" y="104" fill="#858C92" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">JUL</text>
+    </g>
+
+    <g transform="translate(26 234)" font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="12">
+      <circle cx="5" cy="-4" r="4" fill="#2A78D6"/><text x="16" y="0" fill="#AEB5BA">top 20</text>
+      <circle cx="96" cy="-4" r="4" fill="#EB6834"/><text x="107" y="0" fill="#AEB5BA">燃油 / 新能源</text>
+      <text x="286" y="0" fill="#6E767C">CSV → HTML</text>
+    </g>
+  </g>
+</svg>
