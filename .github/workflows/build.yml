@@ -1,597 +1,1436 @@
-name: Probe News Sources (P3)
+name: Build Car Sales Dashboard
 
-# 手动点击触发（用户会在 GitHub 网页上点 Run workflow）；
-# 同时保留 push 触发（限定只在改动本工作流文件时），方便首次把这个文件推上去就自动跑一次。
-# commit-back 步骤的提交信息带 [skip ci]，GitHub Actions 会跳过由该次 push 触发的工作流，
-# 避免"探针提交结果 -> 触发 push -> 又跑一次探针"的死循环——沿用 P1 sync.yml 的口径。
+# 手动点击触发，或者 sync 工作流跑完之后自动触发（sync 提交数据用 [skip ci]，
+# 普通 push 触发会被挡掉，所以这里必须用 workflow_run 监听 sync 工作流本身的完成事件）。
+# 注意：workflow_run 的 workflows 列表里必须填 sync 工作流 name 字段的准确值
+# （即 /tmp/p1-sync/.github/workflows/sync.yml 第一行 name: 的值），
+# 名字对不上这个触发器永远不会触发。
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
-      - master
-    paths:
-      - '.github/workflows/probe_news.yml'
+  workflow_dispatch: {}
+  workflow_run:
+    workflows: ["Sync Car Sales Data (16888)"]
+    types: [completed]
 
 jobs:
-  probe:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: write
-    # 探针的价值就在于诚实记录"哪些源打不通/被拦截"，这本身就是结论而不是流程故障，
-    # 不应该让整个 job 显示失败——沿用 P1 sync.yml 的口径。
+    # 只在手动触发，或者 sync 工作流本次运行成功时才构建——
+    # sync 失败/中止时不要拿残缺或过期的 data/sales.csv 去覆盖线上看板。
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    # 就算脚本内部出了没兜住的异常，也不要让整个 job 显示失败——
+    # 后面的 commit/upload 步骤仍然要有机会跑，尽量拿到部分产出
     continue-on-error: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # workflow_run 触发默认 checkout 的是默认分支最新提交，不一定是触发本次运行的
+          # 那个 sync 提交。显式指定 head_sha，确保拿到的是 sync 刚提交完 data/sales.csv
+          # 之后的那个 commit；workflow_dispatch 手动触发时 workflow_run 上下文不存在，
+          # 回退到 github.ref（手动运行时选择的分支/引用）。
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install Python dependencies
-        run: pip install requests beautifulsoup4 lxml pandas feedparser
-
-      - name: Write probe script
+      - name: Write build script
         run: |
-          cat > probe_news.py << 'PROBE_SCRIPT_EOF'
+          cat > build.py << 'BUILD_PY_EOF'
           #!/usr/bin/env python3
           # -*- coding: utf-8 -*-
           """
-          P3 探针：验证「按品牌/车型抓取新闻」候选数据源在生产环境（GitHub Actions，
-          出口 IP 在美国弗吉尼亚 Azure，已知能访问中国网站）下是否真的可用。
+          build.py -- 中国汽车销量看板构建脚本
 
-          背景 / 已知事实（不重复踩坑）：
-            - dongchedi.com / cpcaauto.com / caam.org.cn 已确认不可用（出网白名单拦截 /
-              滑块验证码），本探针不测这几个。
-            - xl.16888.com（车主之家销量页）已验证可用、静态 HTML、无反爬，是 P1 sync.py
-              的数据源。本探针额外测车主之家的资讯子域 news.16888.com，同域名家族，
-              是否也一样好抓。
-            - 本探针只做"调研阶段的一次性验证"，不是生产管道：不做幂等、不做增量、
-              没有 append/skip 逻辑，每次跑都是全量重测 8 个候选 URL。
+          读取 data/sales.csv，生成一个完全自包含的单文件 HTML 看板
+          （ECharts 库与全部数据均内联，打开后零外部请求）到 docs/index.html。
 
-          本探针要做的事（对每个候选 URL）：
-            1. 用浏览器 UA 发起 GET 请求，请求间隔 3 秒，记录状态码 / 耗时 / 声明编码 /
-               实际编码 / 字节数 / 最终 URL（有无重定向）/ Content-Type。
-            2. 原始响应内容全量保存到 probe_news_output/raw/ 下，供解析失败时人工重写解析器。
-            3. 用多种策略尝试提取新闻条目（标题/链接/日期/来源）：
-                 a) feedparser 按 RSS/Atom 解析（如果像 feed 就会有 entries）
-                 b) pandas.read_html 找表格（新闻列表一般不是表格，但按用户要求也测一下，
-                    做诚实的"试了、没有表格"记录）
-                 c) BeautifulSoup 通用新闻列表启发式：找 <a> 标签里文本长度像标题的，
-                    再在其父节点/兄弟节点里找日期形状的文本
-            4. 每个候选写一条 JSON 结果 + 汇总进 REPORT.md，人工可读地回答：
-                 能不能访问 / 是不是 RSS / 提取到几条 / 标题·链接·日期是否齐全 /
-                 URL 能不能按品牌构造。
-
-          诚实声明：这些候选 URL 有的是网页搜索结果里直接确认存在的（比如
-          tags.sina.com.cn/brand_wenjie、news.mydrivers.com/tag/biyadi.htm），
-          有的是按同一套命名规律"推测"出来的拼音 slug（比如 brand_biyadi、
-          tag/wenjie.htm）——本探针跑完后 REPORT.md 会明确标注每一条究竟是
-          "搜索确认存在" 还是 "推测，未搜索确认"，见 CANDIDATES 里的 confidence 字段。
+          用法: python3 build.py
           """
 
+          import csv
           import json
           import os
-          import re
+          import subprocess
           import sys
-          import time
-          import traceback
+          import tempfile
+          import shutil
+          import urllib.request
+          import ssl
           from datetime import datetime, timezone
-          from urllib.parse import urlparse
 
-          import requests
+          # ---------------------------------------------------------------------------
+          # 路径配置
+          # ---------------------------------------------------------------------------
+          SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+          def _first_existing(*candidates):
+              """按顺序返回第一个存在的路径；都不存在时返回第一个候选（供报错信息使用）。"""
+              for c in candidates:
+                  if c and os.path.isfile(c):
+                      return c
+              return candidates[0]
 
-          try:
-              import feedparser
-          except Exception:
-              feedparser = None
-
-          try:
-              import pandas as pd
-          except Exception:
-              pd = None
-
-          from bs4 import BeautifulSoup
-
-          COMMON_UA = (
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-              "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+          # 数据源：环境变量优先，其次相对当前工作目录（GitHub Actions 里 cwd = 仓库根），
+          # 再次相对脚本所在目录。绝不硬编码开发环境的绝对路径。
+          CSV_PATH = os.environ.get("SALES_CSV") or _first_existing(
+              os.path.join("data", "sales.csv"),
+              os.path.join(SCRIPT_DIR, "data", "sales.csv"),
           )
+          # 新闻缓存：可选，不存在时优雅降级
+          NEWS_PATH = os.environ.get("NEWS_JSON") or _first_existing(
+              os.path.join("data", "news.json"),
+              os.path.join(SCRIPT_DIR, "data", "news.json"),
+              os.path.join(SCRIPT_DIR, "news.json"),
+          )
+          VENDOR_ECHARTS = os.path.join(SCRIPT_DIR, "vendor", "echarts.min.js")
+          OUT_DIR = os.path.join(SCRIPT_DIR, "docs")
+          OUT_PATH = os.path.join(OUT_DIR, "index.html")
 
-          REQUEST_HEADERS = {
-              "User-Agent": COMMON_UA,
-              "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-              "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
-          }
-
-          REQUEST_TIMEOUT_SECONDS = 20
-          SLEEP_BETWEEN_REQUESTS_SECONDS = 3
-
-          BLOCK_MARKERS = [
-              "验证码", "captcha", "人机验证", "安全验证", "访问异常",
-              "拒绝访问", "禁止访问", "blocked", "Access Denied", "a_bogus",
-          ]
-
-          # 测试品牌：老牌(比亚迪) / 新势力(问界) / 跨界(小米汽车)
-          BRAND_BYD = "比亚迪"
-          BRAND_AITO = "问界"
-          BRAND_XIAOMI = "小米汽车"
-
-          # ============================================================
-          # 候选源清单。confidence 字段如实标注：
-          #   "search_confirmed" = WebSearch 结果里直接命中了这个 URL 或同结构的姊妹 URL
-          #   "inferred_pattern" = 按同站已确认的命名规律推测出来的（同一套 pinyin/结构），
-          #                        没有被搜索直接命中过，很可能 404，探针就是要验它
-          # ============================================================
-          CANDIDATES = [
-              {
-                  "id": "16888_news_home",
-                  "source": "车主之家资讯 news.16888.com（首页/列表结构侦察）",
-                  "url": "https://news.16888.com/",
-                  "brand": None,
-                  "confidence": "search_confirmed",
-                  "note": (
-                      "与已验证可用的 xl.16888.com 同域名家族（16888.com）。搜索确认该子域"
-                      "存在且有新闻列表，但没搜到明确的『按品牌筛选』入口，本条只是用来"
-                      "侦察页面结构（是否有 tag/搜索/品牌筛选功能可用），不代表能按品牌构造 URL。"
-                  ),
-              },
-              {
-                  "id": "16888_news_category_qcwh",
-                  "source": "车主之家资讯 news.16888.com 分类列表页样例（汽车文化分类）",
-                  "url": "https://news.16888.com/qcwh/index_list_9.html",
-                  "brand": None,
-                  "confidence": "search_confirmed",
-                  "note": "搜索直接命中的分类列表页，URL 形如 /<分类拼音缩写>/index_list_<N>.html，用于确认列表页 HTML 结构、翻页方式，为后续人工找品牌入口探路。",
-              },
-              {
-                  "id": "sina_tagsnews_byd",
-                  "source": "新浪汽车旧版标签聚合 tags.news.sina.com.cn（中文原词）",
-                  "url": "https://tags.news.sina.com.cn/%E6%AF%94%E4%BA%9A%E8%BF%AA",  # 比亚迪
-                  "brand": BRAND_BYD,
-                  "confidence": "search_confirmed",
-                  "note": "搜索直接命中：『比亚迪 - 最新比亚迪实时滚动快讯...』标题的标签聚合页，URL 是中文品牌名直接 percent-encode，理论上可以对任意品牌名直接构造。",
-              },
-              {
-                  "id": "sina_tags_brand_wenjie",
-                  "source": "新浪汽车新版标签聚合 tags.sina.com.cn/brand_<拼音>",
-                  "url": "https://tags.sina.com.cn/brand_wenjie",
-                  "brand": BRAND_AITO,
-                  "confidence": "search_confirmed",
-                  "note": "搜索直接命中：『问界 - 最新问界实时滚动快讯...』，URL 是纯 ASCII 拼音，比中文 URL 更适合批量构造（不用处理编码）。同一套系统下还搜到 tags.sina.com.cn/model_qinplus（车型级）。",
-              },
-              {
-                  "id": "sina_tags_model_xiaomiqiche",
-                  "source": "新浪汽车新版标签聚合 tags.sina.com.cn/model_<拼音>",
-                  "url": "https://tags.sina.com.cn/model_xiaomiqiche",
-                  "brand": BRAND_XIAOMI,
-                  "confidence": "search_confirmed",
-                  "note": "搜索直接命中：『小米汽车 - 最新小米汽车实时滚动快讯...』。注意小米汽车用的是 model_ 前缀而不是 brand_ 前缀，说明 brand_/model_ 的划分不完全等于我们业务上的『品牌』概念，需要探针实测两种前缀。",
-              },
-              {
-                  "id": "sina_tags_brand_biyadi_guess",
-                  "source": "新浪汽车新版标签聚合 tags.sina.com.cn/brand_biyadi（推测）",
-                  "url": "https://tags.sina.com.cn/brand_biyadi",
-                  "brand": BRAND_BYD,
-                  "confidence": "inferred_pattern",
-                  "note": "按 brand_wenjie 的命名规律推测比亚迪应该是 brand_biyadi，没有被搜索直接命中，可能 404 或需要别的 slug（比如带后缀），探针就是要验证。",
-              },
-              {
-                  "id": "mydrivers_tag_biyadi",
-                  "source": "快科技（mydrivers）news.mydrivers.com/tag/<拼音>.htm",
-                  "url": "https://news.mydrivers.com/tag/biyadi.htm",
-                  "brand": BRAND_BYD,
-                  "confidence": "search_confirmed",
-                  "note": "搜索直接命中『比亚迪最新资讯-快科技』及子车型页 biyadisong.htm（比亚迪宋），说明这套 tag 系统精细到车型级，URL 全 ASCII 拼音。快科技是综合科技媒体不是汽车垂直站，但确实有独立汽车频道。",
-              },
-              {
-                  "id": "mydrivers_tag_wenjie_guess",
-                  "source": "快科技 news.mydrivers.com/tag/wenjie.htm（推测）",
-                  "url": "https://news.mydrivers.com/tag/wenjie.htm",
-                  "brand": BRAND_AITO,
-                  "confidence": "inferred_pattern",
-                  "note": "按 biyadi.htm 的命名规律推测问界是 wenjie.htm，没有被搜索命中过，问界是 2022 年才出现的新品牌，快科技这套 tag 系统是否覆盖到未知，探针验证。",
-              },
-              {
-                  "id": "d1ev_search_byd",
-                  "source": "第一电动 d1ev.com 站内搜索 /search?q=<关键词>",
-                  "url": "https://d1ev.com/search?q=%E6%AF%94%E4%BA%9A%E8%BF%AA",  # 比亚迪
-                  "brand": BRAND_BYD,
-                  "confidence": "search_confirmed",
-                  "note": "搜索命中了同结构的 /search?q=蔚来、/search?q=汽车，说明 q= 参数可以放任意关键词（含品牌名），是新能源垂直媒体，对比亚迪/问界/小米汽车这类新能源相关品牌覆盖度应该不错。",
-              },
-          ]
-
-          OUTPUT_DIR = os.path.join(os.getcwd(), "probe_news_output")
-          RAW_DIR = os.path.join(OUTPUT_DIR, "raw")
-          RESULTS_JSON = os.path.join(OUTPUT_DIR, "results.json")
-          REPORT_MD = os.path.join(OUTPUT_DIR, "REPORT.md")
-
-          DATE_PATTERNS = [
-              re.compile(r"20\d{2}-\d{1,2}-\d{1,2}"),
-              re.compile(r"20\d{2}年\d{1,2}月\d{1,2}日"),
-              re.compile(r"20\d{2}/\d{1,2}/\d{1,2}"),
-              re.compile(r"\d{1,2}-\d{1,2}\s+\d{1,2}:\d{2}"),
-              re.compile(r"\d{1,2}月\d{1,2}日"),
-              re.compile(r"\d{1,2}:\d{2}"),
-          ]
+          BODY_TYPES = ["SUV", "轿车", "MPV", "其他", "运动汽车"]  # 按数据量从大到小排列
 
 
-          def looks_blocked(text):
-              if not text:
-                  return False
-              head = text[:3000]
-              return any(marker in head for marker in BLOCK_MARKERS)
+          # ---------------------------------------------------------------------------
+          # 1. 读取 & 聚合数据
+          # ---------------------------------------------------------------------------
+          def ym_index(year, month):
+              """把 (year, month) 映射为从 2024-01 开始的连续月份序号 (0-based)。"""
+              return (int(year) - 2024) * 12 + (int(month) - 1)
 
 
-          def find_date_near(tag):
-              """在给定标签本身、其父节点、其后 2 个兄弟节点的文本里找日期形状的字符串。"""
-              candidates_text = []
-              candidates_text.append(tag.get_text(" ", strip=True))
-              if tag.parent is not None:
-                  candidates_text.append(tag.parent.get_text(" ", strip=True))
-              sib = tag.find_next_sibling()
-              hops = 0
-              while sib is not None and hops < 2:
-                  candidates_text.append(sib.get_text(" ", strip=True))
-                  sib = sib.find_next_sibling()
-                  hops += 1
-              for text in candidates_text:
-                  for pat in DATE_PATTERNS:
-                      m = pat.search(text)
-                      if m:
-                          return m.group(0)
+          def load_rows():
+              with open(CSV_PATH, "r", encoding="utf-8") as f:
+                  reader = csv.DictReader(f)
+                  return list(reader)
+
+
+          def build_dim_table(rows, keyfunc, n_months):
+              """
+              通用聚合：按 keyfunc(row) 分组，产出：
+                names: [实体名 ...]（按首次出现顺序）
+                fuel:  [[月度燃油销量 x n_months], ...]  与 names 对应
+                ev:    [[月度新能源销量 x n_months], ...]
+              """
+              order = []
+              fuel_map = {}
+              ev_map = {}
+              for r in rows:
+                  k = keyfunc(r)
+                  if k not in fuel_map:
+                      order.append(k)
+                      fuel_map[k] = [0] * n_months
+                      ev_map[k] = [0] * n_months
+                  idx = ym_index(r["year"], r["month"])
+                  sales = int(r["sales"])
+                  if r["energy_type"] == "燃油":
+                      fuel_map[k][idx] += sales
+                  else:
+                      ev_map[k][idx] += sales
+              return order, fuel_map, ev_map
+
+
+          def aggregate(rows):
+              years = sorted(set(int(r["year"]) for r in rows))
+              months_all = [(int(r["year"]), int(r["month"])) for r in rows]
+              min_ym = min(months_all)
+              max_ym = max(months_all)
+              n_months = ym_index(max_ym[0], max_ym[1]) + 1
+
+              # 厂商粒度
+              manu_order, manu_fuel, manu_ev = build_dim_table(
+                  rows, lambda r: r["manufacturer"], n_months
+              )
+              # 品牌粒度
+              brand_order, brand_fuel, brand_ev = build_dim_table(
+                  rows, lambda r: r["brand"], n_months
+              )
+              # 车体类型 -> 车型粒度（key 为 (body_type, model) 元组，保证跨车体同名车型不冲突）
+              model_order, model_fuel, model_ev = build_dim_table(
+                  rows, lambda r: (r["body_type"], r["model"]), n_months
+              )
+
+              def pack(order, fuel_map, ev_map, name_fn):
+                  return {
+                      "n": [name_fn(k) for k in order],
+                      "f": [fuel_map[k] for k in order],
+                      "e": [ev_map[k] for k in order],
+                  }
+
+              manu_payload = pack(manu_order, manu_fuel, manu_ev, lambda k: k)
+              brand_payload = pack(brand_order, brand_fuel, brand_ev, lambda k: k)
+              model_payload = pack(model_order, model_fuel, model_ev, lambda k: k[1])
+              model_body_idx = [BODY_TYPES.index(k[0]) for k in model_order]
+
+              payload = {
+                  "manu": manu_payload,
+                  "brand": brand_payload,
+                  "model": model_payload,
+                  "modelBody": model_body_idx,
+                  "bodyTypes": BODY_TYPES,
+                  "nMonths": n_months,
+                  "startYear": min_ym[0],
+                  "startMonth": min_ym[1],
+              }
+
+              meta = {
+                  "rows": len(rows),
+                  "manufacturers": len(manu_order),
+                  "brands": len(brand_order),
+                  "models": len(set(k[1] for k in model_order)),
+                  "years": years,
+                  "coverageStartYear": min_ym[0],
+                  "coverageStartMonth": min_ym[1],
+                  "coverageEndYear": max_ym[0],
+                  "coverageEndMonth": max_ym[1],
+                  "buildTime": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
+              }
+              return payload, meta
+
+
+          # ---------------------------------------------------------------------------
+          # 2. 获取 ECharts（内联优先，失败则回退 CDN <script> 标签）
+          # ---------------------------------------------------------------------------
+          def _try_npm_pack():
+              """通过 npm registry 拉取 echarts 包（该环境的出网策略允许 registry.npmjs.org）。"""
+              npm = shutil.which("npm")
+              if not npm:
+                  return None
+              tmp = tempfile.mkdtemp(prefix="echarts_npm_")
+              try:
+                  subprocess.run(
+                      [npm, "pack", "echarts@5", "--silent"],
+                      cwd=tmp, check=True, capture_output=True, timeout=120,
+                  )
+                  tgz = None
+                  for fn in os.listdir(tmp):
+                      if fn.endswith(".tgz"):
+                          tgz = os.path.join(tmp, fn)
+                          break
+                  if not tgz:
+                      return None
+                  subprocess.run(
+                      ["tar", "xzf", tgz, "package/dist/echarts.min.js"],
+                      cwd=tmp, check=True, capture_output=True, timeout=60,
+                  )
+                  js_path = os.path.join(tmp, "package", "dist", "echarts.min.js")
+                  if os.path.isfile(js_path):
+                      with open(js_path, "r", encoding="utf-8") as f:
+                          return f.read()
+              except Exception as e:
+                  print(f"  npm pack 获取 echarts 失败: {e}", file=sys.stderr)
+              finally:
+                  shutil.rmtree(tmp, ignore_errors=True)
               return None
 
 
-          def extract_via_bs4_heuristic(html, base_url, max_items=20):
-              """通用新闻列表启发式：<a> 标签文本长度像标题的，配对最近的日期形状文本。"""
-              items = []
-              try:
-                  soup = BeautifulSoup(html, "lxml")
-              except Exception:
-                  soup = BeautifulSoup(html, "html.parser")
-
-              seen_links = set()
-              for a in soup.find_all("a", href=True):
-                  title = a.get_text(" ", strip=True)
-                  href = a["href"]
-                  if not title or len(title) < 8 or len(title) > 120:
-                      continue
-                  if href.startswith("javascript:") or href.startswith("#"):
-                      continue
-                  if href in seen_links:
-                      continue
-                  seen_links.add(href)
-                  date_str = find_date_near(a)
-                  items.append({"title": title, "link": href, "date": date_str})
-                  if len(items) >= max_items:
-                      break
-              return items
-
-
-          def extract_via_feedparser(raw_bytes):
-              if feedparser is None:
-                  return None, "feedparser 未安装"
-              try:
-                  parsed = feedparser.parse(raw_bytes)
-              except Exception as e:
-                  return None, f"feedparser 解析异常: {e}"
-              if not parsed.entries:
-                  return None, "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）"
-              entries = []
-              for e in parsed.entries[:20]:
-                  entries.append({
-                      "title": getattr(e, "title", None),
-                      "link": getattr(e, "link", None),
-                      "date": getattr(e, "published", getattr(e, "updated", None)),
-                  })
-              feed_title = getattr(parsed.feed, "title", None) if hasattr(parsed, "feed") else None
-              return {"feed_title": feed_title, "entries": entries, "total_entries": len(parsed.entries)}, None
-
-
-          def extract_via_pandas_tables(html):
-              if pd is None:
-                  return None, "pandas 未安装"
-              try:
-                  tables = pd.read_html(io_wrap(html))
-              except Exception as e:
-                  return None, f"pandas.read_html 未找到表格或解析失败: {e}"
-              return {
-                  "table_count": len(tables),
-                  "shapes": [list(t.shape) for t in tables[:10]],
-              }, None
-
-
-          def io_wrap(html):
-              import io
-              return io.StringIO(html)
-
-
-          def safe_filename(cand_id, content_type):
-              ext = "html"
-              if content_type and ("xml" in content_type or "rss" in content_type):
-                  ext = "xml"
-              return f"{cand_id}.{ext}"
-
-
-          def probe_one(cand):
-              result = {
-                  "id": cand["id"],
-                  "source": cand["source"],
-                  "url": cand["url"],
-                  "brand": cand["brand"],
-                  "confidence": cand["confidence"],
-                  "note": cand["note"],
-                  "requested_at": datetime.now(timezone.utc).isoformat(),
-              }
-
-              start = time.monotonic()
-              try:
-                  resp = requests.get(
-                      cand["url"],
-                      headers=REQUEST_HEADERS,
-                      timeout=REQUEST_TIMEOUT_SECONDS,
-                      allow_redirects=True,
-                  )
-              except Exception as e:
-                  result["ok"] = False
-                  result["error"] = f"{type(e).__name__}: {e}"
-                  result["elapsed_ms"] = int((time.monotonic() - start) * 1000)
-                  return result
-
-              elapsed_ms = int((time.monotonic() - start) * 1000)
-              content_type = resp.headers.get("Content-Type", "")
-
-              result["ok"] = True
-              result["status_code"] = resp.status_code
-              result["elapsed_ms"] = elapsed_ms
-              result["final_url"] = resp.url
-              result["redirected"] = (urlparse(resp.url).path != urlparse(cand["url"]).path
-                                       or urlparse(resp.url).netloc != urlparse(cand["url"]).netloc)
-              result["content_type"] = content_type
-              result["apparent_encoding"] = resp.apparent_encoding
-              result["declared_encoding"] = resp.encoding
-              result["content_bytes"] = len(resp.content)
-
-              # 保存原始内容——不管后面解析成不成功，这份都留着给人工重写解析器用
-              os.makedirs(RAW_DIR, exist_ok=True)
-              raw_path = os.path.join(RAW_DIR, safe_filename(cand["id"], content_type))
-              try:
-                  with open(raw_path, "wb") as f:
-                      f.write(resp.content)
-                  result["raw_saved_to"] = os.path.relpath(raw_path, OUTPUT_DIR)
-              except Exception as e:
-                  result["raw_saved_to"] = None
-                  result["raw_save_error"] = str(e)
-
-              resp.encoding = resp.apparent_encoding or resp.encoding
-              text = resp.text
-
-              result["looks_blocked"] = looks_blocked(text)
-
-              # 策略 a: RSS/Atom
-              rss_result, rss_err = extract_via_feedparser(resp.content)
-              result["rss_parse"] = rss_result
-              result["rss_parse_error"] = rss_err
-              result["is_rss_like"] = rss_result is not None
-
-              # 策略 b: pandas 表格
-              if resp.status_code == 200 and not result["looks_blocked"]:
-                  table_result, table_err = extract_via_pandas_tables(text)
-              else:
-                  table_result, table_err = None, "跳过（状态码非200或疑似被拦截）"
-              result["pandas_tables"] = table_result
-              result["pandas_tables_error"] = table_err
-
-              # 策略 c: BeautifulSoup 启发式新闻列表
-              if resp.status_code == 200 and not result["looks_blocked"]:
+          def _try_cdn_download():
+              urls = [
+                  "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js",
+                  "https://unpkg.com/echarts@5/dist/echarts.min.js",
+                  "https://registry.npmmirror.com/echarts/5.6.0/files/dist/echarts.min.js",
+              ]
+              ctx = ssl.create_default_context(cafile="/root/.ccr/ca-bundle.crt") if os.path.exists(
+                  "/root/.ccr/ca-bundle.crt"
+              ) else None
+              for url in urls:
                   try:
-                      bs4_items = extract_via_bs4_heuristic(text, cand["url"])
+                      req = urllib.request.Request(url, headers={"User-Agent": "curl/8.0"})
+                      with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+                          data = resp.read()
+                          if len(data) > 200000:  # 粗略校验拿到的是完整文件而非错误页
+                              return data.decode("utf-8")
                   except Exception as e:
-                      bs4_items = []
-                      result["bs4_heuristic_error"] = f"{type(e).__name__}: {e}"
-              else:
-                  bs4_items = []
-              result["bs4_heuristic_items"] = bs4_items
-              result["bs4_heuristic_count"] = len(bs4_items)
-
-              # 汇总一个"最佳提取结果"，方便报告里一眼看出这个源到底能不能提取新闻
-              if result["is_rss_like"]:
-                  result["best_extraction"] = "rss"
-                  result["best_extraction_count"] = rss_result["total_entries"]
-              elif len(bs4_items) > 0:
-                  result["best_extraction"] = "bs4_heuristic"
-                  result["best_extraction_count"] = len(bs4_items)
-              else:
-                  result["best_extraction"] = "none"
-                  result["best_extraction_count"] = 0
-
-              return result
+                      print(f"  CDN 下载失败 {url}: {e}", file=sys.stderr)
+              return None
 
 
-          def field_completeness(items):
-              if not items:
-                  return {"title": 0, "link": 0, "date": 0, "total": 0}
-              total = len(items)
-              return {
-                  "title": sum(1 for it in items if it.get("title")),
-                  "link": sum(1 for it in items if it.get("link")),
-                  "date": sum(1 for it in items if it.get("date")),
-                  "total": total,
-              }
+          def get_echarts():
+              """
+              返回 (mode, content):
+                mode == 'inline' -> content 是完整 JS 源码，写入 <script>...</script>
+                mode == 'cdn'     -> content 是 CDN URL，写入 <script src="...">
+              优先级: 本地 vendor 缓存 -> npm pack -> 直接 CDN 下载 -> 回退 CDN <script> 标签
+              """
+              if os.path.isfile(VENDOR_ECHARTS):
+                  print("  使用本地缓存 vendor/echarts.min.js")
+                  with open(VENDOR_ECHARTS, "r", encoding="utf-8") as f:
+                      return "inline", f.read()
+
+              print("  本地无缓存，尝试通过 npm registry 下载 echarts ...")
+              js = _try_npm_pack()
+              if js:
+                  os.makedirs(os.path.dirname(VENDOR_ECHARTS), exist_ok=True)
+                  with open(VENDOR_ECHARTS, "w", encoding="utf-8") as f:
+                      f.write(js)
+                  return "inline", js
+
+              print("  npm 不可用，尝试直接从 CDN 下载 ...")
+              js = _try_cdn_download()
+              if js:
+                  os.makedirs(os.path.dirname(VENDOR_ECHARTS), exist_ok=True)
+                  with open(VENDOR_ECHARTS, "w", encoding="utf-8") as f:
+                      f.write(js)
+                  return "inline", js
+
+              print("  !! 所有内联方式均失败，回退为 CDN <script> 标签（生成的 HTML 将非完全离线）")
+              return "cdn", "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"
 
 
-          def render_report(all_results):
-              lines = []
-              lines.append("# P3 新闻源探针报告")
-              lines.append("")
-              lines.append(f"生成时间（UTC）：{datetime.now(timezone.utc).isoformat()}")
-              lines.append("")
-              lines.append(
-                  "本报告由 GitHub Actions runner（美国弗吉尼亚 Azure 出口 IP）实测生成。"
-                  "容器本地（本次调研所在的沙箱环境）无法访问中国网站，"
-                  "所以这份报告是唯一的真实连通性依据，调研阶段的判断仅供参考。"
-              )
-              lines.append("")
-              lines.append("## 汇总表")
-              lines.append("")
-              lines.append("| id | 来源 | 品牌 | 可靠度(调研阶段) | HTTP状态 | 疑似拦截 | 是否RSS | 提取条数 | 标题/链接/日期齐全 |")
-              lines.append("|---|---|---|---|---|---|---|---|---|")
-              for r in all_results:
-                  if not r.get("ok"):
-                      lines.append(
-                          f"| {r['id']} | {r['source']} | {r.get('brand') or '-'} | "
-                          f"{r['confidence']} | 请求失败: {r.get('error','')} | - | - | - | - |"
-                      )
-                      continue
-                  comp = field_completeness(
-                      r["rss_parse"]["entries"] if r.get("is_rss_like") else r.get("bs4_heuristic_items", [])
-                  )
-                  comp_str = f"{comp['title']}/{comp['link']}/{comp['date']} (共{comp['total']}条)"
-                  lines.append(
-                      f"| {r['id']} | {r['source']} | {r.get('brand') or '-'} | "
-                      f"{r['confidence']} | {r['status_code']} ({r['elapsed_ms']}ms) | "
-                      f"{'是' if r.get('looks_blocked') else '否'} | "
-                      f"{'是' if r.get('is_rss_like') else '否'} | "
-                      f"{r.get('best_extraction_count', 0)} ({r.get('best_extraction','none')}) | "
-                      f"{comp_str} |"
-                  )
-              lines.append("")
-              lines.append("## 逐个详情")
-              lines.append("")
-              for r in all_results:
-                  lines.append(f"### {r['id']} — {r['source']}")
-                  lines.append("")
-                  lines.append(f"- URL: {r['url']}")
-                  lines.append(f"- 测试品牌: {r.get('brand') or '（不针对具体品牌，用于结构侦察）'}")
-                  lines.append(f"- 调研阶段可靠度: {r['confidence']}")
-                  lines.append(f"- 调研备注: {r['note']}")
-                  if not r.get("ok"):
-                      lines.append(f"- **请求失败**: {r.get('error')}")
-                      lines.append("")
-                      continue
-                  lines.append(f"- HTTP 状态码: {r['status_code']}，耗时 {r['elapsed_ms']}ms")
-                  lines.append(f"- 最终 URL: {r['final_url']}（是否发生重定向: {'是' if r['redirected'] else '否'}）")
-                  lines.append(f"- Content-Type: {r['content_type']}")
-                  lines.append(f"- 编码: 声明={r['declared_encoding']}, 实测={r['apparent_encoding']}")
-                  lines.append(f"- 响应字节数: {r['content_bytes']}")
-                  lines.append(f"- 原始内容已保存: {r.get('raw_saved_to')}")
-                  lines.append(f"- 疑似被拦截(验证码/访问异常等关键词): {'是' if r.get('looks_blocked') else '否'}")
-                  lines.append(f"- RSS/Atom 解析: {'成功，' + str(r['rss_parse']['total_entries']) + ' 条' if r.get('is_rss_like') else '否 — ' + str(r.get('rss_parse_error'))}")
-                  if r.get("pandas_tables"):
-                      lines.append(f"- pandas.read_html: 找到 {r['pandas_tables']['table_count']} 个表格，形状 {r['pandas_tables']['shapes']}")
-                  else:
-                      lines.append(f"- pandas.read_html: {r.get('pandas_tables_error')}")
-                  lines.append(f"- BeautifulSoup 启发式列表: 提取到 {r.get('bs4_heuristic_count', 0)} 条")
-                  items = r["rss_parse"]["entries"] if r.get("is_rss_like") else r.get("bs4_heuristic_items", [])
-                  if items:
-                      lines.append("")
-                      lines.append("  示例前 5 条：")
-                      for it in items[:5]:
-                          lines.append(f"  - 标题: {it.get('title')}")
-                          lines.append(f"    链接: {it.get('link')}")
-                          lines.append(f"    日期: {it.get('date')}")
-                  lines.append("")
-
-              lines.append("## 结论草稿（人工需要复核，这里只是把数据摆出来）")
-              lines.append("")
-              lines.append("- 能访问(HTTP 200 且未疑似拦截)的源: " + ", ".join(
-                  r["id"] for r in all_results if r.get("ok") and r.get("status_code") == 200 and not r.get("looks_blocked")
-              ) or "（无）")
-              lines.append("- 确认是 RSS/Atom 的源: " + ", ".join(
-                  r["id"] for r in all_results if r.get("is_rss_like")
-              ) or "（无）")
-              lines.append("- 提取到至少 1 条新闻的源: " + ", ".join(
-                  r["id"] for r in all_results if r.get("best_extraction_count", 0) > 0
-              ) or "（无）")
-              lines.append("")
-
-              return "\n".join(lines)
+          # ---------------------------------------------------------------------------
+          # 3. 新闻数据（可选，不存在时给空对象，绝不报错）
+          # ---------------------------------------------------------------------------
+          def load_news():
+              if os.path.isfile(NEWS_PATH):
+                  try:
+                      with open(NEWS_PATH, "r", encoding="utf-8") as f:
+                          return json.load(f)
+                  except Exception as e:
+                      print(f"  警告: news.json 存在但解析失败，忽略: {e}", file=sys.stderr)
+                      return {}
+              return {}
 
 
+          # ---------------------------------------------------------------------------
+          # 4. 主流程
+          # ---------------------------------------------------------------------------
           def main():
-              os.makedirs(OUTPUT_DIR, exist_ok=True)
-              all_results = []
-              for i, cand in enumerate(CANDIDATES):
-                  print(f"[{i+1}/{len(CANDIDATES)}] 探测 {cand['id']} -> {cand['url']}", flush=True)
-                  try:
-                      r = probe_one(cand)
-                  except Exception as e:
-                      r = {
-                          "id": cand["id"],
-                          "source": cand["source"],
-                          "url": cand["url"],
-                          "brand": cand["brand"],
-                          "confidence": cand["confidence"],
-                          "note": cand["note"],
-                          "ok": False,
-                          "error": f"顶层未预期异常: {e}\n{traceback.format_exc()}",
-                      }
-                  all_results.append(r)
-                  if i < len(CANDIDATES) - 1:
-                      time.sleep(SLEEP_BETWEEN_REQUESTS_SECONDS)
+              print(f"读取 CSV: {CSV_PATH}")
+              rows = load_rows()
+              print(f"  {len(rows)} 行")
 
-              with open(RESULTS_JSON, "w", encoding="utf-8") as f:
-                  json.dump(all_results, f, ensure_ascii=False, indent=2)
+              print("聚合数据 (厂商 / 品牌 / 车体类型->车型) ...")
+              payload, meta = aggregate(rows)
+              print(f"  厂商 {meta['manufacturers']} 个，品牌 {meta['brands']} 个，车型 {meta['models']} 个")
+              print(f"  覆盖 {meta['coverageStartYear']}-{meta['coverageStartMonth']:02d} "
+                    f"至 {meta['coverageEndYear']}-{meta['coverageEndMonth']:02d}")
 
-              report = render_report(all_results)
-              with open(REPORT_MD, "w", encoding="utf-8") as f:
-                  f.write(report)
+              print("获取 ECharts ...")
+              echarts_mode, echarts_content = get_echarts()
 
-              print("完成。结果见 probe_news_output/REPORT.md 和 probe_news_output/results.json")
+              print("加载 news.json（可选）...")
+              news = load_news()
+              print(f"  news.json {'存在，' + str(len(news)) + ' 个对象有动态' if news else '不存在，使用占位'}")
 
+              data_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+              news_json = json.dumps(news, ensure_ascii=False, separators=(",", ":"))
+              meta_json = json.dumps(meta, ensure_ascii=False, separators=(",", ":"))
+
+              data_kb = len(data_json.encode("utf-8")) / 1024
+              print(f"  数据部分大小: {data_kb:.1f} KB")
+
+              if echarts_mode == "inline":
+                  echarts_tag = "<script>\n/* ECharts (bundled offline at build time) */\n" + echarts_content + "\n</script>"
+              else:
+                  echarts_tag = (
+                      f'<!-- 警告: 构建时无法内联 ECharts，回退到 CDN，本页面并非完全离线自包含 -->\n'
+                      f'<script src="{echarts_content}"></script>'
+                  )
+
+              html = HTML_TEMPLATE
+              html = html.replace("@@ECHARTS_TAG@@", echarts_tag)
+              html = html.replace("@@DATA_JSON@@", data_json)
+              html = html.replace("@@NEWS_JSON@@", news_json)
+              html = html.replace("@@META_JSON@@", meta_json)
+              html = html.replace(
+                  "@@COVERAGE_TEXT@@",
+                  f"数据覆盖 {meta['coverageStartYear']}年{meta['coverageStartMonth']}月 "
+                  f"至 {meta['coverageEndYear']}年{meta['coverageEndMonth']}月",
+              )
+              html = html.replace("@@UPDATE_TEXT@@", f"更新时间 {meta['buildTime']}")
+
+              os.makedirs(OUT_DIR, exist_ok=True)
+              with open(OUT_PATH, "w", encoding="utf-8") as f:
+                  f.write(html)
+
+              size_kb = os.path.getsize(OUT_PATH) / 1024
+              print(f"完成: {OUT_PATH} ({size_kb:.1f} KB, echarts 模式: {echarts_mode})")
+
+
+          # ---------------------------------------------------------------------------
+          # 5. HTML / CSS / JS 模板
+          # ---------------------------------------------------------------------------
+          HTML_TEMPLATE = r"""<!doctype html>
+          <html lang="zh-CN">
+          <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+          <title>中国汽车销量看板</title>
+          <style>
+          :root{
+            color-scheme: light;
+            --surface-1:#fcfcfb;
+            --page-plane:#f9f9f7;
+            --text-primary:#0b0b0b;
+            --text-secondary:#52514e;
+            --text-muted:#898781;
+            --grid:#e1e0d9;
+            --baseline:#c3c2b7;
+            --border:rgba(11,11,11,0.10);
+            --good:#0ca30c;
+            --critical:#d03b3b;
+            --series-1:#2a78d6;
+            --series-2:#eb6834;
+            --series-3:#1baf7a;
+            --series-4:#eda100;
+            --series-5:#e87ba4;
+            --series-6:#008300;
+            --series-7:#4a3aa7;
+            --series-8:#e34948;
+            --muted-line:#a6a49a;
+            --other-line:#89877e;
+            --chip-bg:#f0efec;
+            --chip-bg-active:#0b0b0b;
+            --chip-fg-active:#ffffff;
+            --overlay:rgba(11,11,11,0.35);
+            --shadow: 0 8px 30px rgba(11,11,11,0.16);
+          }
+          @media (prefers-color-scheme: dark){
+            :root:where(:not([data-theme="light"])){
+              color-scheme: dark;
+              --surface-1:#1a1a19;
+              --page-plane:#0d0d0d;
+              --text-primary:#ffffff;
+              --text-secondary:#c3c2b7;
+              --text-muted:#898781;
+              --grid:#2c2c2a;
+              --baseline:#383835;
+              --border:rgba(255,255,255,0.10);
+              --good:#0ca30c;
+              --critical:#e66767;
+              --series-1:#3987e5;
+              --series-2:#d95926;
+              --series-3:#199e70;
+              --series-4:#c98500;
+              --series-5:#d55181;
+              --series-6:#008300;
+              --series-7:#9085e9;
+              --series-8:#e66767;
+              --muted-line:#6b6a63;
+              --other-line:#6b6a63;
+              --chip-bg:#262624;
+              --chip-bg-active:#ffffff;
+              --chip-fg-active:#0b0b0b;
+              --overlay:rgba(0,0,0,0.55);
+              --shadow: 0 8px 30px rgba(0,0,0,0.5);
+            }
+          }
+          :root[data-theme="dark"]{
+            color-scheme: dark;
+            --surface-1:#1a1a19;
+            --page-plane:#0d0d0d;
+            --text-primary:#ffffff;
+            --text-secondary:#c3c2b7;
+            --text-muted:#898781;
+            --grid:#2c2c2a;
+            --baseline:#383835;
+            --border:rgba(255,255,255,0.10);
+            --good:#0ca30c;
+            --critical:#e66767;
+            --series-1:#3987e5;
+            --series-2:#d95926;
+            --series-3:#199e70;
+            --series-4:#c98500;
+            --series-5:#d55181;
+            --series-6:#008300;
+            --series-7:#9085e9;
+            --series-8:#e66767;
+            --muted-line:#6b6a63;
+            --other-line:#6b6a63;
+            --chip-bg:#262624;
+            --chip-bg-active:#ffffff;
+            --chip-fg-active:#0b0b0b;
+            --overlay:rgba(0,0,0,0.55);
+            --shadow: 0 8px 30px rgba(0,0,0,0.5);
+          }
+          *{box-sizing:border-box;}
+          html,body{margin:0;padding:0;}
+          body{
+            background:var(--page-plane);
+            color:var(--text-primary);
+            font-family: system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+            -webkit-font-smoothing:antialiased;
+            min-height:100vh;
+          }
+          .wrap{max-width:1320px;margin:0 auto;padding:12px 16px 48px;}
+          header.app-header{
+            display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;
+            gap:10px;padding:14px 4px 12px;
+          }
+          .app-title{font-size:20px;font-weight:700;letter-spacing:.2px;}
+          .app-sub{margin-top:4px;font-size:12.5px;color:var(--text-secondary);display:flex;gap:14px;flex-wrap:wrap;}
+          .app-sub span{white-space:nowrap;}
+          .theme-btn{
+            border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);
+            border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;line-height:1;
+          }
+          .theme-btn:hover{border-color:var(--text-muted);}
+
+          .card{
+            background:var(--surface-1);border:1px solid var(--border);border-radius:14px;
+          }
+          .controls{
+            padding:12px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;
+          }
+          .ctrl-group{display:flex;flex-direction:column;gap:6px;}
+          .ctrl-label{font-size:11.5px;color:var(--text-muted);}
+          .chip-row{display:flex;gap:6px;flex-wrap:wrap;}
+          .chip{
+            border:1px solid var(--border);background:var(--chip-bg);color:var(--text-primary);
+            border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;user-select:none;
+            transition:background .12s,color .12s;white-space:nowrap;
+          }
+          .chip:hover{border-color:var(--text-muted);}
+          .chip.active{background:var(--chip-bg-active);color:var(--chip-fg-active);border-color:var(--chip-bg-active);}
+          select.bodytype-select{
+            border:1px solid var(--border);background:var(--chip-bg);color:var(--text-primary);
+            border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;
+          }
+          .switch-row{display:flex;align-items:center;gap:8px;}
+          .switch{
+            position:relative;width:42px;height:24px;border-radius:999px;background:var(--chip-bg);
+            border:1px solid var(--border);cursor:pointer;flex:none;
+          }
+          .switch .knob{
+            position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+            background:var(--text-muted);transition:left .15s,background .15s;
+          }
+          .switch.on{background:var(--series-1);}
+          .switch.on .knob{left:20px;background:#fff;}
+          .switch-label{font-size:13px;color:var(--text-secondary);}
+
+          .main-grid{display:flex;gap:12px;align-items:flex-start;}
+          .chart-panel{flex:1 1 0;min-width:0;padding:10px 6px 6px;}
+          .chart-toolbar{display:flex;justify-content:space-between;align-items:center;padding:2px 8px 4px;gap:8px;flex-wrap:wrap;}
+          .chart-title{font-size:13.5px;color:var(--text-secondary);}
+          .small-btn{
+            border:1px solid var(--border);background:transparent;color:var(--text-secondary);
+            border-radius:7px;padding:5px 10px;font-size:12.5px;cursor:pointer;
+          }
+          .small-btn:hover{color:var(--text-primary);border-color:var(--text-muted);}
+          #chart{width:100%;height:520px;}
+          #tableview{display:none;max-height:520px;overflow:auto;padding:0 8px 8px;}
+          table.datatable{width:100%;border-collapse:collapse;font-size:12.5px;}
+          table.datatable th,table.datatable td{
+            padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap;
+            font-variant-numeric:tabular-nums;
+          }
+          table.datatable th:first-child,table.datatable td:first-child{text-align:left;position:sticky;left:0;background:var(--surface-1);}
+          table.datatable thead th{color:var(--text-muted);font-weight:600;position:sticky;top:0;background:var(--surface-1);}
+
+          .legend-panel{
+            width:290px;flex:none;padding:10px 10px 12px;display:flex;flex-direction:column;gap:8px;max-height:580px;
+          }
+          .legend-search{
+            border:1px solid var(--border);background:var(--page-plane);color:var(--text-primary);
+            border-radius:8px;padding:8px 10px;font-size:13px;width:100%;outline:none;
+          }
+          .legend-search:focus{border-color:var(--series-1);}
+          .legend-meta{font-size:11.5px;color:var(--text-muted);display:flex;justify-content:space-between;}
+          .other-toggle-row{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;color:var(--text-secondary);
+            cursor:pointer;line-height:1.4;padding:2px 1px;}
+          .other-toggle-row input{flex:none;margin-top:2px;accent-color:var(--other-line);width:13px;height:13px;cursor:pointer;}
+          .legend-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:2px;padding-right:2px;}
+          .legend-item{
+            display:flex;align-items:center;gap:8px;padding:6px 6px;border-radius:7px;cursor:pointer;font-size:12.5px;
+          }
+          .legend-item:hover{background:var(--chip-bg);}
+          .legend-item .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+          .legend-item .rank{width:20px;flex:none;color:var(--text-muted);font-size:11px;text-align:right;font-variant-numeric:tabular-nums;}
+          .legend-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-primary);}
+          .legend-item .val{color:var(--text-secondary);font-size:11.5px;font-variant-numeric:tabular-nums;flex:none;}
+          .legend-item input[type=checkbox]{flex:none;accent-color:var(--series-1);width:14px;height:14px;cursor:pointer;}
+          .legend-item.dim .name,.legend-item.dim .val{opacity:.45;}
+          .legend-item.other .dot{border:1px dashed var(--other-line);background:transparent;}
+
+          .footnote{font-size:11.5px;color:var(--text-muted);line-height:1.7;padding:14px 6px 0;}
+
+          /* 抽屉 */
+          .drawer-backdrop{
+            position:fixed;inset:0;background:var(--overlay);opacity:0;pointer-events:none;
+            transition:opacity .18s;z-index:40;
+          }
+          .drawer-backdrop.open{opacity:1;pointer-events:auto;}
+          .drawer{
+            position:fixed;top:0;right:0;height:100%;width:420px;max-width:92vw;
+            background:var(--surface-1);box-shadow:var(--shadow);z-index:41;
+            transform:translateX(100%);transition:transform .2s ease;
+            display:flex;flex-direction:column;
+          }
+          .drawer.open{transform:translateX(0);}
+          .drawer-head{padding:16px 18px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+          .drawer-head h2{margin:0;font-size:17px;}
+          .drawer-head .sub{font-size:12px;color:var(--text-muted);margin-top:4px;}
+          .drawer-close{border:none;background:transparent;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;padding:4px;}
+          .drawer-close:hover{color:var(--text-primary);}
+          .drawer-body{flex:1;overflow-y:auto;padding:14px 18px 28px;}
+          .drawer-section{margin-bottom:22px;}
+          .drawer-section h3{font-size:13px;color:var(--text-muted);margin:0 0 8px;font-weight:600;letter-spacing:.2px;}
+          .stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+          .stat-tile{flex:1;min-width:110px;background:var(--page-plane);border:1px solid var(--border);border-radius:10px;padding:9px 11px;}
+          .stat-tile .lbl{font-size:11px;color:var(--text-muted);}
+          .stat-tile .val{font-size:17px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;}
+          .stat-tile .delta{font-size:11.5px;margin-top:2px;font-variant-numeric:tabular-nums;}
+          .delta.up{color:var(--good);}
+          .delta.down{color:var(--critical);}
+          #drawerBar{width:100%;height:180px;}
+          table.mtable{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+          table.mtable th,table.mtable td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums;}
+          table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
+          .news-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+          .news-card a{color:var(--text-primary);text-decoration:none;font-size:13px;font-weight:600;line-height:1.4;}
+          .news-card a:hover{text-decoration:underline;}
+          .news-meta{font-size:11px;color:var(--text-muted);margin-top:5px;}
+          .news-empty{font-size:12.5px;color:var(--text-muted);padding:14px 0;text-align:center;border:1px dashed var(--border);border-radius:10px;}
+
+          @media (max-width: 880px){
+            .main-grid{flex-direction:column;}
+            .legend-panel{width:100%;max-height:320px;}
+            #chart{height:380px;}
+            .drawer{width:100%;max-width:100%;}
+          }
+          </style>
+          </head>
+          <body>
+          <div class="wrap">
+            <header class="app-header">
+              <div>
+                <div class="app-title">中国汽车销量看板</div>
+                <div class="app-sub">
+                  <span id="coverageText">@@COVERAGE_TEXT@@</span>
+                  <span id="updateText">@@UPDATE_TEXT@@</span>
+                  <span id="metaCounts"></span>
+                </div>
+              </div>
+              <button class="theme-btn" id="themeBtn" type="button">🌓 切换主题</button>
+            </header>
+
+            <div class="card controls">
+              <div class="ctrl-group">
+                <div class="ctrl-label">年份</div>
+                <div class="chip-row" id="yearChips"></div>
+              </div>
+              <div class="ctrl-group">
+                <div class="ctrl-label">粒度</div>
+                <div class="chip-row" id="granChips">
+                  <div class="chip" data-gran="manu">厂商</div>
+                  <div class="chip" data-gran="brand">品牌</div>
+                  <div class="chip" data-gran="model">车体类型 → 车型</div>
+                </div>
+              </div>
+              <div class="ctrl-group" id="bodyTypeGroup" style="display:none;">
+                <div class="ctrl-label">车体类型</div>
+                <select class="bodytype-select" id="bodyTypeSelect"></select>
+              </div>
+              <div class="ctrl-group">
+                <div class="ctrl-label">能源类型</div>
+                <div class="chip-row" id="energyChips">
+                  <div class="chip" data-energy="all">全部</div>
+                  <div class="chip" data-energy="fuel">燃油</div>
+                  <div class="chip" data-energy="ev">新能源</div>
+                </div>
+              </div>
+              <div class="ctrl-group">
+                <div class="ctrl-label">图表模式</div>
+                <div class="switch-row">
+                  <span class="switch-label">独立折线</span>
+                  <div class="switch" id="modeSwitch"><div class="knob"></div></div>
+                  <span class="switch-label">堆积面积</span>
+                </div>
+              </div>
+              <div class="ctrl-group">
+                <div class="ctrl-label">&nbsp;</div>
+                <button class="small-btn" id="resetBtn" type="button">重置为 Top 20</button>
+              </div>
+            </div>
+
+            <div class="card main-grid">
+              <div class="chart-panel">
+                <div class="chart-toolbar">
+                  <div class="chart-title" id="chartTitle"></div>
+                  <div style="display:flex;gap:8px;">
+                    <button class="small-btn" id="downloadCsvBtn" type="button" style="display:none;">下载 CSV</button>
+                    <button class="small-btn" id="tableToggleBtn" type="button">切换为表格视图</button>
+                  </div>
+                </div>
+                <div id="chart"></div>
+                <div id="tableview"></div>
+              </div>
+              <div class="legend-panel">
+                <input class="legend-search" id="legendSearch" type="text" placeholder="搜索品牌 / 厂商 / 车型，勾选后加入图表">
+                <label class="other-toggle-row" for="otherToggle">
+                  <input type="checkbox" id="otherToggle">
+                  <span>显示「其他」聚合线（未展示对象之和；独立折线默认关，堆积面积默认开）</span>
+                </label>
+                <div class="legend-meta"><span id="legendCount"></span><span id="legendShownCount"></span></div>
+                <div class="legend-list" id="legendList"></div>
+              </div>
+            </div>
+
+            <div class="footnote">
+              折线图：默认展示当年 Top 20（按年初至今累计销量排名），前 8 名使用可辨识色，其余以及「其他」聚合线为淡灰色，
+              悬停/点击线条或图例可高亮；勾选右侧列表可手动增补关注的对象。2026 年数据仅至 7 月，后续月份不补零，折线在此处断开。
+              点击任意折线或图例条目可在右侧查看该对象的月度明细、同比与相关动态。
+            </div>
+          </div>
+
+          <div class="drawer-backdrop" id="drawerBackdrop"></div>
+          <div class="drawer" id="drawer">
+            <div class="drawer-head">
+              <div>
+                <h2 id="drawerTitle">--</h2>
+                <div class="sub" id="drawerSub">--</div>
+              </div>
+              <button class="drawer-close" id="drawerClose" type="button">✕</button>
+            </div>
+            <div class="drawer-body">
+              <div class="drawer-section">
+                <div class="stat-row" id="drawerStats"></div>
+              </div>
+              <div class="drawer-section">
+                <h3>逐月销量（当年）</h3>
+                <div id="drawerBar"></div>
+                <table class="mtable" id="drawerTable"></table>
+              </div>
+              <div class="drawer-section">
+                <h3>相关动态</h3>
+                <div id="drawerNews"></div>
+              </div>
+            </div>
+          </div>
+
+          @@ECHARTS_TAG@@
+          <script>
+          (function(){
+          "use strict";
+          var RAW = @@DATA_JSON@@;
+          var NEWS = @@NEWS_JSON@@;
+          var META = @@META_JSON@@;
+
+          var PALETTE = {
+            light: ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948'],
+            dark:  ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767']
+          };
+
+          /* ---------------- 主题 ---------------- */
+          function getSystemDark(){
+            return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+          }
+          function currentTheme(){
+            var t = document.documentElement.getAttribute('data-theme');
+            if(t === 'dark' || t === 'light') return t;
+            return getSystemDark() ? 'dark' : 'light';
+          }
+          function applyTheme(t){
+            if(t){ document.documentElement.setAttribute('data-theme', t); }
+            else { document.documentElement.removeAttribute('data-theme'); }
+            try{ localStorage.setItem('cn-auto-dash-theme', t || ''); }catch(e){}
+            renderAll();
+          }
+          (function initTheme(){
+            var saved = null;
+            try{ saved = localStorage.getItem('cn-auto-dash-theme'); }catch(e){}
+            if(saved){ document.documentElement.setAttribute('data-theme', saved); }
+          })();
+          document.getElementById('themeBtn').addEventListener('click', function(){
+            var next = currentTheme() === 'dark' ? 'light' : 'dark';
+            applyTheme(next);
+          });
+          if(window.matchMedia){
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){
+              if(!document.documentElement.getAttribute('data-theme')) renderAll();
+            });
+          }
+          function cssVar(name){
+            return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+          }
+
+          /* ---------------- 状态 ---------------- */
+          var YEARS = META.years.slice().sort();
+          var state = {
+            year: YEARS[YEARS.length-1],
+            gran: 'manu',           // manu | brand | model
+            bodyType: 0,             // index into RAW.bodyTypes, used when gran==='model'
+            energy: 'all',           // all | fuel | ev
+            stacked: false,
+            shown: new Set(),        // 当前勾选(展示)的实体 key 集合
+            searchTerm: '',
+            hoverKey: null,
+            tableView: false,
+            otherVisible: false,    // 独立折线模式默认不显示「其他」聚合线
+            otherManual: false      // 用户是否手动改过「其他」显示开关（true 时不再随模式切换自动覆盖）
+          };
+
+          /* ---------------- 数据访问辅助 ---------------- */
+          function ymIndex(year, month){ return (year-2024)*12 + (month-1); }
+          function lastMonthOfYear(year){
+            var idx = Math.min(12, RAW.nMonths - (year-2024)*12);
+            return Math.max(0, idx);
+          }
+
+          function currentDim(){
+            if(state.gran === 'manu') return RAW.manu;
+            if(state.gran === 'brand') return RAW.brand;
+            // model: 按当前车体类型过滤
+            var m = RAW.model;
+            var names=[], fuel=[], ev=[];
+            for(var i=0;i<m.n.length;i++){
+              if(RAW.modelBody[i] === state.bodyType){
+                names.push(m.n[i]); fuel.push(m.f[i]); ev.push(m.e[i]);
+              }
+            }
+            return {n:names, f:fuel, e:ev};
+          }
+          function entityKey(gran, bodyType, name){
+            return gran + '|' + (gran==='model' ? bodyType+'|' : '') + name;
+          }
+          function monthlyValue(fuelArr, evArr, year, month){
+            var idx = ymIndex(year, month);
+            if(idx < 0 || idx >= RAW.nMonths) return null;
+            var f = fuelArr[idx]||0, e = evArr[idx]||0;
+            if(state.energy==='fuel') return f;
+            if(state.energy==='ev') return e;
+            return f+e;
+          }
+
+          // 计算当前 年/粒度/能源 下所有实体的：月度值(1..12,越界为null)、YTD累计、排名
+          function computeUniverse(){
+            var dim = currentDim();
+            var lastM = lastMonthOfYear(state.year);
+            var entities = [];
+            for(var i=0;i<dim.n.length;i++){
+              var monthly = [];
+              var cum = 0, cumArr = [];
+              for(var m=1;m<=12;m++){
+                if(m<=lastM){
+                  var v = monthlyValue(dim.f[i], dim.e[i], state.year, m);
+                  monthly.push(v);
+                  cum += (v||0);
+                  cumArr.push(cum);
+                } else {
+                  monthly.push(null);
+                  cumArr.push(null);
+                }
+              }
+              entities.push({
+                name: dim.n[i],
+                key: entityKey(state.gran, state.bodyType, dim.n[i]),
+                monthly: monthly,
+                cum: cumArr,
+                ytd: cum
+              });
+            }
+            entities.sort(function(a,b){ return b.ytd - a.ytd; });
+            entities.forEach(function(e,idx){ e.rank = idx+1; });
+            return {entities:entities, lastMonth:lastM};
+          }
+
+          function ensureDefaultShown(universe){
+            // 粒度/车体类型变化后重置为 Top20；否则保留用户勾选（按 key 过滤已不存在的）
+            var valid = new Set(universe.entities.map(function(e){return e.key;}));
+            var keep = new Set();
+            state.shown.forEach(function(k){ if(valid.has(k)) keep.add(k); });
+            state.shown = keep;
+          }
+          function resetToTop20(){
+            var u = computeUniverse();
+            state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;}));
+          }
+
+          /* ---------------- 顶部控件渲染 ---------------- */
+          function renderYearChips(){
+            var el = document.getElementById('yearChips');
+            el.innerHTML='';
+            YEARS.forEach(function(y){
+              var c = document.createElement('div');
+              c.className = 'chip' + (y===state.year?' active':'');
+              c.setAttribute('data-year', y);
+              c.textContent = y + '年';
+              c.addEventListener('click', function(){
+                state.year = y; resetToTop20(); renderAll();
+              });
+              el.appendChild(c);
+            });
+          }
+          document.querySelectorAll('#granChips .chip').forEach(function(c){
+            c.addEventListener('click', function(){
+              state.gran = c.getAttribute('data-gran');
+              document.getElementById('bodyTypeGroup').style.display = state.gran==='model' ? '' : 'none';
+              resetToTop20();
+              renderAll();
+            });
+          });
+          document.querySelectorAll('#energyChips .chip').forEach(function(c){
+            c.addEventListener('click', function(){
+              state.energy = c.getAttribute('data-energy');
+              resetToTop20();
+              renderAll();
+            });
+          });
+          var bodySelect = document.getElementById('bodyTypeSelect');
+          RAW.bodyTypes.forEach(function(bt,i){
+            var opt = document.createElement('option');
+            opt.value = i; opt.textContent = bt;
+            bodySelect.appendChild(opt);
+          });
+          bodySelect.addEventListener('change', function(){
+            state.bodyType = parseInt(bodySelect.value,10);
+            resetToTop20();
+            renderAll();
+          });
+          document.getElementById('modeSwitch').addEventListener('click', function(){
+            state.stacked = !state.stacked;
+            if(!state.otherManual){
+              // 未手动改过开关时，按模式套用默认值：独立折线默认关闭「其他」，堆积面积默认打开
+              state.otherVisible = state.stacked;
+            }
+            renderAll();
+          });
+          document.getElementById('otherToggle').addEventListener('change', function(e){
+            state.otherVisible = e.target.checked;
+            state.otherManual = true;
+            renderAll();
+          });
+          document.getElementById('resetBtn').addEventListener('click', function(){
+            resetToTop20(); renderAll();
+          });
+          document.getElementById('legendSearch').addEventListener('input', function(e){
+            state.searchTerm = e.target.value.trim();
+            renderLegend(lastUniverse);
+          });
+          document.getElementById('tableToggleBtn').addEventListener('click', function(){
+            state.tableView = !state.tableView;
+            document.getElementById('chart').style.display = state.tableView ? 'none' : '';
+            document.getElementById('tableview').style.display = state.tableView ? 'block' : 'none';
+            document.getElementById('downloadCsvBtn').style.display = state.tableView ? '' : 'none';
+            document.getElementById('tableToggleBtn').textContent = state.tableView ? '切换为图表视图' : '切换为表格视图';
+            if(state.tableView) renderTable(lastUniverse);
+          });
+          document.getElementById('downloadCsvBtn').addEventListener('click', function(){
+            downloadCsv(lastUniverse);
+          });
+
+          function syncControlStates(){
+            document.querySelectorAll('#yearChips .chip').forEach(function(c){
+              c.classList.toggle('active', String(state.year)===c.getAttribute('data-year'));
+            });
+            document.querySelectorAll('#granChips .chip').forEach(function(c){
+              c.classList.toggle('active', c.getAttribute('data-gran')===state.gran);
+            });
+            document.querySelectorAll('#energyChips .chip').forEach(function(c){
+              c.classList.toggle('active', c.getAttribute('data-energy')===state.energy);
+            });
+            document.getElementById('modeSwitch').classList.toggle('on', state.stacked);
+            document.getElementById('otherToggle').checked = state.otherVisible;
+            bodySelect.value = state.bodyType;
+            document.getElementById('bodyTypeGroup').style.display = state.gran==='model' ? '' : 'none';
+          }
+
+          /* ---------------- 主图表 ---------------- */
+          var chart = echarts.init(document.getElementById('chart'));
+          window.addEventListener('resize', function(){ chart.resize(); });
+          var lastUniverse = null;
+
+          function granLabel(){
+            if(state.gran==='manu') return '厂商';
+            if(state.gran==='brand') return '品牌';
+            return '车型（' + RAW.bodyTypes[state.bodyType] + '）';
+          }
+          function energyLabel(){
+            return state.energy==='all' ? '全部能源' : (state.energy==='fuel' ? '燃油' : '新能源');
+          }
+
+          // 计算「其他」= 全部实体 - 已展示实体，按月合计后再累计为 YTD；供图表与表格/导出共用同一份口径
+          function computeOther(universe, shownList){
+            var shownKeys = new Set(shownList.map(function(e){return e.key;}));
+            var otherMonthly = [0,0,0,0,0,0,0,0,0,0,0,0];
+            var totalMonthly = [0,0,0,0,0,0,0,0,0,0,0,0];
+            universe.entities.forEach(function(e){
+              for(var m=0;m<12;m++){
+                if(e.monthly[m]==null) continue;
+                totalMonthly[m]+= e.monthly[m];
+                if(!shownKeys.has(e.key)) otherMonthly[m]+= e.monthly[m];
+              }
+            });
+            var hasOther = false;
+            var cum=[]; var run=0; var monthly=[];
+            for(var m=0;m<12;m++){
+              if(m>=universe.lastMonth){ cum.push(null); monthly.push(null); continue; }
+              var diff = otherMonthly[m];
+              if(diff>0.4) hasOther = true;
+              run += diff;
+              cum.push(run);
+              monthly.push(diff);
+            }
+            return {hasOther:hasOther, cum:cum, monthly:monthly};
+          }
+
+          function buildSeries(universe){
+            var shownList = universe.entities.filter(function(e){ return state.shown.has(e.key); });
+            // 颜色分配：仅按“默认Top20排名”的前8名给主色，其余（含手动增补）一律淡灰
+            var top20Keys = universe.entities.slice(0,20).map(function(e){return e.key;});
+            var top8Keys = universe.entities.slice(0,8).map(function(e){return e.key;});
+            var palette = PALETTE[currentTheme()];
+            var mutedColor = cssVar('--muted-line');
+            var otherColor = cssVar('--other-line');
+
+            var months = [1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){ return m+'月'; });
+            var series = [];
+            shownList.forEach(function(e){
+              var top8idx = top8Keys.indexOf(e.key);
+              var color = top8idx>=0 ? palette[top8idx] : mutedColor;
+              series.push({
+                id: e.key,
+                name: e.name,
+                type: 'line',
+                data: e.cum,
+                showSymbol:false,
+                symbolSize:8,
+                connectNulls:false,
+                lineStyle:{width: top8idx>=0?2:1.5, color: color},
+                itemStyle:{color: color},
+                areaStyle: state.stacked ? {opacity:0.55, color: color} : null,
+                stack: state.stacked ? 'total' : null,
+                emphasis:{focus:'series', lineStyle:{width: (top8idx>=0?3:2.5)}},
+                blur:{lineStyle:{opacity:0.15},areaStyle:{opacity:0.1}},
+                z: top8idx>=0 ? 10-top8idx : 2
+              });
+            });
+            // 其他 = 全部实体 - 已展示实体
+            var otherInfo = computeOther(universe, shownList);
+            if(otherInfo.hasOther && state.otherVisible){
+              series.push({
+                id:'__other__', name:'其他', type:'line', data:otherInfo.cum,
+                showSymbol:false, connectNulls:false,
+                lineStyle:{width:1.5,type:'dashed',color:otherColor},
+                itemStyle:{color:otherColor},
+                areaStyle: state.stacked ? {opacity:0.35,color:otherColor} : null,
+                stack: state.stacked ? 'total' : null,
+                emphasis:{focus:'series'}, blur:{lineStyle:{opacity:0.15}},
+                z:1
+              });
+            }
+            return {months:months, series:series, otherInfo:otherInfo};
+          }
+
+          function renderChart(universe){
+            var built = buildSeries(universe);
+            var isDark = currentTheme()==='dark';
+            var textColor = cssVar('--text-secondary');
+            var mutedColor = cssVar('--text-muted');
+            var gridColor = cssVar('--grid');
+            var surface = cssVar('--surface-1');
+
+            var option = {
+              backgroundColor:'transparent',
+              animationDuration:280,
+              textStyle:{color:textColor, fontFamily:'inherit'},
+              grid:{left:56,right:20,top:28,bottom:36,containLabel:true},
+              xAxis:{
+                type:'category', data: built.months, boundaryGap:false,
+                axisLine:{lineStyle:{color: cssVar('--baseline')}},
+                axisTick:{show:false},
+                axisLabel:{color:mutedColor, fontSize:11.5}
+              },
+              yAxis:{
+                type:'value',
+                splitLine:{lineStyle:{color:gridColor}},
+                axisLabel:{color:mutedColor, fontSize:11.5, formatter:function(v){return formatCompact(v);}}
+              },
+              tooltip:{
+                trigger:'axis',
+                backgroundColor: surface,
+                borderColor: cssVar('--border'),
+                textStyle:{color: cssVar('--text-primary'), fontSize:12.5},
+                confine:true,
+                order:'valueDesc',
+                formatter: function(params){
+                  if(!params || !params.length) return '';
+                  var lines = [params[0].axisValueLabel + '（' + state.year + '年 累计）'];
+                  params.forEach(function(p){
+                    if(p.value==null) return;
+                    lines.push(
+                      '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+p.color+';margin-right:6px;"></span>'+
+                      escapeHtml(p.seriesName) + '：<b style="float:right;margin-left:14px;">' + formatNum(p.value) + '</b>'
+                    );
+                  });
+                  return lines.join('<br/>');
+                }
+              },
+              legend:{show:false},
+              series: built.series
+            };
+            chart.setOption(option, true);
+          }
+
+          chart.on('click', function(params){
+            if(params.seriesId==='__other__'){ return; }
+            if(params.seriesName){ openDrawer(params.seriesId, params.seriesName); }
+          });
+          chart.on('mouseover', {seriesIndex:'all'}, function(params){
+            if(params.seriesId) highlightKey(params.seriesId);
+          });
+          chart.getZr().on('globalout', function(){ highlightKey(null); });
+
+          function highlightKey(key){
+            state.hoverKey = key;
+            chart.dispatchAction({type:'downplay'});
+            if(key){ chart.dispatchAction({type:'highlight', seriesId:key}); }
+            renderLegendDim();
+          }
+
+          /* ---------------- 图例面板 ---------------- */
+          function renderLegend(universe){
+            lastUniverse = universe;
+            var listEl = document.getElementById('legendList');
+            listEl.innerHTML='';
+            var term = state.searchTerm.toLowerCase();
+            var top8Keys = universe.entities.slice(0,8).map(function(e){return e.key;});
+            var palette = PALETTE[currentTheme()];
+            var mutedColor = cssVar('--muted-line');
+
+            var shownCount = state.shown.size;
+            var filtered = universe.entities.filter(function(e){
+              if(!term) return true;
+              return e.name.toLowerCase().indexOf(term) >= 0;
+            });
+            // 排序：已勾选优先按 rank，其余按 rank
+            filtered.sort(function(a,b){ return a.rank-b.rank; });
+
+            filtered.forEach(function(e){
+              var row = document.createElement('div');
+              row.className='legend-item';
+              row.setAttribute('data-key', e.key);
+
+              var cb = document.createElement('input');
+              cb.type='checkbox';
+              cb.checked = state.shown.has(e.key);
+              cb.addEventListener('change', function(){
+                if(cb.checked) state.shown.add(e.key); else state.shown.delete(e.key);
+                renderAll();
+              });
+              row.appendChild(cb);
+
+              var rankEl = document.createElement('span');
+              rankEl.className='rank'; rankEl.textContent = '#'+e.rank;
+              row.appendChild(rankEl);
+
+              var dot = document.createElement('span');
+              dot.className='dot';
+              var top8idx = top8Keys.indexOf(e.key);
+              dot.style.background = state.shown.has(e.key) ? (top8idx>=0?palette[top8idx]:mutedColor) : 'transparent';
+              dot.style.border = state.shown.has(e.key) ? 'none' : '1px solid ' + mutedColor;
+              row.appendChild(dot);
+
+              var nameEl = document.createElement('span');
+              nameEl.className='name'; nameEl.textContent = e.name;
+              row.appendChild(nameEl);
+
+              var valEl = document.createElement('span');
+              valEl.className='val'; valEl.textContent = formatCompact(e.ytd);
+              row.appendChild(valEl);
+
+              row.addEventListener('mouseenter', function(){ highlightKey(e.key); });
+              row.addEventListener('mouseleave', function(){ highlightKey(null); });
+              row.addEventListener('click', function(evt){
+                if(evt.target===cb) return;
+                openDrawer(e.key, e.name);
+              });
+
+              listEl.appendChild(row);
+            });
+
+            document.getElementById('legendCount').textContent = filtered.length + ' 个对象';
+            document.getElementById('legendShownCount').textContent = '已选 ' + shownCount;
+            renderLegendDim();
+          }
+          function renderLegendDim(){
+            document.querySelectorAll('.legend-item').forEach(function(row){
+              var k = row.getAttribute('data-key');
+              if(state.hoverKey && state.hoverKey!==k){ row.classList.add('dim'); }
+              else{ row.classList.remove('dim'); }
+            });
+          }
+
+          /* ---------------- 表格视图 ---------------- */
+          // 表格视图与 CSV 导出共用同一份行数据，保证两者口径一致
+          function buildTableRows(universe){
+            var shownList = universe.entities.filter(function(e){return state.shown.has(e.key);});
+            shownList.sort(function(a,b){return a.rank-b.rank;});
+            var rows = shownList.map(function(e){
+              return {rank:'#'+e.rank, name:e.name, cum:e.cum};
+            });
+            var otherInfo = computeOther(universe, shownList);
+            if(otherInfo.hasOther && state.otherVisible){
+              rows.push({rank:'', name:'其他（未展示对象合计）', cum:otherInfo.cum});
+            }
+            return rows;
+          }
+
+          function renderTable(universe){
+            var el = document.getElementById('tableview');
+            var rows = buildTableRows(universe);
+            var html = '<table class="datatable"><thead><tr><th>排名</th><th>名称</th>';
+            for(var m=1;m<=12;m++) html += '<th>'+m+'月累计</th>';
+            html += '</tr></thead><tbody>';
+            rows.forEach(function(r){
+              html += '<tr><td>'+escapeHtml(r.rank)+'</td><td>'+escapeHtml(r.name)+'</td>';
+              r.cum.forEach(function(v){ html += '<td>'+(v==null?'—':formatNum(v))+'</td>'; });
+              html += '</tr>';
+            });
+            html += '</tbody></table>';
+            el.innerHTML = html;
+          }
+
+          function csvEscape(s){
+            s = String(s);
+            if(/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+            return s;
+          }
+          function downloadCsv(universe){
+            if(!universe) return;
+            var rows = buildTableRows(universe);
+            var header = ['排名','名称'];
+            for(var m=1;m<=12;m++) header.push(m+'月累计销量（YTD）');
+            var lines = [header.map(csvEscape).join(',')];
+            rows.forEach(function(r){
+              var line = [r.rank, r.name].concat(r.cum.map(function(v){ return v==null ? '' : Math.round(v); }));
+              lines.push(line.map(csvEscape).join(','));
+            });
+            var csv = '\ufeff' + lines.join('\r\n'); // 前缀 BOM，Excel 打开中文不乱码
+            var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            var fname = '汽车销量_' + state.year + '_' + granLabel().replace(/\s/g,'') + '_' + energyLabel() + '.csv';
+            a.href = url; a.download = fname;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+          }
+
+          /* ---------------- 抽屉 ---------------- */
+          var drawerChart = null;
+          function openDrawer(key, name){
+            var backdrop = document.getElementById('drawerBackdrop');
+            var drawer = document.getElementById('drawer');
+            backdrop.classList.add('open'); drawer.classList.add('open');
+            document.getElementById('drawerTitle').textContent = name;
+            document.getElementById('drawerSub').textContent = granLabel() + ' · ' + state.year + '年 · ' + energyLabel();
+
+            var cur = findEntity(key, state.year);
+            var prevYear = state.year - 1;
+            var prev = YEARS.indexOf(prevYear)>=0 ? findEntity(key, prevYear) : null;
+
+            // 统计卡片
+            var statsEl = document.getElementById('drawerStats');
+            statsEl.innerHTML='';
+            var lastM = lastUniverse.lastMonth;
+            var ytd = cur ? cur.ytd : 0;
+            var rank = cur ? cur.rank : null;
+            var prevRank = prev ? prev.rank : null;
+
+            statsEl.appendChild(statTile('年初至今累计（YTD）', formatNum(ytd), null, null));
+            if(prevRank!=null && rank!=null){
+              var rd = rankDeltaText(prevRank, rank);
+              statsEl.appendChild(statTile('当前排名', rank?('第 '+rank+' 名'):'--', rd.text, rd.dir));
+            } else {
+              statsEl.appendChild(statTile('当前排名', rank?('第 '+rank+' 名'):'--', '上年无对应数据', null));
+            }
+            if(prev){
+              var yoy = prev.ytd>0 ? ((cur?cur.ytd:0)-prev.ytd)/prev.ytd*100 : null;
+              statsEl.appendChild(statTile('同比（至'+lastM+'月）', yoy==null?'--':(yoy>=0?'+':'')+yoy.toFixed(1)+'%',
+                null, yoy==null?null:(yoy>=0?'up':'down')));
+            } else {
+              statsEl.appendChild(statTile('同比', '无上年数据', null, null));
+            }
+
+            // 月度柱状图（当年 vs 去年同月）
+            var months = [];
+            var curMonthly = [], prevMonthly = [];
+            for(var m=1;m<=12;m++){
+              months.push(m+'月');
+              curMonthly.push(cur && cur.monthly[m-1]!=null ? cur.monthly[m-1] : null);
+              prevMonthly.push(prev && prev.monthly[m-1]!=null ? prev.monthly[m-1] : null);
+            }
+            if(!drawerChart){ drawerChart = echarts.init(document.getElementById('drawerBar')); }
+            var palette = PALETTE[currentTheme()];
+            drawerChart.setOption({
+              backgroundColor:'transparent',
+              grid:{left:44,right:10,top:10,bottom:24,containLabel:true},
+              textStyle:{color:cssVar('--text-secondary')},
+              xAxis:{type:'category', data:months, axisLabel:{color:cssVar('--text-muted'),fontSize:10.5},
+                axisLine:{lineStyle:{color:cssVar('--baseline')}}, axisTick:{show:false}},
+              yAxis:{type:'value', splitLine:{lineStyle:{color:cssVar('--grid')}},
+                axisLabel:{color:cssVar('--text-muted'),fontSize:10.5,formatter:function(v){return formatCompact(v);}}},
+              tooltip:{trigger:'axis', backgroundColor:cssVar('--surface-1'), borderColor:cssVar('--border'),
+                textStyle:{color:cssVar('--text-primary'),fontSize:12},
+                formatter:function(params){
+                  var s = months[params[0].dataIndex];
+                  params.forEach(function(p){ if(p.value!=null) s += '<br/>'+escapeHtml(p.seriesName)+'：'+formatNum(p.value); });
+                  return s;
+                }},
+              legend:{show:!!prev, top:0, right:0, textStyle:{color:cssVar('--text-secondary'),fontSize:11}, itemWidth:12,itemHeight:8},
+              series:[
+                {name:state.year+'年', type:'bar', data:curMonthly, itemStyle:{color:palette[0], borderRadius:[3,3,0,0]}, barMaxWidth:18},
+                prev?{name:prevYear+'年', type:'bar', data:prevMonthly, itemStyle:{color:cssVar('--muted-line'), borderRadius:[3,3,0,0]}, barMaxWidth:18}:null
+              ].filter(Boolean)
+            }, true);
+            setTimeout(function(){ drawerChart.resize(); }, 50);
+
+            // 明细表格
+            var tEl = document.getElementById('drawerTable');
+            var html = '<thead><tr><th>月份</th><th>'+state.year+'年销量</th>' + (prev?('<th>'+prevYear+'年同月</th><th>同比</th>'):'') + '</tr></thead><tbody>';
+            for(var i=0;i<12;i++){
+              var cv = curMonthly[i], pv = prevMonthly[i];
+              html += '<tr><td>'+months[i]+'</td><td>'+(cv==null?'—':formatNum(cv))+'</td>';
+              if(prev){
+                html += '<td>'+(pv==null?'—':formatNum(pv))+'</td>';
+                var yy = (cv!=null && pv) ? ((cv-pv)/pv*100) : null;
+                html += '<td'+(yy!=null?(' style="color:'+(yy>=0?cssVar('--good'):cssVar('--critical'))+'"'):'')+'>'+(yy==null?'—':(yy>=0?'+':'')+yy.toFixed(1)+'%')+'</td>';
+              }
+              html += '</tr>';
+            }
+            html += '</tbody>';
+            tEl.innerHTML = html;
+
+            // 新闻
+            renderNews(name);
+          }
+          function statTile(lbl, val, deltaText, deltaDir){
+            var d = document.createElement('div');
+            d.className='stat-tile';
+            var l = document.createElement('div'); l.className='lbl'; l.textContent=lbl;
+            var v = document.createElement('div'); v.className='val'; v.textContent=val;
+            d.appendChild(l); d.appendChild(v);
+            if(deltaText){
+              var el = document.createElement('div');
+              el.className = 'delta' + (deltaDir==='up'?' up':(deltaDir==='down'?' down':''));
+              el.textContent = deltaText;
+              d.appendChild(el);
+            }
+            return d;
+          }
+          function rankDeltaText(prevRank, rank){
+            var diff = prevRank - rank; // 正数 = 名次上升（排名数字变小）
+            if(diff===0) return {text:'与上年持平', dir:null};
+            return diff>0 ? {text:'▲ 较上年上升 '+diff+' 名', dir:'up'} : {text:'▼ 较上年下降 '+(-diff)+' 名', dir:'down'};
+          }
+          function findEntity(key, year){
+            var savedYear = state.year;
+            state.year = year;
+            var u = computeUniverse();
+            state.year = savedYear;
+            for(var i=0;i<u.entities.length;i++){ if(u.entities[i].key===key) return u.entities[i]; }
+            return null;
+          }
+          function renderNews(name){
+            var el = document.getElementById('drawerNews');
+            el.innerHTML='';
+            var items = NEWS && NEWS[name];
+            if(!items || !items.length){
+              var empty = document.createElement('div');
+              empty.className='news-empty';
+              empty.textContent='暂无动态';
+              el.appendChild(empty);
+              return;
+            }
+            items.forEach(function(it){
+              var card = document.createElement('div');
+              card.className='news-card';
+              var a = document.createElement('a');
+              a.href = it.url || '#'; a.target='_blank'; a.rel='noopener noreferrer';
+              a.textContent = it.title || '(无标题)';
+              var meta = document.createElement('div');
+              meta.className='news-meta';
+              meta.textContent = [it.date, it.source].filter(Boolean).join(' · ');
+              card.appendChild(a); card.appendChild(meta);
+              el.appendChild(card);
+            });
+          }
+          document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+          document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
+          function closeDrawer(){
+            document.getElementById('drawerBackdrop').classList.remove('open');
+            document.getElementById('drawer').classList.remove('open');
+          }
+
+          /* ---------------- 工具函数 ---------------- */
+          function formatNum(v){
+            if(v==null) return '—';
+            return Math.round(v).toLocaleString('zh-CN');
+          }
+          function formatCompact(v){
+            if(v==null) return '';
+            var av = Math.abs(v);
+            if(av>=10000) return (v/10000).toFixed(1).replace(/\.0$/,'') + '万';
+            return String(Math.round(v));
+          }
+          function escapeHtml(s){
+            return String(s).replace(/[&<>"']/g, function(c){
+              return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+            });
+          }
+
+          /* ---------------- 总渲染入口 ---------------- */
+          function renderAll(){
+            syncControlStates();
+            var u = computeUniverse();
+            if(state.shown.size===0){ state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;})); }
+            lastUniverse = u;
+            document.getElementById('chartTitle').textContent =
+              state.year + '年 · ' + granLabel() + ' · ' + energyLabel() + ' · 年初至今累计销量（辆）';
+            renderChart(u);
+            renderLegend(u);
+            if(state.tableView) renderTable(u);
+            var counts = META.manufacturers+' 厂商 · '+META.brands+' 品牌 · '+META.models+' 车型 · '+META.rows+' 条记录';
+            document.getElementById('metaCounts').textContent = counts;
+          }
+
+          renderYearChips();
+          resetToTop20();
+          renderAll();
+          })();
+          </script>
+          </body>
+          </html>
+          """
 
           if __name__ == "__main__":
-              try:
-                  main()
-              except Exception as e:
-                  try:
-                      os.makedirs(OUTPUT_DIR, exist_ok=True)
-                      with open(os.path.join(OUTPUT_DIR, "FATAL_ERROR.txt"), "w", encoding="utf-8") as f:
-                          f.write(f"顶层未预期异常:\n{e}\n\n{traceback.format_exc()}")
-                  except Exception:
-                      print(traceback.format_exc())
-                  sys.exit(0)
+              main()
 
-          PROBE_SCRIPT_EOF
+          BUILD_PY_EOF
 
-      - name: Run probe script
-        # 脚本内部已经用 try/except 兜住了几乎所有异常，
-        # 这里再加一层 continue-on-error 保险，确保后面的 commit/upload 步骤一定能跑
+      - name: Run build script
+        # build.py 内部对 ECharts 获取失败等情况已有多级回退（本地缓存 -> npm pack ->
+        # CDN 直连 -> 最后回退成 <script src=CDN> 标签），这里再加一层 continue-on-error
+        # 保险，确保就算构建整体失败，后面的 commit/upload 步骤也仍有机会执行、暴露问题。
         continue-on-error: true
-        run: python3 probe_news.py
+        run: python3 build.py
 
-      - name: Drop oversized raw files before commit
-        if: always()
-        continue-on-error: true
-        run: |
-          find probe_news_output/ -type f -size +20M -print -exec sh -c 'echo "文件过大已删除: $(basename "$1")" > "$1.toolarge.txt"; rm -f "$1"' _ {} \; || true
-
-      - name: Commit probe results back to repo
+      - name: Commit dashboard back to repo
         if: always()
         continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A probe_news_output/ || true
+          git add -A docs/ || true
           if git diff --staged --quiet; then
             echo "没有变化，跳过提交"
           else
-            git commit -m "chore: probe news sources (P3) [skip ci]"
+            git commit -m "chore: build car sales dashboard [skip ci]"
             git push
           fi
 
-      - name: Upload probe output
+      - name: Upload build output
         # 关键：即使上面的步骤失败，也要执行这一步，
         # 否则运行失败时我们什么产出都拿不到
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: probe-news-output
-          path: probe_news_output/
+          name: dashboard-site
+          path: docs/
           if-no-files-found: warn
           retention-days: 30
