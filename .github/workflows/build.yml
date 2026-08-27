@@ -40,7 +40,20 @@ jobs:
 
       - name: Write build script
         run: |
-          cat > build.py << 'BUILD_PY_EOF'
+          mkdir -p src
+          cat > src/README.md << 'SRC_README_EOF'
+          # src/ —— 运行时自动生成的源码归档
+
+          本目录下的文件由 GitHub Actions 工作流每次运行时，从 workflow YAML 里内嵌的脚本
+          自动重新写出，目的是让源码在仓库里有独立、可读、可 diff 的历史，不必打开 YAML
+          文件翻找 heredoc 才能看代码。
+
+          - 本目录**只供阅读和 diff**，直接修改这里的文件不会影响任何工作流的实际行为——
+            下一次运行时会被内嵌在 workflow 里的版本原样重写覆盖。
+          - 想要真正修改脚本行为，请改动 workflow YAML 文件里对应的内嵌脚本内容，
+            改动流程见仓库根 README 第七节。
+          SRC_README_EOF
+          cat > src/build.py << 'BUILD_PY_EOF'
           #!/usr/bin/env python3
           # -*- coding: utf-8 -*-
           """
@@ -71,7 +84,14 @@ jobs:
           # ---------------------------------------------------------------------------
           # 路径配置
           # ---------------------------------------------------------------------------
-          SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+          # 关键：不能用 SCRIPT_DIR（脚本文件自身所在目录）来定位 docs/ / vendor/ / data/ ——
+          # 脚本现在存放在仓库的 src/ 目录下，如果继续用 SCRIPT_DIR，docs/ 会被写到
+          # <repo>/src/docs/ 而不是 <repo>/docs/，GitHub Pages（配置为发布 /docs）会直接失效。
+          # 统一改用 REPO_ROOT = 运行时的当前工作目录：workflow 里固定是先 cd 到仓库根，
+          # 再执行 python3 src/build.py，所以 os.getcwd() 就是仓库根，且在脚本搬到 src/ 之后、
+          # 或者以后再搬到别的地方，都不需要再改这里。
+          REPO_ROOT = os.getcwd()
+          SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # 仅保留供参考/调试，不再用于定位输出路径
           def _first_existing(*candidates):
               """按顺序返回第一个存在的路径；都不存在时返回第一个候选（供报错信息使用）。"""
               for c in candidates:
@@ -79,20 +99,21 @@ jobs:
                       return c
               return candidates[0]
 
-          # 数据源：环境变量优先，其次相对当前工作目录（GitHub Actions 里 cwd = 仓库根），
-          # 再次相对脚本所在目录。绝不硬编码开发环境的绝对路径。
+          # 数据源：环境变量优先，其次相对当前工作目录（GitHub Actions / 本地都应该在仓库根下运行），
+          # 再次显式相对仓库根（REPO_ROOT，效果上和上一条一样，是防御性的双重保险）。
+          # 绝不硬编码开发环境的绝对路径，也不再依赖脚本文件自身的位置。
           CSV_PATH = os.environ.get("SALES_CSV") or _first_existing(
               os.path.join("data", "sales.csv"),
-              os.path.join(SCRIPT_DIR, "data", "sales.csv"),
+              os.path.join(REPO_ROOT, "data", "sales.csv"),
           )
           # 新闻缓存：可选，不存在时优雅降级
           NEWS_PATH = os.environ.get("NEWS_JSON") or _first_existing(
               os.path.join("data", "news.json"),
-              os.path.join(SCRIPT_DIR, "data", "news.json"),
-              os.path.join(SCRIPT_DIR, "news.json"),
+              os.path.join(REPO_ROOT, "data", "news.json"),
+              os.path.join(REPO_ROOT, "news.json"),
           )
-          VENDOR_ECHARTS = os.path.join(SCRIPT_DIR, "vendor", "echarts.min.js")
-          OUT_DIR = os.path.join(SCRIPT_DIR, "docs")
+          VENDOR_ECHARTS = os.path.join(REPO_ROOT, "vendor", "echarts.min.js")
+          OUT_DIR = os.path.join(REPO_ROOT, "docs")
           OUT_PATH = os.path.join(OUT_DIR, "index.html")
 
           BODY_TYPES = ["SUV", "轿车", "MPV", "其他", "运动汽车"]  # 按数据量从大到小排列
@@ -1861,7 +1882,7 @@ jobs:
         # CDN 直连 -> 最后回退成 <script src=CDN> 标签），这里再加一层 continue-on-error
         # 保险，确保就算构建整体失败，后面的 commit/upload 步骤也仍有机会执行、暴露问题。
         continue-on-error: true
-        run: python3 build.py
+        run: python3 src/build.py
 
       - name: Commit dashboard back to repo
         # 已知问题的修复：新闻探针等其它工作流也可能在这段时间往仓库推 docs/ 之外的改动，
@@ -1876,7 +1897,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A docs/ || true
+          git add -A docs/ src/ || true
           if git diff --staged --quiet; then
             echo "没有变化，跳过提交"
           else
