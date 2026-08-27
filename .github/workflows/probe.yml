@@ -51,6 +51,11 @@ jobs:
         run: pip install requests beautifulsoup4 lxml pandas
 
       - name: Write sync script
+        # 修复的步骤顺序 bug：这一步和"Write Feishu notify script"必须都排在
+        # "Commit sync results back to repo"之前——否则某个脚本写出来的时候提交已经
+        # 发生过了，那个脚本就永远不会被归档进仓库（src/ 下会永久缺这一个文件）。
+        # 两个 Write 步骤紧挨着放在这里，一次性把 src/ 下三个文件（README + 两份脚本）
+        # 全部写完，之后再进入 Run/Drop/Commit/Upload/Notify 的正常顺序。
         run: |
           mkdir -p src
           cat > src/README.md << 'SRC_README_EOF'
@@ -1652,80 +1657,10 @@ jobs:
 
           SYNC_SCRIPT_EOF
 
-      - name: Run sync script
-        # 脚本内部已经用 try/except 兜住了几乎所有异常，
-        # 这里再加一层 continue-on-error 保险，确保后面的 commit/upload 步骤一定能跑。
-        # 给这一步起个 id，是因为 sync.py 运行结束时会把"本次是否发生了值得关注的事情"
-        # (noteworthy: 新抓到数据 / 有失败放弃 / 被拦截 三者任一为真) 写进
-        # $GITHUB_OUTPUT，后面的"发送飞书通知"步骤要读这个值来判断该不该发通知——
-        # 纯粹的幂等空跑（比如月初 8 号数据还没发布）不应该产生通知噪音。
-        id: run_sync
-        continue-on-error: true
-        env:
-          # push/schedule 触发时没有 inputs.max_months/force_refresh，两个都会是空字符串——
-          # sync.py 里 parse_max_months()/parse_force_refresh() 把空字符串分别按
-          # "只跑1个月"/"不重抓" 处理（保守优先），不会因为一次 push 或定时触发就误跑全量、
-          # 误重抓。定时任务本来就只需要抓"当前缺失的最新月份"，MAX_MONTHS=1（留空时的默认值）
-          # 正合适，不用特意在这里为 schedule 分支设置成别的值。
-          MAX_MONTHS: ${{ inputs.max_months }}
-          FORCE_REFRESH: ${{ inputs.force_refresh }}
-          # 报告里记一笔这次是怎么触发的（schedule / workflow_dispatch / push），方便事后追查。
-          TRIGGER_EVENT: ${{ github.event_name }}
-        run: python3 src/sync_script.py
-
-      - name: Drop oversized files before commit
-        if: always()
-        continue-on-error: true
-        run: |
-          find data/ -type f -size +50M -print -exec sh -c 'echo "文件过大已删除: $(basename "$1")" > "$1.toolarge.txt"; rm -f "$1"' _ {} \; || true
-
-      - name: Commit sync results back to repo
-        # 定时任务开始跑之后，sync 和其它手动触发/别的工作流撞车（同时往仓库 push）的概率
-        # 变高了——直接 git push 一旦撞上 non-fast-forward 会被拒绝，之前 continue-on-error
-        # 会把这类失败整个吞掉，日志上完全看不出发生过什么。现在改成显式重试：push 失败就
-        # git pull --rebase --autostash 再试，最多 3 次，间隔递增；三次都失败时打印醒目的
-        # 失败信息（不再静默），但步骤本身仍然 continue-on-error —— 数据已经在 artifact 里，
-        # 不该因为一次推送竞争让整个 job 显示失败。
-        if: always()
-        continue-on-error: true
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A data/ src/ || true
-          if git diff --staged --quiet; then
-            echo "没有变化，跳过提交"
-          else
-            git commit -m "chore: sync car sales data (16888) [skip ci]"
-            for i in 1 2 3; do
-              if git push; then
-                echo "push 成功"
-                break
-              fi
-              echo "push 失败（第 $i 次），拉取远端后重试 ..."
-              git pull --rebase --autostash || true
-              sleep $((i * 5))
-              if [ "$i" = "3" ]; then
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                echo "!! git push 连续 3 次失败，data/ 的更新没有推送成功，仓库里看到的"
-                echo "!! 还是旧数据。本次抓到的数据仍然在 artifact 里，可以手动下载，"
-                echo "!! 但需要人工介入排查为什么远端一直推不上去。"
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-              fi
-            done
-          fi
-
-      - name: Upload sync output
-        # 关键：即使上面的步骤失败，也要执行这一步，
-        # 否则运行失败时我们什么产出都拿不到
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: sales-data
-          path: data/
-          if-no-files-found: warn
-          retention-days: 30
-
       - name: Write Feishu notify script
+        # if: always() ——就算前面某一步失败了也要把这份脚本写出来：
+        # 一是要让它一起被提交归档进 src/，二是后面"Send Feishu notification"
+        # 步骤本身也需要这份脚本文件才能执行（包括发送"同步失败"告警卡片那条路径）。
         if: always()
         run: |
           mkdir -p src
@@ -2327,6 +2262,79 @@ jobs:
           # ---------------------------------------------------------------------------
 
           NOTIFY_SCRIPT_EOF
+
+      - name: Run sync script
+        # 脚本内部已经用 try/except 兜住了几乎所有异常，
+        # 这里再加一层 continue-on-error 保险，确保后面的 commit/upload 步骤一定能跑。
+        # 给这一步起个 id，是因为 sync.py 运行结束时会把"本次是否发生了值得关注的事情"
+        # (noteworthy: 新抓到数据 / 有失败放弃 / 被拦截 三者任一为真) 写进
+        # $GITHUB_OUTPUT，后面的"发送飞书通知"步骤要读这个值来判断该不该发通知——
+        # 纯粹的幂等空跑（比如月初 8 号数据还没发布）不应该产生通知噪音。
+        id: run_sync
+        continue-on-error: true
+        env:
+          # push/schedule 触发时没有 inputs.max_months/force_refresh，两个都会是空字符串——
+          # sync.py 里 parse_max_months()/parse_force_refresh() 把空字符串分别按
+          # "只跑1个月"/"不重抓" 处理（保守优先），不会因为一次 push 或定时触发就误跑全量、
+          # 误重抓。定时任务本来就只需要抓"当前缺失的最新月份"，MAX_MONTHS=1（留空时的默认值）
+          # 正合适，不用特意在这里为 schedule 分支设置成别的值。
+          MAX_MONTHS: ${{ inputs.max_months }}
+          FORCE_REFRESH: ${{ inputs.force_refresh }}
+          # 报告里记一笔这次是怎么触发的（schedule / workflow_dispatch / push），方便事后追查。
+          TRIGGER_EVENT: ${{ github.event_name }}
+        run: python3 src/sync_script.py
+
+      - name: Drop oversized files before commit
+        if: always()
+        continue-on-error: true
+        run: |
+          find data/ -type f -size +50M -print -exec sh -c 'echo "文件过大已删除: $(basename "$1")" > "$1.toolarge.txt"; rm -f "$1"' _ {} \; || true
+
+      - name: Commit sync results back to repo
+        # 定时任务开始跑之后，sync 和其它手动触发/别的工作流撞车（同时往仓库 push）的概率
+        # 变高了——直接 git push 一旦撞上 non-fast-forward 会被拒绝，之前 continue-on-error
+        # 会把这类失败整个吞掉，日志上完全看不出发生过什么。现在改成显式重试：push 失败就
+        # git pull --rebase --autostash 再试，最多 3 次，间隔递增；三次都失败时打印醒目的
+        # 失败信息（不再静默），但步骤本身仍然 continue-on-error —— 数据已经在 artifact 里，
+        # 不该因为一次推送竞争让整个 job 显示失败。
+        if: always()
+        continue-on-error: true
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data/ src/ || true
+          if git diff --staged --quiet; then
+            echo "没有变化，跳过提交"
+          else
+            git commit -m "chore: sync car sales data (16888) [skip ci]"
+            for i in 1 2 3; do
+              if git push; then
+                echo "push 成功"
+                break
+              fi
+              echo "push 失败（第 $i 次），拉取远端后重试 ..."
+              git pull --rebase --autostash || true
+              sleep $((i * 5))
+              if [ "$i" = "3" ]; then
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+                echo "!! git push 连续 3 次失败，data/ 的更新没有推送成功，仓库里看到的"
+                echo "!! 还是旧数据。本次抓到的数据仍然在 artifact 里，可以手动下载，"
+                echo "!! 但需要人工介入排查为什么远端一直推不上去。"
+                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+              fi
+            done
+          fi
+
+      - name: Upload sync output
+        # 关键：即使上面的步骤失败，也要执行这一步，
+        # 否则运行失败时我们什么产出都拿不到
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sales-data
+          path: data/
+          if-no-files-found: warn
+          retention-days: 30
 
       - name: Send Feishu notification
         # 条件解释：
