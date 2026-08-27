@@ -1,0 +1,1821 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+build.py -- 中国汽车销量看板构建脚本
+
+读取 data/sales.csv，生成一个完全自包含的单文件 HTML 看板
+（ECharts 库与全部数据均内联，打开后零外部请求）到 docs/index.html。
+
+用法: python3 build.py
+"""
+
+import csv
+import json
+import os
+import subprocess
+import sys
+import tempfile
+import shutil
+import urllib.request
+import ssl
+from datetime import datetime, timezone
+
+import html as _html_mod
+def _esc(s):
+    """HTML 转义，用于把 Python 端字符串安全地拼进静态模板文本。"""
+    return _html_mod.escape(str(s), quote=True)
+
+# ---------------------------------------------------------------------------
+# 路径配置
+# ---------------------------------------------------------------------------
+# 关键：不能用 SCRIPT_DIR（脚本文件自身所在目录）来定位 docs/ / vendor/ / data/ ——
+# 脚本现在存放在仓库的 src/ 目录下，如果继续用 SCRIPT_DIR，docs/ 会被写到
+# <repo>/src/docs/ 而不是 <repo>/docs/，GitHub Pages（配置为发布 /docs）会直接失效。
+# 统一改用 REPO_ROOT = 运行时的当前工作目录：workflow 里固定是先 cd 到仓库根，
+# 再执行 python3 src/build.py，所以 os.getcwd() 就是仓库根，且在脚本搬到 src/ 之后、
+# 或者以后再搬到别的地方，都不需要再改这里。
+REPO_ROOT = os.getcwd()
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # 仅保留供参考/调试，不再用于定位输出路径
+def _first_existing(*candidates):
+    """按顺序返回第一个存在的路径；都不存在时返回第一个候选（供报错信息使用）。"""
+    for c in candidates:
+        if c and os.path.isfile(c):
+            return c
+    return candidates[0]
+
+# 数据源：环境变量优先，其次相对当前工作目录（GitHub Actions / 本地都应该在仓库根下运行），
+# 再次显式相对仓库根（REPO_ROOT，效果上和上一条一样，是防御性的双重保险）。
+# 绝不硬编码开发环境的绝对路径，也不再依赖脚本文件自身的位置。
+CSV_PATH = os.environ.get("SALES_CSV") or _first_existing(
+    os.path.join("data", "sales.csv"),
+    os.path.join(REPO_ROOT, "data", "sales.csv"),
+)
+# 新闻缓存：可选，不存在时优雅降级
+NEWS_PATH = os.environ.get("NEWS_JSON") or _first_existing(
+    os.path.join("data", "news.json"),
+    os.path.join(REPO_ROOT, "data", "news.json"),
+    os.path.join(REPO_ROOT, "news.json"),
+)
+VENDOR_ECHARTS = os.path.join(REPO_ROOT, "vendor", "echarts.min.js")
+OUT_DIR = os.path.join(REPO_ROOT, "docs")
+OUT_PATH = os.path.join(OUT_DIR, "index.html")
+
+BODY_TYPES = ["SUV", "轿车", "MPV", "其他", "运动汽车"]  # 按数据量从大到小排列
+
+# ===== CALIBER_NOTE_BEGIN =====
+CALIBER_SHORT = "口径：经比对推断为乘联会零售数据"
+CALIBER_LONG = (
+    "本看板销量数据采集自车主之家（16888.com）月度销量排行榜，该站未在页面上标注统计口径。经与乘联会（CPCA）2024–2026 年 6 个月份的官方零售、批发数据逐一比对，本数据与乘联会「全国乘用车市场零售」口径的月度总量差异稳定在 ±0.8% 以内，而与「厂商批发」口径差异达 -2.6%～-31.7% 且随时间扩大，因此推断为零售口径（车企/经销商卖给终端消费者的数量），而非发给经销商的批发出货量。提醒：零售口径通常低于同期批发口径（年末冲量月份尤为明显），也与交强险上牌量、中汽协产销数据存在统计范围差异；跨数据源比较时请先对齐口径，不要直接拿本看板数字与批发/产销类新闻标题比较。本判定由外部权威数据反推得出，非数据源官方声明，置信度高但非 100% 确定。另注：数据源声明其销量不包含进口车型。"
+)
+# ===== CALIBER_NOTE_END =====
+
+
+# ---------------------------------------------------------------------------
+# 1. 读取 & 聚合数据
+# ---------------------------------------------------------------------------
+def ym_index(year, month):
+    """把 (year, month) 映射为从 2024-01 开始的连续月份序号 (0-based)。"""
+    return (int(year) - 2024) * 12 + (int(month) - 1)
+
+
+def load_rows():
+    with open(CSV_PATH, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        return list(reader)
+
+
+def build_dim_table(rows, keyfunc, n_months):
+    """
+    通用聚合：按 keyfunc(row) 分组，产出：
+      names: [实体名 ...]（按首次出现顺序）
+      fuel:  [[月度燃油销量 x n_months], ...]  与 names 对应
+      ev:    [[月度新能源销量 x n_months], ...]
+    """
+    order = []
+    fuel_map = {}
+    ev_map = {}
+    for r in rows:
+        k = keyfunc(r)
+        if k not in fuel_map:
+            order.append(k)
+            fuel_map[k] = [0] * n_months
+            ev_map[k] = [0] * n_months
+        idx = ym_index(r["year"], r["month"])
+        sales = int(r["sales"])
+        if r["energy_type"] == "燃油":
+            fuel_map[k][idx] += sales
+        else:
+            ev_map[k][idx] += sales
+    return order, fuel_map, ev_map
+
+
+def aggregate(rows):
+    years = sorted(set(int(r["year"]) for r in rows))
+    months_all = [(int(r["year"]), int(r["month"])) for r in rows]
+    min_ym = min(months_all)
+    max_ym = max(months_all)
+    n_months = ym_index(max_ym[0], max_ym[1]) + 1
+
+    # 厂商粒度
+    manu_order, manu_fuel, manu_ev = build_dim_table(
+        rows, lambda r: r["manufacturer"], n_months
+    )
+    # 品牌粒度
+    brand_order, brand_fuel, brand_ev = build_dim_table(
+        rows, lambda r: r["brand"], n_months
+    )
+    # 车体类型 -> 车型粒度（key 为 (body_type, model) 元组，保证跨车体同名车型不冲突）
+    model_order, model_fuel, model_ev = build_dim_table(
+        rows, lambda r: (r["body_type"], r["model"]), n_months
+    )
+
+    def pack(order, fuel_map, ev_map, name_fn):
+        return {
+            "n": [name_fn(k) for k in order],
+            "f": [fuel_map[k] for k in order],
+            "e": [ev_map[k] for k in order],
+        }
+
+    manu_payload = pack(manu_order, manu_fuel, manu_ev, lambda k: k)
+    brand_payload = pack(brand_order, brand_fuel, brand_ev, lambda k: k)
+    model_payload = pack(model_order, model_fuel, model_ev, lambda k: k[1])
+    model_body_idx = [BODY_TYPES.index(k[0]) for k in model_order]
+
+    # 每个 (body_type, model) 在源数据里唯一对应一个厂商与一个品牌（已用全量数据校验，
+    # 见开发记录）；这里把这层归属关系也编码进车型数组，供前端做"统计范围"审计视图，
+    # 不需要在浏览器端反查 mapping.json。用 dict 建立 (body_type, model) -> 厂商/品牌名，
+    # 顺带校验假设是否仍然成立——如果未来数据出现同名车型分属多个厂商，构建时立刻报错，
+    # 而不是让前端悄悄展示错误的归属。
+    model_manu_name = {}
+    model_brand_name = {}
+    for r in rows:
+        k = (r["body_type"], r["model"])
+        mfr, brd = r["manufacturer"], r["brand"]
+        if k in model_manu_name and model_manu_name[k] != mfr:
+            raise SystemExit(
+                f"数据假设被打破: 车型 {k} 同时属于厂商 {model_manu_name[k]!r} 和 {mfr!r}，"
+                f"需要调整「统计范围」的实现（不能再假设车型与厂商一一对应）。"
+            )
+        if k in model_brand_name and model_brand_name[k] != brd:
+            raise SystemExit(
+                f"数据假设被打破: 车型 {k} 同时属于品牌 {model_brand_name[k]!r} 和 {brd!r}。"
+            )
+        model_manu_name[k] = mfr
+        model_brand_name[k] = brd
+    manu_index = {name: i for i, name in enumerate(manu_order)}
+    brand_index = {name: i for i, name in enumerate(brand_order)}
+    model_manu_idx = [manu_index[model_manu_name[k]] for k in model_order]
+    model_brand_idx = [brand_index[model_brand_name[k]] for k in model_order]
+
+    # 一个厂商内含多个品牌的情况（按车型逐条拆分得到，用于"关于数据"里的说明文字，
+    # 不是硬编码列表——数据变了这句话会跟着变）。
+    manu_to_brands = {}
+    for r in rows:
+        manu_to_brands.setdefault(r["manufacturer"], set()).add(r["brand"])
+    multi_brand_manus = sorted(
+        [m for m, bs in manu_to_brands.items() if len(bs) > 1],
+        key=lambda m: -len(manu_to_brands[m]),
+    )
+
+    payload = {
+        "manu": manu_payload,
+        "brand": brand_payload,
+        "model": model_payload,
+        "modelBody": model_body_idx,
+        "modelManu": model_manu_idx,
+        "modelBrand": model_brand_idx,
+        "bodyTypes": BODY_TYPES,
+        "nMonths": n_months,
+        "startYear": min_ym[0],
+        "startMonth": min_ym[1],
+    }
+
+    multi_brand_desc = "、".join(
+        f"{m}（{len(manu_to_brands[m])}个品牌：{'/'.join(sorted(manu_to_brands[m]))}）"
+        for m in multi_brand_manus
+    ) if multi_brand_manus else "（当前数据中未发现一厂多牌的情况）"
+
+    meta = {
+        "rows": len(rows),
+        "manufacturers": len(manu_order),
+        "brands": len(brand_order),
+        "models": len(set(k[1] for k in model_order)),
+        "years": years,
+        "coverageStartYear": min_ym[0],
+        "coverageStartMonth": min_ym[1],
+        "coverageEndYear": max_ym[0],
+        "coverageEndMonth": max_ym[1],
+        "buildTime": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M %Z"),
+        "multiBrandManufacturers": multi_brand_manus,
+        "multiBrandDesc": multi_brand_desc,
+    }
+    return payload, meta
+
+
+# ---------------------------------------------------------------------------
+# 2. 获取 ECharts（内联优先，失败则回退 CDN <script> 标签）
+# ---------------------------------------------------------------------------
+def _try_npm_pack():
+    """通过 npm registry 拉取 echarts 包（该环境的出网策略允许 registry.npmjs.org）。"""
+    npm = shutil.which("npm")
+    if not npm:
+        return None
+    tmp = tempfile.mkdtemp(prefix="echarts_npm_")
+    try:
+        subprocess.run(
+            [npm, "pack", "echarts@5", "--silent"],
+            cwd=tmp, check=True, capture_output=True, timeout=120,
+        )
+        tgz = None
+        for fn in os.listdir(tmp):
+            if fn.endswith(".tgz"):
+                tgz = os.path.join(tmp, fn)
+                break
+        if not tgz:
+            return None
+        subprocess.run(
+            ["tar", "xzf", tgz, "package/dist/echarts.min.js"],
+            cwd=tmp, check=True, capture_output=True, timeout=60,
+        )
+        js_path = os.path.join(tmp, "package", "dist", "echarts.min.js")
+        if os.path.isfile(js_path):
+            with open(js_path, "r", encoding="utf-8") as f:
+                return f.read()
+    except Exception as e:
+        print(f"  npm pack 获取 echarts 失败: {e}", file=sys.stderr)
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return None
+
+
+def _try_cdn_download():
+    urls = [
+        "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js",
+        "https://unpkg.com/echarts@5/dist/echarts.min.js",
+        "https://registry.npmmirror.com/echarts/5.6.0/files/dist/echarts.min.js",
+    ]
+    ctx = ssl.create_default_context(cafile="/root/.ccr/ca-bundle.crt") if os.path.exists(
+        "/root/.ccr/ca-bundle.crt"
+    ) else None
+    for url in urls:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "curl/8.0"})
+            with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+                data = resp.read()
+                if len(data) > 200000:  # 粗略校验拿到的是完整文件而非错误页
+                    return data.decode("utf-8")
+        except Exception as e:
+            print(f"  CDN 下载失败 {url}: {e}", file=sys.stderr)
+    return None
+
+
+def get_echarts():
+    """
+    返回 (mode, content):
+      mode == 'inline' -> content 是完整 JS 源码，写入 <script>...</script>
+      mode == 'cdn'     -> content 是 CDN URL，写入 <script src="...">
+    优先级: 本地 vendor 缓存 -> npm pack -> 直接 CDN 下载 -> 回退 CDN <script> 标签
+    """
+    if os.path.isfile(VENDOR_ECHARTS):
+        print("  使用本地缓存 vendor/echarts.min.js")
+        with open(VENDOR_ECHARTS, "r", encoding="utf-8") as f:
+            return "inline", f.read()
+
+    print("  本地无缓存，尝试通过 npm registry 下载 echarts ...")
+    js = _try_npm_pack()
+    if js:
+        os.makedirs(os.path.dirname(VENDOR_ECHARTS), exist_ok=True)
+        with open(VENDOR_ECHARTS, "w", encoding="utf-8") as f:
+            f.write(js)
+        return "inline", js
+
+    print("  npm 不可用，尝试直接从 CDN 下载 ...")
+    js = _try_cdn_download()
+    if js:
+        os.makedirs(os.path.dirname(VENDOR_ECHARTS), exist_ok=True)
+        with open(VENDOR_ECHARTS, "w", encoding="utf-8") as f:
+            f.write(js)
+        return "inline", js
+
+    print("  !! 所有内联方式均失败，回退为 CDN <script> 标签（生成的 HTML 将非完全离线）")
+    return "cdn", "https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"
+
+
+# ---------------------------------------------------------------------------
+# 3. 新闻数据（可选，不存在时给空对象，绝不报错）
+# ---------------------------------------------------------------------------
+def load_news():
+    if os.path.isfile(NEWS_PATH):
+        try:
+            with open(NEWS_PATH, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"  警告: news.json 存在但解析失败，忽略: {e}", file=sys.stderr)
+            return {}
+    return {}
+
+
+# ---------------------------------------------------------------------------
+# 4. 主流程
+# ---------------------------------------------------------------------------
+def main():
+    print(f"读取 CSV: {CSV_PATH}")
+    rows = load_rows()
+    print(f"  {len(rows)} 行")
+
+    print("聚合数据 (厂商 / 品牌 / 车体类型->车型) ...")
+    payload, meta = aggregate(rows)
+    print(f"  厂商 {meta['manufacturers']} 个，品牌 {meta['brands']} 个，车型 {meta['models']} 个")
+    print(f"  覆盖 {meta['coverageStartYear']}-{meta['coverageStartMonth']:02d} "
+          f"至 {meta['coverageEndYear']}-{meta['coverageEndMonth']:02d}")
+
+    print("获取 ECharts ...")
+    echarts_mode, echarts_content = get_echarts()
+
+    print("加载 news.json（可选）...")
+    news = load_news()
+    print(f"  news.json {'存在，' + str(len(news)) + ' 个对象有动态' if news else '不存在，使用占位'}")
+
+    data_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+    news_json = json.dumps(news, ensure_ascii=False, separators=(",", ":"))
+    meta_json = json.dumps(meta, ensure_ascii=False, separators=(",", ":"))
+
+    data_kb = len(data_json.encode("utf-8")) / 1024
+    print(f"  数据部分大小: {data_kb:.1f} KB")
+
+    if echarts_mode == "inline":
+        echarts_tag = "<script>\n/* ECharts (bundled offline at build time) */\n" + echarts_content + "\n</script>"
+    else:
+        echarts_tag = (
+            f'<!-- 警告: 构建时无法内联 ECharts，回退到 CDN，本页面并非完全离线自包含 -->\n'
+            f'<script src="{echarts_content}"></script>'
+        )
+
+    html = HTML_TEMPLATE
+    html = html.replace("@@ECHARTS_TAG@@", echarts_tag)
+    html = html.replace("@@DATA_JSON@@", data_json)
+    html = html.replace("@@NEWS_JSON@@", news_json)
+    html = html.replace("@@META_JSON@@", meta_json)
+    html = html.replace(
+        "@@COVERAGE_TEXT@@",
+        f"数据覆盖 {meta['coverageStartYear']}年{meta['coverageStartMonth']}月 "
+        f"至 {meta['coverageEndYear']}年{meta['coverageEndMonth']}月",
+    )
+    html = html.replace("@@UPDATE_TEXT@@", f"更新时间 {meta['buildTime']}")
+    html = html.replace("@@CALIBER_SHORT@@", _esc(CALIBER_SHORT))
+    html = html.replace("@@CALIBER_LONG@@", _esc(CALIBER_LONG))
+    html = html.replace("@@MULTI_BRAND_DESC@@", _esc(meta["multiBrandDesc"]))
+    html = html.replace(
+        "@@MANU_COUNT@@", str(meta["manufacturers"])
+    ).replace(
+        "@@BRAND_COUNT@@", str(meta["brands"])
+    ).replace(
+        "@@MODEL_COUNT@@", str(meta["models"])
+    )
+
+    os.makedirs(OUT_DIR, exist_ok=True)
+    with open(OUT_PATH, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    size_kb = os.path.getsize(OUT_PATH) / 1024
+    print(f"完成: {OUT_PATH} ({size_kb:.1f} KB, echarts 模式: {echarts_mode})")
+
+
+# ---------------------------------------------------------------------------
+# 5. HTML / CSS / JS 模板
+# ---------------------------------------------------------------------------
+HTML_TEMPLATE = r"""<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>中国汽车销量看板</title>
+<style>
+:root{
+  color-scheme: light;
+  --surface-1:#fcfcfb;
+  --page-plane:#f9f9f7;
+  --text-primary:#0b0b0b;
+  --text-secondary:#52514e;
+  --text-muted:#898781;
+  --grid:#e1e0d9;
+  --baseline:#c3c2b7;
+  --border:rgba(11,11,11,0.10);
+  --good:#0ca30c;
+  --critical:#d03b3b;
+  --warning-bg:rgba(250,178,25,0.16);
+  --warning-fg:#7a5100;
+  --warning-border:rgba(250,178,25,0.55);
+  --info-bg:rgba(42,120,214,0.10);
+  --info-fg:#184f95;
+  --info-border:rgba(42,120,214,0.35);
+  --series-1:#2a78d6;
+  --series-2:#eb6834;
+  --series-3:#1baf7a;
+  --series-4:#eda100;
+  --series-5:#e87ba4;
+  --series-6:#008300;
+  --series-7:#4a3aa7;
+  --series-8:#e34948;
+  --muted-line:#a6a49a;
+  --other-line:#89877e;
+  --chip-bg:#f0efec;
+  --chip-bg-active:#0b0b0b;
+  --chip-fg-active:#ffffff;
+  --overlay:rgba(11,11,11,0.35);
+  --shadow: 0 8px 30px rgba(11,11,11,0.16);
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --surface-1:#1a1a19;
+    --page-plane:#0d0d0d;
+    --text-primary:#ffffff;
+    --text-secondary:#c3c2b7;
+    --text-muted:#898781;
+    --grid:#2c2c2a;
+    --baseline:#383835;
+    --border:rgba(255,255,255,0.10);
+    --good:#0ca30c;
+    --critical:#e66767;
+    --warning-bg:rgba(250,178,25,0.14);
+    --warning-fg:#fab219;
+    --warning-border:rgba(250,178,25,0.45);
+    --info-bg:rgba(57,135,229,0.14);
+    --info-fg:#86b6ef;
+    --info-border:rgba(57,135,229,0.4);
+    --series-1:#3987e5;
+    --series-2:#d95926;
+    --series-3:#199e70;
+    --series-4:#c98500;
+    --series-5:#d55181;
+    --series-6:#008300;
+    --series-7:#9085e9;
+    --series-8:#e66767;
+    --muted-line:#6b6a63;
+    --other-line:#6b6a63;
+    --chip-bg:#262624;
+    --chip-bg-active:#ffffff;
+    --chip-fg-active:#0b0b0b;
+    --overlay:rgba(0,0,0,0.55);
+    --shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --surface-1:#1a1a19;
+  --page-plane:#0d0d0d;
+  --text-primary:#ffffff;
+  --text-secondary:#c3c2b7;
+  --text-muted:#898781;
+  --grid:#2c2c2a;
+  --baseline:#383835;
+  --border:rgba(255,255,255,0.10);
+  --good:#0ca30c;
+  --critical:#e66767;
+  --warning-bg:rgba(250,178,25,0.14);
+  --warning-fg:#fab219;
+  --warning-border:rgba(250,178,25,0.45);
+  --info-bg:rgba(57,135,229,0.14);
+  --info-fg:#86b6ef;
+  --info-border:rgba(57,135,229,0.4);
+  --series-1:#3987e5;
+  --series-2:#d95926;
+  --series-3:#199e70;
+  --series-4:#c98500;
+  --series-5:#d55181;
+  --series-6:#008300;
+  --series-7:#9085e9;
+  --series-8:#e66767;
+  --muted-line:#6b6a63;
+  --other-line:#6b6a63;
+  --chip-bg:#262624;
+  --chip-bg-active:#ffffff;
+  --chip-fg-active:#0b0b0b;
+  --overlay:rgba(0,0,0,0.55);
+  --shadow: 0 8px 30px rgba(0,0,0,0.5);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--page-plane);
+  color:var(--text-primary);
+  font-family: system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  -webkit-font-smoothing:antialiased;
+  min-height:100vh;
+}
+.wrap{max-width:1320px;margin:0 auto;padding:12px 16px 48px;}
+header.app-header{
+  display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;
+  gap:10px;padding:14px 4px 12px;
+}
+.app-title{font-size:20px;font-weight:700;letter-spacing:.2px;}
+.app-sub{margin-top:4px;font-size:12.5px;color:var(--text-secondary);display:flex;gap:14px;flex-wrap:wrap;}
+.app-sub span{white-space:nowrap;}
+.theme-btn{
+  border:1px solid var(--border);background:var(--surface-1);color:var(--text-primary);
+  border-radius:999px;padding:7px 14px;font-size:13px;cursor:pointer;line-height:1;
+}
+.theme-btn:hover{border-color:var(--text-muted);}
+
+.card{
+  background:var(--surface-1);border:1px solid var(--border);border-radius:14px;
+}
+.controls{
+  padding:12px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;
+}
+.ctrl-group{display:flex;flex-direction:column;gap:6px;}
+.ctrl-label{font-size:11.5px;color:var(--text-muted);}
+.chip-row{display:flex;gap:6px;flex-wrap:wrap;}
+.chip{
+  border:1px solid var(--border);background:var(--chip-bg);color:var(--text-primary);
+  border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;user-select:none;
+  transition:background .12s,color .12s;white-space:nowrap;
+}
+.chip:hover{border-color:var(--text-muted);}
+.chip.active{background:var(--chip-bg-active);color:var(--chip-fg-active);border-color:var(--chip-bg-active);}
+select.bodytype-select{
+  border:1px solid var(--border);background:var(--chip-bg);color:var(--text-primary);
+  border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;
+}
+.switch-row{display:flex;align-items:center;gap:8px;}
+.switch{
+  position:relative;width:42px;height:24px;border-radius:999px;background:var(--chip-bg);
+  border:1px solid var(--border);cursor:pointer;flex:none;
+}
+.switch .knob{
+  position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;
+  background:var(--text-muted);transition:left .15s,background .15s;
+}
+.switch.on{background:var(--series-1);}
+.switch.on .knob{left:20px;background:#fff;}
+.switch-label{font-size:13px;color:var(--text-secondary);}
+
+.main-grid{display:flex;gap:12px;align-items:flex-start;}
+.chart-panel{flex:1 1 0;min-width:0;padding:10px 6px 6px;}
+.chart-toolbar{display:flex;justify-content:space-between;align-items:center;padding:2px 8px 4px;gap:8px;flex-wrap:wrap;}
+.chart-title{font-size:13.5px;color:var(--text-secondary);}
+.small-btn{
+  border:1px solid var(--border);background:transparent;color:var(--text-secondary);
+  border-radius:7px;padding:5px 10px;font-size:12.5px;cursor:pointer;
+}
+.small-btn:hover{color:var(--text-primary);border-color:var(--text-muted);}
+#chart{width:100%;height:520px;}
+#tableview{display:none;max-height:520px;overflow:auto;padding:0 8px 8px;}
+table.datatable{width:100%;border-collapse:collapse;font-size:12.5px;}
+table.datatable th,table.datatable td{
+  padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap;
+  font-variant-numeric:tabular-nums;
+}
+table.datatable th:first-child,table.datatable td:first-child{text-align:left;position:sticky;left:0;background:var(--surface-1);}
+table.datatable thead th{color:var(--text-muted);font-weight:600;position:sticky;top:0;background:var(--surface-1);}
+
+.legend-panel{
+  width:290px;flex:none;padding:10px 10px 12px;display:flex;flex-direction:column;gap:8px;max-height:580px;
+}
+.legend-search{
+  border:1px solid var(--border);background:var(--page-plane);color:var(--text-primary);
+  border-radius:8px;padding:8px 10px;font-size:13px;width:100%;outline:none;
+}
+.legend-search:focus{border-color:var(--series-1);}
+.legend-meta{font-size:11.5px;color:var(--text-muted);display:flex;justify-content:space-between;}
+.other-toggle-row{display:flex;align-items:flex-start;gap:7px;font-size:11.5px;color:var(--text-secondary);
+  cursor:pointer;line-height:1.4;padding:2px 1px;}
+.other-toggle-row input{flex:none;margin-top:2px;accent-color:var(--other-line);width:13px;height:13px;cursor:pointer;}
+.legend-list{overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:2px;padding-right:2px;}
+.legend-item{
+  display:flex;align-items:center;gap:8px;padding:6px 6px;border-radius:7px;cursor:pointer;font-size:12.5px;
+}
+.legend-item:hover{background:var(--chip-bg);}
+.legend-item .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+.legend-item .rank{width:20px;flex:none;color:var(--text-muted);font-size:11px;text-align:right;font-variant-numeric:tabular-nums;}
+.legend-item .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-primary);}
+.legend-item .val{color:var(--text-secondary);font-size:11.5px;font-variant-numeric:tabular-nums;flex:none;}
+.legend-item input[type=checkbox]{flex:none;accent-color:var(--series-1);width:14px;height:14px;cursor:pointer;}
+.legend-item.dim .name,.legend-item.dim .val{opacity:.45;}
+.legend-item.other .dot{border:1px dashed var(--other-line);background:transparent;}
+
+.footnote{font-size:11.5px;color:var(--text-muted);line-height:1.7;padding:14px 6px 0;}
+
+.caliber-badge{
+  display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
+  background:var(--info-bg);color:var(--info-fg);border:1px solid var(--info-border);
+  border-radius:999px;padding:3px 10px;cursor:help;white-space:nowrap;
+}
+.caliber-inline{
+  display:inline-flex;align-items:center;font-size:11.5px;font-weight:600;
+  background:var(--info-bg);color:var(--info-fg);border:1px solid var(--info-border);
+  border-radius:6px;padding:1px 8px;
+}
+.about-block{margin-top:12px;padding:12px 16px;}
+.about-block summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--text-primary);padding:2px 0;}
+.about-block summary:hover{color:var(--series-1);}
+.about-body{margin-top:10px;font-size:12.5px;color:var(--text-secondary);line-height:1.8;}
+.about-body p{margin:0 0 10px;}
+.about-body p:last-child{margin-bottom:0;}
+.about-body b{color:var(--text-primary);}
+
+.comp-tooltip{
+  position:fixed;z-index:60;max-width:300px;pointer-events:none;
+  background:var(--surface-1);border:1px solid var(--border);border-radius:10px;
+  box-shadow:var(--shadow);padding:10px 12px;font-size:12px;color:var(--text-secondary);
+  line-height:1.6;display:none;
+}
+.comp-tooltip.show{display:block;}
+.comp-tooltip .ct-head{color:var(--text-primary);font-weight:600;margin-bottom:4px;}
+.comp-tooltip .ct-sub{color:var(--text-muted);margin-bottom:6px;}
+.comp-tooltip .ct-row{display:flex;justify-content:space-between;gap:10px;}
+.comp-tooltip .ct-row .ct-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.comp-tooltip .ct-row .ct-val{flex:none;font-variant-numeric:tabular-nums;color:var(--text-primary);}
+.comp-tooltip .ct-more{color:var(--series-1);margin-top:4px;}
+
+.other-toggle-row{display:flex;align-items:flex-start;gap:8px;font-size:11.5px;color:var(--text-secondary);cursor:pointer;line-height:1.5;}
+.other-toggle-row input{margin-top:2px;flex:none;accent-color:var(--series-1);}
+
+.scope-hint{font-size:11.5px;color:var(--text-muted);margin-bottom:8px;}
+.scope-subhead{font-size:12px;font-weight:600;color:var(--text-primary);margin:10px 0 4px;}
+.scope-table-wrap{max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;}
+table.scope-table{width:100%;border-collapse:collapse;font-size:12px;}
+table.scope-table th,table.scope-table td{padding:5px 8px;text-align:right;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums;white-space:nowrap;}
+table.scope-table th:first-child,table.scope-table td:first-child{text-align:left;}
+table.scope-table td:first-child{overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+table.scope-table thead th{position:sticky;top:0;background:var(--surface-1);color:var(--text-muted);font-weight:600;}
+.scope-bar-cell{position:relative;}
+.scope-bar{position:absolute;left:0;top:0;bottom:0;background:var(--series-1);opacity:.12;z-index:0;}
+.scope-model-line{font-size:12.5px;color:var(--text-secondary);padding:4px 0;}
+.scope-model-line b{color:var(--text-primary);}
+
+/* 抽屉 */
+.drawer-backdrop{
+  position:fixed;inset:0;background:var(--overlay);opacity:0;pointer-events:none;
+  transition:opacity .18s;z-index:40;
+}
+.drawer-backdrop.open{opacity:1;pointer-events:auto;}
+.drawer{
+  position:fixed;top:0;right:0;height:100%;width:420px;max-width:92vw;
+  background:var(--surface-1);box-shadow:var(--shadow);z-index:41;
+  transform:translateX(100%);transition:transform .2s ease;
+  display:flex;flex-direction:column;
+}
+.drawer.open{transform:translateX(0);}
+.drawer-head{padding:16px 18px 10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.drawer-head h2{margin:0;font-size:17px;}
+.drawer-head .sub{font-size:12px;color:var(--text-muted);margin-top:4px;}
+.drawer-close{border:none;background:transparent;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;padding:4px;}
+.drawer-close:hover{color:var(--text-primary);}
+.drawer-body{flex:1;overflow-y:auto;padding:14px 18px 28px;}
+.drawer-section{margin-bottom:22px;}
+.drawer-section h3{font-size:13px;color:var(--text-muted);margin:0 0 8px;font-weight:600;letter-spacing:.2px;}
+.stat-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+.stat-tile{flex:1;min-width:110px;background:var(--page-plane);border:1px solid var(--border);border-radius:10px;padding:9px 11px;}
+.stat-tile .lbl{font-size:11px;color:var(--text-muted);}
+.stat-tile .val{font-size:17px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums;}
+.stat-tile .delta{font-size:11.5px;margin-top:2px;font-variant-numeric:tabular-nums;}
+.delta.up{color:var(--good);}
+.delta.down{color:var(--critical);}
+#drawerBar{width:100%;height:180px;}
+table.mtable{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
+table.mtable th,table.mtable td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums;}
+table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
+.news-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
+.news-card a{color:var(--text-primary);text-decoration:none;font-size:13px;font-weight:600;line-height:1.4;}
+.news-card a:hover{text-decoration:underline;}
+.news-meta{font-size:11px;color:var(--text-muted);margin-top:5px;}
+.news-empty{font-size:12.5px;color:var(--text-muted);padding:14px 0;text-align:center;border:1px dashed var(--border);border-radius:10px;}
+
+@media (max-width: 880px){
+  .main-grid{flex-direction:column;}
+  .legend-panel{width:100%;max-height:320px;}
+  #chart{height:380px;}
+  .drawer{width:100%;max-width:100%;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app-header">
+    <div>
+      <div class="app-title">中国汽车销量看板</div>
+      <div class="app-sub">
+        <span id="coverageText">@@COVERAGE_TEXT@@</span>
+        <span id="updateText">@@UPDATE_TEXT@@</span>
+        <span id="metaCounts"></span>
+        <span class="caliber-badge" title="@@CALIBER_LONG@@">ℹ @@CALIBER_SHORT@@</span>
+      </div>
+    </div>
+    <button class="theme-btn" id="themeBtn" type="button">🌓 切换主题</button>
+  </header>
+
+  <div class="card controls">
+    <div class="ctrl-group">
+      <div class="ctrl-label">年份</div>
+      <div class="chip-row" id="yearChips"></div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">粒度</div>
+      <div class="chip-row" id="granChips">
+        <div class="chip" data-gran="manu">厂商</div>
+        <div class="chip" data-gran="brand">品牌</div>
+        <div class="chip" data-gran="model">车体类型 → 车型</div>
+      </div>
+    </div>
+    <div class="ctrl-group" id="bodyTypeGroup" style="display:none;">
+      <div class="ctrl-label">车体类型</div>
+      <select class="bodytype-select" id="bodyTypeSelect"></select>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">能源类型</div>
+      <div class="chip-row" id="energyChips">
+        <div class="chip" data-energy="all">全部</div>
+        <div class="chip" data-energy="fuel">燃油</div>
+        <div class="chip" data-energy="ev">新能源</div>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">图表模式</div>
+      <div class="switch-row">
+        <span class="switch-label">独立折线</span>
+        <div class="switch" id="modeSwitch"><div class="knob"></div></div>
+        <span class="switch-label">堆积面积</span>
+      </div>
+    </div>
+    <div class="ctrl-group">
+      <div class="ctrl-label">&nbsp;</div>
+      <button class="small-btn" id="resetBtn" type="button">重置为 Top 20</button>
+    </div>
+  </div>
+
+  <div class="card main-grid">
+    <div class="chart-panel">
+      <div class="chart-toolbar">
+        <div class="chart-title" id="chartTitle"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="small-btn" id="downloadCsvBtn" type="button" style="display:none;">下载 CSV</button>
+          <button class="small-btn" id="tableToggleBtn" type="button">切换为表格视图</button>
+        </div>
+      </div>
+      <div id="chart"></div>
+      <div id="tableview"></div>
+    </div>
+    <div class="legend-panel">
+      <input class="legend-search" id="legendSearch" type="text" placeholder="搜索品牌 / 厂商 / 车型，勾选后加入图表">
+      <label class="other-toggle-row" for="otherToggle">
+        <input type="checkbox" id="otherToggle">
+        <span>显示「其他」聚合线（未展示对象之和；独立折线默认关，堆积面积默认开）</span>
+      </label>
+      <div class="legend-meta"><span id="legendCount"></span><span id="legendShownCount"></span></div>
+      <div class="legend-list" id="legendList"></div>
+    </div>
+  </div>
+
+  <div class="footnote">
+    折线图：默认展示当年 Top 20（按年初至今累计销量排名），前 8 名使用可辨识色，其余以及「其他」聚合线为淡灰色，
+    悬停/点击线条或图例可高亮；勾选右侧列表可手动增补关注的对象。2026 年数据仅至 7 月，后续月份不补零，折线在此处断开。
+    点击任意折线或图例条目可在右侧查看该对象的月度明细、同比、统计范围与相关动态。
+    悬停「厂商」「品牌」粒度的折线或图例，会额外提示该对象当前统计范围包含哪些车型；「车型」是本工具的最小统计单位，不再细分。
+  </div>
+
+  <details class="about-block card" id="aboutBlock">
+    <summary>关于数据 —— 车型 / 厂商 / 品牌 三层口径说明</summary>
+    <div class="about-body">
+      <p><b>销量口径：</b><span class="caliber-inline">@@CALIBER_SHORT@@</span> —— @@CALIBER_LONG@@</p>
+      <p><b>三层关系：</b>「车型」是本工具的最小统计单位（每一行原始数据对应一个车体类型下的一个车型）；
+      「厂商」是数据源里的原始字段（如「长安汽车」「上汽大众」），同一品牌在不同厂商生产会被算作不同厂商；
+      「品牌」由映射字典归并而来（解析优先级：车型→品牌 优先，其次厂商→品牌，都没有则退回厂商原值作为品牌名），
+      同一品牌旗下可能横跨多个厂商，一个厂商也可能对应多个品牌——这两种情况在本工具里都按<b>车型</b>逐条拆分统计，
+      不做整厂商/整品牌层面的近似归并。</p>
+      <p><b>一厂多牌的情况（按当前数据统计得出，非固定列表）：</b>@@MULTI_BRAND_DESC@@</p>
+      <p>当前数据共 @@MANU_COUNT@@ 个厂商、@@BRAND_COUNT@@ 个品牌、@@MODEL_COUNT@@ 个车型。
+      如果你发现某个「品牌」或「厂商」下的车型构成与预期不符，可以在图表里悬停/点击该对象查看右侧抽屉的
+      「统计范围」一节——那里会完整列出当前筛选条件下计入该对象的每一个车型，不做省略，方便逐条核对。</p>
+    </div>
+  </details>
+</div>
+
+<div class="comp-tooltip" id="compTooltip"></div>
+
+<div class="drawer-backdrop" id="drawerBackdrop"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <div>
+      <h2 id="drawerTitle">--</h2>
+      <div class="sub" id="drawerSub">--</div>
+    </div>
+    <button class="drawer-close" id="drawerClose" type="button">✕</button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-section">
+      <div class="stat-row" id="drawerStats"></div>
+    </div>
+    <div class="drawer-section">
+      <h3>逐月销量（当年）</h3>
+      <div id="drawerBar"></div>
+      <table class="mtable" id="drawerTable"></table>
+    </div>
+    <div class="drawer-section" id="scopeSection">
+      <h3 id="scopeTitle">统计范围</h3>
+      <div id="scopeBody"></div>
+    </div>
+    <div class="drawer-section">
+      <h3>相关动态</h3>
+      <div id="drawerNews"></div>
+    </div>
+  </div>
+</div>
+
+@@ECHARTS_TAG@@
+<script>
+(function(){
+"use strict";
+var RAW = @@DATA_JSON@@;
+var NEWS = @@NEWS_JSON@@;
+var META = @@META_JSON@@;
+
+var PALETTE = {
+  light: ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948'],
+  dark:  ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767']
+};
+
+/* ---------------- 主题 ---------------- */
+function getSystemDark(){
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+function currentTheme(){
+  var t = document.documentElement.getAttribute('data-theme');
+  if(t === 'dark' || t === 'light') return t;
+  return getSystemDark() ? 'dark' : 'light';
+}
+function applyTheme(t){
+  if(t){ document.documentElement.setAttribute('data-theme', t); }
+  else { document.documentElement.removeAttribute('data-theme'); }
+  try{ localStorage.setItem('cn-auto-dash-theme', t || ''); }catch(e){}
+  renderAll();
+}
+(function initTheme(){
+  var saved = null;
+  try{ saved = localStorage.getItem('cn-auto-dash-theme'); }catch(e){}
+  if(saved){ document.documentElement.setAttribute('data-theme', saved); }
+})();
+document.getElementById('themeBtn').addEventListener('click', function(){
+  var next = currentTheme() === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+});
+if(window.matchMedia){
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(){
+    if(!document.documentElement.getAttribute('data-theme')) renderAll();
+  });
+}
+function cssVar(name){
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+/* ---------------- 状态 ---------------- */
+var YEARS = META.years.slice().sort();
+var state = {
+  year: YEARS[YEARS.length-1],
+  gran: 'manu',           // manu | brand | model
+  bodyType: 0,             // index into RAW.bodyTypes, used when gran==='model'
+  energy: 'all',           // all | fuel | ev
+  stacked: false,
+  shown: new Set(),        // 当前勾选(展示)的实体 key 集合
+  searchTerm: '',
+  hoverKey: null,
+  tableView: false,
+  otherVisible: false,    // 独立折线模式默认不显示「其他」聚合线
+  otherManual: false      // 用户是否手动改过「其他」显示开关（true 时不再随模式切换自动覆盖）
+};
+
+/* ---------------- 数据访问辅助 ---------------- */
+function ymIndex(year, month){ return (year-2024)*12 + (month-1); }
+function lastMonthOfYear(year){
+  var idx = Math.min(12, RAW.nMonths - (year-2024)*12);
+  return Math.max(0, idx);
+}
+
+function currentDim(){
+  if(state.gran === 'manu') return RAW.manu;
+  if(state.gran === 'brand') return RAW.brand;
+  // model: 按当前车体类型过滤
+  var m = RAW.model;
+  var names=[], fuel=[], ev=[];
+  for(var i=0;i<m.n.length;i++){
+    if(RAW.modelBody[i] === state.bodyType){
+      names.push(m.n[i]); fuel.push(m.f[i]); ev.push(m.e[i]);
+    }
+  }
+  return {n:names, f:fuel, e:ev};
+}
+function entityKey(gran, bodyType, name){
+  return gran + '|' + (gran==='model' ? bodyType+'|' : '') + name;
+}
+function parseEntityKey(key){
+  var gran = key.split('|',1)[0];
+  if(gran==='model'){
+    var rest = key.slice(gran.length+1);
+    var pipeIdx = rest.indexOf('|');
+    return {gran:gran, bodyType:parseInt(rest.slice(0,pipeIdx),10), name:rest.slice(pipeIdx+1)};
+  }
+  return {gran:gran, name:key.slice(gran.length+1)};
+}
+function monthlyValue(fuelArr, evArr, year, month){
+  var idx = ymIndex(year, month);
+  if(idx < 0 || idx >= RAW.nMonths) return null;
+  var f = fuelArr[idx]||0, e = evArr[idx]||0;
+  if(state.energy==='fuel') return f;
+  if(state.energy==='ev') return e;
+  return f+e;
+}
+
+/* ---------------- 统计范围 / 构成审计（厂商·品牌 -> 车型） ----------------
+   modelManu[i] / modelBrand[i] 是车型 i 对应的厂商 / 品牌在 RAW.manu.n / RAW.brand.n
+   里的下标，构建时已从原始数据里逐行核验过一一对应关系。这里只做聚合，不猜测。 */
+function findModelIndex(bodyType, name){
+  for(var i=0;i<RAW.model.n.length;i++){
+    if(RAW.modelBody[i]===bodyType && RAW.model.n[i]===name) return i;
+  }
+  return -1;
+}
+function modelYTD(i, year){
+  var lastM = lastMonthOfYear(year);
+  var sum = 0;
+  for(var m=1;m<=lastM;m++){
+    var v = monthlyValueAt(RAW.model.f[i], RAW.model.e[i], year, m);
+    if(v!=null) sum += v;
+  }
+  return sum;
+}
+// 与 monthlyValue 相同的能源过滤逻辑，但允许显式传入 year（供审计计算复用，不依赖全局 state.year）
+function monthlyValueAt(fuelArr, evArr, year, month){
+  var idx = ymIndex(year, month);
+  if(idx < 0 || idx >= RAW.nMonths) return null;
+  var f = fuelArr[idx]||0, e = evArr[idx]||0;
+  if(state.energy==='fuel') return f;
+  if(state.energy==='ev') return e;
+  return f+e;
+}
+// gran: 'manu' | 'brand'；返回当前 year/energy 筛选下，归属于该厂商/品牌的全部车型（销量>0），按销量降序
+function entityModels(gran, name, year){
+  var idxArr = gran==='manu' ? RAW.modelManu : RAW.modelBrand;
+  var nameArr = gran==='manu' ? RAW.manu.n : RAW.brand.n;
+  var targetIdx = nameArr.indexOf(name);
+  if(targetIdx<0) return [];
+  var out = [];
+  for(var i=0;i<RAW.model.n.length;i++){
+    if(idxArr[i]!==targetIdx) continue;
+    var ytd = modelYTD(i, year);
+    if(ytd<=0) continue;
+    out.push({
+      name: RAW.model.n[i],
+      bodyType: RAW.bodyTypes[RAW.modelBody[i]],
+      manuName: RAW.manu.n[RAW.modelManu[i]],
+      brandName: RAW.brand.n[RAW.modelBrand[i]],
+      ytd: ytd
+    });
+  }
+  out.sort(function(a,b){ return b.ytd-a.ytd; });
+  return out;
+}
+// 把车型列表按所属厂商分组求和（供"品牌"粒度展示"构成厂商"）
+function groupByManu(models){
+  var map = {}, order = [];
+  models.forEach(function(m){
+    if(!map[m.manuName]){ map[m.manuName] = {name:m.manuName, ytd:0, count:0}; order.push(m.manuName); }
+    map[m.manuName].ytd += m.ytd;
+    map[m.manuName].count += 1;
+  });
+  var out = order.map(function(k){ return map[k]; });
+  out.sort(function(a,b){ return b.ytd-a.ytd; });
+  return out;
+}
+// 车型粒度：给定 (bodyType, modelName)，返回其所属厂商/品牌名，用于抽屉里的"所属厂商/所属品牌"提示
+function modelOwnership(bodyType, name){
+  var i = findModelIndex(bodyType, name);
+  if(i<0) return null;
+  return {manuName: RAW.manu.n[RAW.modelManu[i]], brandName: RAW.brand.n[RAW.modelBrand[i]]};
+}
+
+// 计算当前 年/粒度/能源 下所有实体的：月度值(1..12,越界为null)、YTD累计、排名
+function computeUniverse(){
+  var dim = currentDim();
+  var lastM = lastMonthOfYear(state.year);
+  var entities = [];
+  for(var i=0;i<dim.n.length;i++){
+    var monthly = [];
+    var cum = 0, cumArr = [];
+    for(var m=1;m<=12;m++){
+      if(m<=lastM){
+        var v = monthlyValue(dim.f[i], dim.e[i], state.year, m);
+        monthly.push(v);
+        cum += (v||0);
+        cumArr.push(cum);
+      } else {
+        monthly.push(null);
+        cumArr.push(null);
+      }
+    }
+    entities.push({
+      name: dim.n[i],
+      key: entityKey(state.gran, state.bodyType, dim.n[i]),
+      monthly: monthly,
+      cum: cumArr,
+      ytd: cum
+    });
+  }
+  entities.sort(function(a,b){ return b.ytd - a.ytd; });
+  entities.forEach(function(e,idx){ e.rank = idx+1; });
+  return {entities:entities, lastMonth:lastM};
+}
+
+// 同期对比专用：计算某年"截至第 capMonth 月"（不是该年自己的自然可得月份）的累计与排名。
+// 用于同比 / 排名对比——上年数据即使是完整年份，也只应该累计到跟当前选中年份同一个月份，
+// 否则会出现"今年7个月 vs 去年12个月"的跨期比较错误。
+function computeUniverseAt(year, capMonth){
+  var dim = currentDim();
+  var cap = Math.max(0, Math.min(12, capMonth));
+  var entities = [];
+  for(var i=0;i<dim.n.length;i++){
+    var cum = 0;
+    for(var m=1;m<=cap;m++){
+      var v = monthlyValueAt(dim.f[i], dim.e[i], year, m);
+      if(v!=null) cum += v;
+    }
+    entities.push({
+      name: dim.n[i],
+      key: entityKey(state.gran, state.bodyType, dim.n[i]),
+      ytd: cum
+    });
+  }
+  entities.sort(function(a,b){ return b.ytd - a.ytd; });
+  entities.forEach(function(e,idx){ e.rank = idx+1; });
+  return entities;
+}
+
+function ensureDefaultShown(universe){
+  // 粒度/车体类型变化后重置为 Top20；否则保留用户勾选（按 key 过滤已不存在的）
+  var valid = new Set(universe.entities.map(function(e){return e.key;}));
+  var keep = new Set();
+  state.shown.forEach(function(k){ if(valid.has(k)) keep.add(k); });
+  state.shown = keep;
+}
+function resetToTop20(){
+  var u = computeUniverse();
+  state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;}));
+}
+
+/* ---------------- 顶部控件渲染 ---------------- */
+function renderYearChips(){
+  var el = document.getElementById('yearChips');
+  el.innerHTML='';
+  YEARS.forEach(function(y){
+    var c = document.createElement('div');
+    c.className = 'chip' + (y===state.year?' active':'');
+    c.setAttribute('data-year', y);
+    c.textContent = y + '年';
+    c.addEventListener('click', function(){
+      state.year = y; resetToTop20(); renderAll();
+    });
+    el.appendChild(c);
+  });
+}
+document.querySelectorAll('#granChips .chip').forEach(function(c){
+  c.addEventListener('click', function(){
+    state.gran = c.getAttribute('data-gran');
+    document.getElementById('bodyTypeGroup').style.display = state.gran==='model' ? '' : 'none';
+    resetToTop20();
+    renderAll();
+  });
+});
+document.querySelectorAll('#energyChips .chip').forEach(function(c){
+  c.addEventListener('click', function(){
+    state.energy = c.getAttribute('data-energy');
+    resetToTop20();
+    renderAll();
+  });
+});
+var bodySelect = document.getElementById('bodyTypeSelect');
+RAW.bodyTypes.forEach(function(bt,i){
+  var opt = document.createElement('option');
+  opt.value = i; opt.textContent = bt;
+  bodySelect.appendChild(opt);
+});
+bodySelect.addEventListener('change', function(){
+  state.bodyType = parseInt(bodySelect.value,10);
+  resetToTop20();
+  renderAll();
+});
+document.getElementById('modeSwitch').addEventListener('click', function(){
+  state.stacked = !state.stacked;
+  if(!state.otherManual){
+    // 未手动改过开关时，按模式套用默认值：独立折线默认关闭「其他」，堆积面积默认打开
+    state.otherVisible = state.stacked;
+  }
+  renderAll();
+});
+document.getElementById('otherToggle').addEventListener('change', function(e){
+  state.otherVisible = e.target.checked;
+  state.otherManual = true;
+  renderAll();
+});
+document.getElementById('resetBtn').addEventListener('click', function(){
+  resetToTop20(); renderAll();
+});
+document.getElementById('legendSearch').addEventListener('input', function(e){
+  state.searchTerm = e.target.value.trim();
+  renderLegend(lastUniverse);
+});
+document.getElementById('tableToggleBtn').addEventListener('click', function(){
+  state.tableView = !state.tableView;
+  document.getElementById('chart').style.display = state.tableView ? 'none' : '';
+  document.getElementById('tableview').style.display = state.tableView ? 'block' : 'none';
+  document.getElementById('downloadCsvBtn').style.display = state.tableView ? '' : 'none';
+  document.getElementById('tableToggleBtn').textContent = state.tableView ? '切换为图表视图' : '切换为表格视图';
+  if(state.tableView) renderTable(lastUniverse);
+});
+document.getElementById('downloadCsvBtn').addEventListener('click', function(){
+  downloadCsv(lastUniverse);
+});
+
+function syncControlStates(){
+  document.querySelectorAll('#yearChips .chip').forEach(function(c){
+    c.classList.toggle('active', String(state.year)===c.getAttribute('data-year'));
+  });
+  document.querySelectorAll('#granChips .chip').forEach(function(c){
+    c.classList.toggle('active', c.getAttribute('data-gran')===state.gran);
+  });
+  document.querySelectorAll('#energyChips .chip').forEach(function(c){
+    c.classList.toggle('active', c.getAttribute('data-energy')===state.energy);
+  });
+  document.getElementById('modeSwitch').classList.toggle('on', state.stacked);
+  document.getElementById('otherToggle').checked = state.otherVisible;
+  bodySelect.value = state.bodyType;
+  document.getElementById('bodyTypeGroup').style.display = state.gran==='model' ? '' : 'none';
+}
+
+/* ---------------- 主图表 ---------------- */
+var chart = echarts.init(document.getElementById('chart'));
+window.addEventListener('resize', function(){ chart.resize(); });
+var lastUniverse = null;
+
+function granLabel(){
+  if(state.gran==='manu') return '厂商';
+  if(state.gran==='brand') return '品牌';
+  return '车型（' + RAW.bodyTypes[state.bodyType] + '）';
+}
+function energyLabel(){
+  return state.energy==='all' ? '全部能源' : (state.energy==='fuel' ? '燃油' : '新能源');
+}
+
+// 计算「其他」= 全部实体 - 已展示实体，按月合计后再累计为 YTD；供图表与表格/导出共用同一份口径
+function computeOther(universe, shownList){
+  var shownKeys = new Set(shownList.map(function(e){return e.key;}));
+  var otherMonthly = [0,0,0,0,0,0,0,0,0,0,0,0];
+  var totalMonthly = [0,0,0,0,0,0,0,0,0,0,0,0];
+  universe.entities.forEach(function(e){
+    for(var m=0;m<12;m++){
+      if(e.monthly[m]==null) continue;
+      totalMonthly[m]+= e.monthly[m];
+      if(!shownKeys.has(e.key)) otherMonthly[m]+= e.monthly[m];
+    }
+  });
+  var hasOther = false;
+  var cum=[]; var run=0; var monthly=[];
+  for(var m=0;m<12;m++){
+    if(m>=universe.lastMonth){ cum.push(null); monthly.push(null); continue; }
+    var diff = otherMonthly[m];
+    if(diff>0.4) hasOther = true;
+    run += diff;
+    cum.push(run);
+    monthly.push(diff);
+  }
+  return {hasOther:hasOther, cum:cum, monthly:monthly};
+}
+
+function buildSeries(universe){
+  var shownList = universe.entities.filter(function(e){ return state.shown.has(e.key); });
+  // 颜色分配：仅按“默认Top20排名”的前8名给主色，其余（含手动增补）一律淡灰
+  var top20Keys = universe.entities.slice(0,20).map(function(e){return e.key;});
+  var top8Keys = universe.entities.slice(0,8).map(function(e){return e.key;});
+  var palette = PALETTE[currentTheme()];
+  var mutedColor = cssVar('--muted-line');
+  var otherColor = cssVar('--other-line');
+
+  var months = [1,2,3,4,5,6,7,8,9,10,11,12].map(function(m){ return m+'月'; });
+  var series = [];
+  shownList.forEach(function(e){
+    var top8idx = top8Keys.indexOf(e.key);
+    var color = top8idx>=0 ? palette[top8idx] : mutedColor;
+    series.push({
+      id: e.key,
+      name: e.name,
+      type: 'line',
+      data: e.cum,
+      showSymbol:false,
+      symbolSize:8,
+      connectNulls:false,
+      lineStyle:{width: top8idx>=0?2:1.5, color: color},
+      itemStyle:{color: color},
+      areaStyle: state.stacked ? {opacity:0.55, color: color} : null,
+      stack: state.stacked ? 'total' : null,
+      emphasis:{focus:'series', lineStyle:{width: (top8idx>=0?3:2.5)}},
+      blur:{lineStyle:{opacity:0.15},areaStyle:{opacity:0.1}},
+      z: top8idx>=0 ? 10-top8idx : 2
+    });
+  });
+  // 其他 = 全部实体 - 已展示实体
+  var otherInfo = computeOther(universe, shownList);
+  if(otherInfo.hasOther && state.otherVisible){
+    series.push({
+      id:'__other__', name:'其他', type:'line', data:otherInfo.cum,
+      showSymbol:false, connectNulls:false,
+      lineStyle:{width:1.5,type:'dashed',color:otherColor},
+      itemStyle:{color:otherColor},
+      areaStyle: state.stacked ? {opacity:0.35,color:otherColor} : null,
+      stack: state.stacked ? 'total' : null,
+      emphasis:{focus:'series'}, blur:{lineStyle:{opacity:0.15}},
+      z:1
+    });
+  }
+  return {months:months, series:series, otherInfo:otherInfo};
+}
+
+function renderChart(universe){
+  var built = buildSeries(universe);
+  var isDark = currentTheme()==='dark';
+  var textColor = cssVar('--text-secondary');
+  var mutedColor = cssVar('--text-muted');
+  var gridColor = cssVar('--grid');
+  var surface = cssVar('--surface-1');
+
+  var option = {
+    backgroundColor:'transparent',
+    animationDuration:280,
+    textStyle:{color:textColor, fontFamily:'inherit'},
+    grid:{left:56,right:20,top:28,bottom:36,containLabel:true},
+    xAxis:{
+      type:'category', data: built.months, boundaryGap:false,
+      axisLine:{lineStyle:{color: cssVar('--baseline')}},
+      axisTick:{show:false},
+      axisLabel:{color:mutedColor, fontSize:11.5}
+    },
+    yAxis:{
+      type:'value',
+      splitLine:{lineStyle:{color:gridColor}},
+      axisLabel:{color:mutedColor, fontSize:11.5, formatter:function(v){return formatCompact(v);}}
+    },
+    tooltip:{
+      trigger:'axis',
+      backgroundColor: surface,
+      borderColor: cssVar('--border'),
+      textStyle:{color: cssVar('--text-primary'), fontSize:12.5},
+      confine:true,
+      order:'valueDesc',
+      formatter: function(params){
+        if(!params || !params.length) return '';
+        var lines = [params[0].axisValueLabel + '（' + state.year + '年 累计）'];
+        params.forEach(function(p){
+          if(p.value==null) return;
+          lines.push(
+            '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+p.color+';margin-right:6px;"></span>'+
+            escapeHtml(p.seriesName) + '：<b style="float:right;margin-left:14px;">' + formatNum(p.value) + '</b>'
+          );
+        });
+        return lines.join('<br/>');
+      }
+    },
+    legend:{show:false},
+    series: built.series
+  };
+  chart.setOption(option, true);
+}
+
+chart.on('click', function(params){
+  if(params.seriesId==='__other__'){ return; }
+  if(params.seriesName){ openDrawer(params.seriesId, params.seriesName); }
+});
+chart.on('mouseover', {seriesIndex:'all'}, function(params){
+  if(params.seriesId) highlightKey(params.seriesId);
+});
+chart.getZr().on('globalout', function(){ highlightKey(null); hideCompTooltip(); });
+chart.getZr().on('mousemove', function(evt){
+  if(state.hoverKey && state.hoverKey!=='__other__' && (state.gran==='manu' || state.gran==='brand')){
+    var parsed = parseEntityKey(state.hoverKey);
+    var rect = document.getElementById('chart').getBoundingClientRect();
+    showCompTooltip(rect.left + evt.offsetX, rect.top + evt.offsetY, parsed.gran, parsed.name);
+  } else {
+    hideCompTooltip();
+  }
+});
+
+function highlightKey(key){
+  state.hoverKey = key;
+  chart.dispatchAction({type:'downplay'});
+  if(key){ chart.dispatchAction({type:'highlight', seriesId:key}); }
+  renderLegendDim();
+}
+
+/* ---------------- 构成提示（悬浮小卡片，仅厂商/品牌粒度） ---------------- */
+var compTooltipEl = document.getElementById('compTooltip');
+function buildCompNode(gran, name){
+  var frag = document.createDocumentFragment();
+  var models = entityModels(gran, name, state.year);
+  var head = document.createElement('div'); head.className='ct-head';
+  if(models.length===0){
+    head.textContent = (gran==='manu'?'厂商「':'品牌「')+name+'」';
+    frag.appendChild(head);
+    var subE = document.createElement('div'); subE.className='ct-sub';
+    subE.textContent = '当前筛选（'+state.year+'年 · '+energyLabel()+'）下暂无销量数据';
+    frag.appendChild(subE);
+    return frag;
+  }
+  if(gran==='manu'){
+    head.textContent = '厂商「'+name+'」· 包含 '+models.length+' 个车型';
+    frag.appendChild(head);
+  } else {
+    var manuGroups = groupByManu(models);
+    head.textContent = '品牌「'+name+'」· 由 '+manuGroups.length+' 个厂商、'+models.length+' 个车型构成';
+    frag.appendChild(head);
+    var sub = document.createElement('div'); sub.className='ct-sub';
+    sub.textContent = '厂商：'+manuGroups.map(function(g){return g.name;}).join('、');
+    frag.appendChild(sub);
+  }
+  models.slice(0,5).forEach(function(m,i){
+    var row = document.createElement('div'); row.className='ct-row';
+    var nm = document.createElement('span'); nm.className='ct-name'; nm.textContent=(i+1)+'. '+m.name;
+    var val = document.createElement('span'); val.className='ct-val'; val.textContent=formatCompact(m.ytd);
+    row.appendChild(nm); row.appendChild(val);
+    frag.appendChild(row);
+  });
+  if(models.length>5){
+    var more = document.createElement('div'); more.className='ct-more';
+    more.textContent = '…等 '+models.length+' 个，点击查看全部';
+    frag.appendChild(more);
+  }
+  return frag;
+}
+function showCompTooltip(clientX, clientY, gran, name){
+  if(gran!=='manu' && gran!=='brand'){ hideCompTooltip(); return; }
+  compTooltipEl.innerHTML='';
+  compTooltipEl.appendChild(buildCompNode(gran, name));
+  compTooltipEl.classList.add('show');
+  positionCompTooltip(clientX, clientY);
+}
+function positionCompTooltip(clientX, clientY){
+  var pad = 14;
+  compTooltipEl.style.left='0px'; compTooltipEl.style.top='0px';
+  var w = compTooltipEl.offsetWidth || 280;
+  var h = compTooltipEl.offsetHeight || 100;
+  var x = clientX + pad, y = clientY + pad;
+  if(x + w > window.innerWidth - 8) x = Math.max(8, clientX - w - pad);
+  if(y + h > window.innerHeight - 8) y = Math.max(8, window.innerHeight - h - 8);
+  compTooltipEl.style.left = x+'px';
+  compTooltipEl.style.top = y+'px';
+}
+function hideCompTooltip(){
+  compTooltipEl.classList.remove('show');
+}
+
+/* ---------------- 图例面板 ---------------- */
+function renderLegend(universe){
+  lastUniverse = universe;
+  var listEl = document.getElementById('legendList');
+  listEl.innerHTML='';
+  var term = state.searchTerm.toLowerCase();
+  var top8Keys = universe.entities.slice(0,8).map(function(e){return e.key;});
+  var palette = PALETTE[currentTheme()];
+  var mutedColor = cssVar('--muted-line');
+
+  var shownCount = state.shown.size;
+  var filtered = universe.entities.filter(function(e){
+    if(!term) return true;
+    return e.name.toLowerCase().indexOf(term) >= 0;
+  });
+  // 排序：已勾选优先按 rank，其余按 rank
+  filtered.sort(function(a,b){ return a.rank-b.rank; });
+
+  filtered.forEach(function(e){
+    var row = document.createElement('div');
+    row.className='legend-item';
+    row.setAttribute('data-key', e.key);
+
+    var cb = document.createElement('input');
+    cb.type='checkbox';
+    cb.checked = state.shown.has(e.key);
+    cb.addEventListener('change', function(){
+      if(cb.checked) state.shown.add(e.key); else state.shown.delete(e.key);
+      renderAll();
+    });
+    row.appendChild(cb);
+
+    var rankEl = document.createElement('span');
+    rankEl.className='rank'; rankEl.textContent = '#'+e.rank;
+    row.appendChild(rankEl);
+
+    var dot = document.createElement('span');
+    dot.className='dot';
+    var top8idx = top8Keys.indexOf(e.key);
+    dot.style.background = state.shown.has(e.key) ? (top8idx>=0?palette[top8idx]:mutedColor) : 'transparent';
+    dot.style.border = state.shown.has(e.key) ? 'none' : '1px solid ' + mutedColor;
+    row.appendChild(dot);
+
+    var nameEl = document.createElement('span');
+    nameEl.className='name'; nameEl.textContent = e.name;
+    row.appendChild(nameEl);
+
+    var valEl = document.createElement('span');
+    valEl.className='val'; valEl.textContent = formatCompact(e.ytd);
+    row.appendChild(valEl);
+
+    row.addEventListener('mouseenter', function(){ highlightKey(e.key); });
+    row.addEventListener('mousemove', function(evt){
+      if(state.gran==='manu' || state.gran==='brand'){
+        showCompTooltip(evt.clientX, evt.clientY, state.gran, e.name);
+      }
+    });
+    row.addEventListener('mouseleave', function(){ highlightKey(null); hideCompTooltip(); });
+    row.addEventListener('click', function(evt){
+      if(evt.target===cb) return;
+      hideCompTooltip();
+      openDrawer(e.key, e.name);
+    });
+
+    listEl.appendChild(row);
+  });
+
+  document.getElementById('legendCount').textContent = filtered.length + ' 个对象';
+  document.getElementById('legendShownCount').textContent = '已选 ' + shownCount;
+  renderLegendDim();
+}
+function renderLegendDim(){
+  document.querySelectorAll('.legend-item').forEach(function(row){
+    var k = row.getAttribute('data-key');
+    if(state.hoverKey && state.hoverKey!==k){ row.classList.add('dim'); }
+    else{ row.classList.remove('dim'); }
+  });
+}
+
+/* ---------------- 表格视图 ---------------- */
+// 表格视图与 CSV 导出共用同一份行数据，保证两者口径一致
+function buildTableRows(universe){
+  var shownList = universe.entities.filter(function(e){return state.shown.has(e.key);});
+  shownList.sort(function(a,b){return a.rank-b.rank;});
+  var rows = shownList.map(function(e){
+    return {rank:'#'+e.rank, name:e.name, cum:e.cum};
+  });
+  var otherInfo = computeOther(universe, shownList);
+  if(otherInfo.hasOther && state.otherVisible){
+    rows.push({rank:'', name:'其他（未展示对象合计）', cum:otherInfo.cum});
+  }
+  return rows;
+}
+
+function renderTable(universe){
+  var el = document.getElementById('tableview');
+  var rows = buildTableRows(universe);
+  var html = '<table class="datatable"><thead><tr><th>排名</th><th>名称</th>';
+  for(var m=1;m<=12;m++) html += '<th>'+m+'月累计</th>';
+  html += '</tr></thead><tbody>';
+  rows.forEach(function(r){
+    html += '<tr><td>'+escapeHtml(r.rank)+'</td><td>'+escapeHtml(r.name)+'</td>';
+    r.cum.forEach(function(v){ html += '<td>'+(v==null?'—':formatNum(v))+'</td>'; });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+function csvEscape(s){
+  s = String(s);
+  if(/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+function downloadCsv(universe){
+  if(!universe) return;
+  var rows = buildTableRows(universe);
+  var header = ['排名','名称'];
+  for(var m=1;m<=12;m++) header.push(m+'月累计销量（YTD）');
+  var lines = [header.map(csvEscape).join(',')];
+  rows.forEach(function(r){
+    var line = [r.rank, r.name].concat(r.cum.map(function(v){ return v==null ? '' : Math.round(v); }));
+    lines.push(line.map(csvEscape).join(','));
+  });
+  var csv = '\ufeff' + lines.join('\r\n'); // 前缀 BOM，Excel 打开中文不乱码
+  var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  var fname = '汽车销量_' + state.year + '_' + granLabel().replace(/\s/g,'') + '_' + energyLabel() + '.csv';
+  a.href = url; a.download = fname;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+
+/* ---------------- 抽屉 ---------------- */
+var drawerChart = null;
+function openDrawer(key, name){
+  var backdrop = document.getElementById('drawerBackdrop');
+  var drawer = document.getElementById('drawer');
+  backdrop.classList.add('open'); drawer.classList.add('open');
+  document.getElementById('drawerTitle').textContent = name;
+  document.getElementById('drawerSub').textContent = granLabel() + ' · ' + state.year + '年 · ' + energyLabel();
+
+  var cur = findEntity(key, state.year);
+  var prevYear = state.year - 1;
+  // prevFull：上年的完整 12 个月原始数据，供逐月柱状图/表格做"同月对同月"展示（本身没有跨期问题）。
+  var prevFull = YEARS.indexOf(prevYear)>=0 ? findEntity(key, prevYear) : null;
+  var lastM = lastUniverse.lastMonth; // N = 当前选中年份实际有数据的最后一个月（2026 年是 7，2024/2025 是 12）
+
+  // prevCapped：上年"截至同一个第 N 月"的累计与排名——YTD 同比、排名同比都必须用这个，
+  // 不能直接用 prevFull.ytd / prevFull.rank（那是上年全年数据，会把「7个月 vs 12个月」这种
+  // 跨期错误同比算出来）。
+  var prevCapped = null;
+  if(prevFull){
+    var prevCappedEntities = computeUniverseAt(prevYear, lastM);
+    for(var pi=0; pi<prevCappedEntities.length; pi++){
+      if(prevCappedEntities[pi].key===key){ prevCapped = prevCappedEntities[pi]; break; }
+    }
+  }
+
+  // 统计卡片
+  var statsEl = document.getElementById('drawerStats');
+  statsEl.innerHTML='';
+  var ytd = cur ? cur.ytd : 0;
+  var rank = cur ? cur.rank : null;
+  var prevRank = prevCapped ? prevCapped.rank : null; // 同期排名（截至第 lastM 月），不是上年全年排名
+
+  var prevYtdForDisplay = prevCapped ? prevCapped.ytd : null;
+  statsEl.appendChild(statTile('年初至今累计（YTD）', formatNum(ytd), null, null));
+  if(rank==null){
+    statsEl.appendChild(statTile('当前排名', '--', null, null));
+  } else if(prevRank==null){
+    statsEl.appendChild(statTile('当前排名', '第 '+rank+' 名', '上年同期无对应数据', null));
+  } else if(prevYtdForDisplay===0 && ytd>0){
+    statsEl.appendChild(statTile('当前排名', '第 '+rank+' 名', '上年同期无销量（新增对象）', 'up'));
+  } else {
+    var rd = rankDeltaText(prevRank, rank);
+    statsEl.appendChild(statTile('当前排名', '第 '+rank+' 名', rd.text + '（同期对比）', rd.dir));
+  }
+  if(prevCapped){
+    var prevYtd = prevCapped.ytd;
+    var curYtd = cur ? cur.ytd : 0;
+    var yoyText, yoyDir;
+    if(prevYtd > 0){
+      var yoy = (curYtd - prevYtd) / prevYtd * 100;
+      yoyText = (yoy>=0?'+':'') + yoy.toFixed(1) + '%';
+      yoyDir = yoy>=0 ? 'up' : 'down';
+    } else if(curYtd > 0){
+      yoyText = '新增'; yoyDir = 'up'; // 去年同期为 0（新车型/新品牌），不是 +Infinity / NaN
+    } else {
+      yoyText = '—'; yoyDir = null; // 两年同期都是 0，同比无意义
+    }
+    statsEl.appendChild(statTile('同比（至'+lastM+'月）', yoyText, null, yoyDir));
+  } else {
+    statsEl.appendChild(statTile('同比（至'+lastM+'月）', '—', '无上年同期数据', null));
+  }
+
+  // 月度柱状图（当年 vs 去年同月，逐月对比本身就是同期对比，不受上面那个 bug 影响）
+  var months = [];
+  var curMonthly = [], prevMonthly = [];
+  for(var m=1;m<=12;m++){
+    months.push(m+'月');
+    curMonthly.push(cur && cur.monthly[m-1]!=null ? cur.monthly[m-1] : null);
+    prevMonthly.push(prevFull && prevFull.monthly[m-1]!=null ? prevFull.monthly[m-1] : null);
+  }
+  if(!drawerChart){ drawerChart = echarts.init(document.getElementById('drawerBar')); }
+  var palette = PALETTE[currentTheme()];
+  drawerChart.setOption({
+    backgroundColor:'transparent',
+    grid:{left:44,right:10,top:10,bottom:24,containLabel:true},
+    textStyle:{color:cssVar('--text-secondary')},
+    xAxis:{type:'category', data:months, axisLabel:{color:cssVar('--text-muted'),fontSize:10.5},
+      axisLine:{lineStyle:{color:cssVar('--baseline')}}, axisTick:{show:false}},
+    yAxis:{type:'value', splitLine:{lineStyle:{color:cssVar('--grid')}},
+      axisLabel:{color:cssVar('--text-muted'),fontSize:10.5,formatter:function(v){return formatCompact(v);}}},
+    tooltip:{trigger:'axis', backgroundColor:cssVar('--surface-1'), borderColor:cssVar('--border'),
+      textStyle:{color:cssVar('--text-primary'),fontSize:12},
+      formatter:function(params){
+        var s = months[params[0].dataIndex];
+        params.forEach(function(p){ if(p.value!=null) s += '<br/>'+escapeHtml(p.seriesName)+'：'+formatNum(p.value); });
+        return s;
+      }},
+    legend:{show:!!prevFull, top:0, right:0, textStyle:{color:cssVar('--text-secondary'),fontSize:11}, itemWidth:12,itemHeight:8},
+    series:[
+      {name:state.year+'年', type:'bar', data:curMonthly, itemStyle:{color:palette[0], borderRadius:[3,3,0,0]}, barMaxWidth:18},
+      prevFull?{name:prevYear+'年', type:'bar', data:prevMonthly, itemStyle:{color:cssVar('--muted-line'), borderRadius:[3,3,0,0]}, barMaxWidth:18}:null
+    ].filter(Boolean)
+  }, true);
+  setTimeout(function(){ drawerChart.resize(); }, 50);
+
+  // 明细表格
+  var tEl = document.getElementById('drawerTable');
+  var html = '<thead><tr><th>月份</th><th>'+state.year+'年销量</th>' + (prevFull?('<th>'+prevYear+'年同月</th><th>同比</th>'):'') + '</tr></thead><tbody>';
+  for(var i=0;i<12;i++){
+    var cv = curMonthly[i], pv = prevMonthly[i];
+    html += '<tr><td>'+months[i]+'</td><td>'+(cv==null?'—':formatNum(cv))+'</td>';
+    if(prevFull){
+      html += '<td>'+(pv==null?'—':formatNum(pv))+'</td>';
+      var yy = (cv!=null && pv) ? ((cv-pv)/pv*100) : null;
+      html += '<td'+(yy!=null?(' style="color:'+(yy>=0?cssVar('--good'):cssVar('--critical'))+'"'):'')+'>'+(yy==null?'—':(yy>=0?'+':'')+yy.toFixed(1)+'%')+'</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  tEl.innerHTML = html;
+
+  // 统计范围（可审计的构成明细）
+  hideCompTooltip();
+  renderScope(key, name);
+
+  // 新闻
+  renderNews(name);
+}
+function pct(v,total){ return total>0 ? (v/total*100).toFixed(1)+'%' : '—'; }
+function buildScopeTable(headers, rows){
+  var wrap = document.createElement('div'); wrap.className='scope-table-wrap';
+  var table = document.createElement('table'); table.className='scope-table';
+  var thead = document.createElement('thead'); var trh=document.createElement('tr');
+  headers.forEach(function(h){ var th=document.createElement('th'); th.textContent=h; trh.appendChild(th); });
+  thead.appendChild(trh); table.appendChild(thead);
+  var tbody = document.createElement('tbody');
+  rows.forEach(function(cols){
+    var tr = document.createElement('tr');
+    cols.forEach(function(c){ var td=document.createElement('td'); td.textContent=c; tr.appendChild(td); });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+  return wrap;
+}
+function renderScope(key, name){
+  var el = document.getElementById('scopeBody');
+  var titleEl = document.getElementById('scopeTitle');
+  el.innerHTML='';
+  var filterLabel = state.year+'年 · '+energyLabel();
+  var parsed = parseEntityKey(key);
+
+  if(parsed.gran==='model'){
+    titleEl.textContent = '统计范围';
+    var own = modelOwnership(parsed.bodyType, name);
+    var line = document.createElement('div');
+    line.className='scope-model-line';
+    if(own){
+      line.appendChild(document.createTextNode('所属厂商：'));
+      var b1=document.createElement('b'); b1.textContent=own.manuName; line.appendChild(b1);
+      line.appendChild(document.createTextNode('　所属品牌：'));
+      var b2=document.createElement('b'); b2.textContent=own.brandName; line.appendChild(b2);
+    } else {
+      line.textContent = '未能定位所属厂商/品牌（数据异常）';
+    }
+    el.appendChild(line);
+    var hint0 = document.createElement('div');
+    hint0.className='scope-hint'; hint0.style.marginTop='6px';
+    hint0.textContent = '车型是本工具的最小统计单位，不再向下细分——因此这里不展示"构成"，只展示它归属的厂商与品牌，方便对照。';
+    el.appendChild(hint0);
+    return;
+  }
+
+  titleEl.textContent = '统计范围（' + filterLabel + '）';
+  var models = entityModels(parsed.gran, name, state.year);
+  var totalYtd = models.reduce(function(s,m){return s+m.ytd;},0);
+
+  if(models.length===0){
+    var empty = document.createElement('div');
+    empty.className='scope-hint';
+    empty.textContent = '当前筛选条件（'+filterLabel+'）下没有销量数据。';
+    el.appendChild(empty);
+    return;
+  }
+
+  if(parsed.gran==='brand'){
+    var manuGroups = groupByManu(models);
+    var hint = document.createElement('div');
+    hint.className='scope-hint';
+    hint.textContent = '由 '+manuGroups.length+' 个厂商、'+models.length+' 个车型构成，合计 '+formatNum(totalYtd)+'（与上方 YTD 对得上就说明口径一致）';
+    el.appendChild(hint);
+
+    var sub1 = document.createElement('div'); sub1.className='scope-subhead'; sub1.textContent='构成厂商（'+manuGroups.length+'）';
+    el.appendChild(sub1);
+    el.appendChild(buildScopeTable(
+      ['厂商','车型数','累计销量','占比'],
+      manuGroups.map(function(g){ return [g.name, String(g.count), formatNum(g.ytd), pct(g.ytd,totalYtd)]; })
+    ));
+
+    var sub2 = document.createElement('div'); sub2.className='scope-subhead'; sub2.textContent='全部车型（'+models.length+'，不截断）';
+    el.appendChild(sub2);
+    el.appendChild(buildScopeTable(
+      ['车型','所属厂商','累计销量','占比'],
+      models.map(function(m){ return [m.name, m.manuName, formatNum(m.ytd), pct(m.ytd,totalYtd)]; })
+    ));
+  } else {
+    var hintM = document.createElement('div');
+    hintM.className='scope-hint';
+    hintM.textContent = '厂商「'+name+'」包含 '+models.length+' 个车型（不截断），合计 '+formatNum(totalYtd)+'（与上方 YTD 对得上就说明口径一致）';
+    el.appendChild(hintM);
+    el.appendChild(buildScopeTable(
+      ['车型','车体类型','累计销量','占比'],
+      models.map(function(m){ return [m.name, m.bodyType, formatNum(m.ytd), pct(m.ytd,totalYtd)]; })
+    ));
+  }
+}
+function statTile(lbl, val, deltaText, deltaDir){
+  var d = document.createElement('div');
+  d.className='stat-tile';
+  var l = document.createElement('div'); l.className='lbl'; l.textContent=lbl;
+  var v = document.createElement('div'); v.className='val'; v.textContent=val;
+  d.appendChild(l); d.appendChild(v);
+  if(deltaText){
+    var el = document.createElement('div');
+    el.className = 'delta' + (deltaDir==='up'?' up':(deltaDir==='down'?' down':''));
+    el.textContent = deltaText;
+    d.appendChild(el);
+  }
+  return d;
+}
+function rankDeltaText(prevRank, rank){
+  var diff = prevRank - rank; // 正数 = 名次上升（排名数字变小）
+  if(diff===0) return {text:'与上年持平', dir:null};
+  return diff>0 ? {text:'▲ 较上年上升 '+diff+' 名', dir:'up'} : {text:'▼ 较上年下降 '+(-diff)+' 名', dir:'down'};
+}
+function findEntity(key, year){
+  var savedYear = state.year;
+  state.year = year;
+  var u = computeUniverse();
+  state.year = savedYear;
+  for(var i=0;i<u.entities.length;i++){ if(u.entities[i].key===key) return u.entities[i]; }
+  return null;
+}
+function renderNews(name){
+  var el = document.getElementById('drawerNews');
+  el.innerHTML='';
+  var items = NEWS && NEWS[name];
+  if(!items || !items.length){
+    var empty = document.createElement('div');
+    empty.className='news-empty';
+    empty.textContent='暂无动态';
+    el.appendChild(empty);
+    return;
+  }
+  items.forEach(function(it){
+    var card = document.createElement('div');
+    card.className='news-card';
+    var a = document.createElement('a');
+    a.href = it.url || '#'; a.target='_blank'; a.rel='noopener noreferrer';
+    a.textContent = it.title || '(无标题)';
+    var meta = document.createElement('div');
+    meta.className='news-meta';
+    meta.textContent = [it.date, it.source].filter(Boolean).join(' · ');
+    card.appendChild(a); card.appendChild(meta);
+    el.appendChild(card);
+  });
+}
+document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
+function closeDrawer(){
+  document.getElementById('drawerBackdrop').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+
+/* ---------------- 工具函数 ---------------- */
+function formatNum(v){
+  if(v==null) return '—';
+  return Math.round(v).toLocaleString('zh-CN');
+}
+function formatCompact(v){
+  if(v==null) return '';
+  var av = Math.abs(v);
+  if(av>=10000) return (v/10000).toFixed(1).replace(/\.0$/,'') + '万';
+  return String(Math.round(v));
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+/* ---------------- 总渲染入口 ---------------- */
+function renderAll(){
+  syncControlStates();
+  var u = computeUniverse();
+  if(state.shown.size===0){ state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;})); }
+  lastUniverse = u;
+  document.getElementById('chartTitle').textContent =
+    state.year + '年 · ' + granLabel() + ' · ' + energyLabel() + ' · 年初至今累计销量（辆）';
+  renderChart(u);
+  renderLegend(u);
+  if(state.tableView) renderTable(u);
+  var counts = META.manufacturers+' 厂商 · '+META.brands+' 品牌 · '+META.models+' 车型 · '+META.rows+' 条记录';
+  document.getElementById('metaCounts').textContent = counts;
+}
+
+renderYearChips();
+resetToTop20();
+renderAll();
+})();
+</script>
+</body>
+</html>
+"""
+
+if __name__ == "__main__":
+    main()
+
