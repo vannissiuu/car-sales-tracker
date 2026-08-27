@@ -1,3 +1,5 @@
+![中国汽车销量看板](assets/readme/hero.svg)
+
 # 中国汽车销量跟踪看板
 
 > 在线看板：**https://vannissiuu.github.io/car-sales-tracker/**
