@@ -1,0 +1,2523 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小米汽车 - 最新小米汽车实时滚动快讯，聚合所有小米汽车相关热门新闻快讯_新浪汽车</title>
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<link rel="shortcut icon" type="image/x-icon" href="//mjs.sinaimg.cn/wap/module/base/img/favicon.ico" />
+	<meta property="og:category" content="model">
+	<meta property="og:site_name" content="新浪网" />
+	<meta property="og:locale" content="zh_CN" />
+	<meta property="og:title" content="小米汽车最新快讯，新浪聚合所有小米汽车相关的新闻快讯，并为你提供最新的相关资讯。">
+	<meta property="og:url" content="https://tags.sina.com.cn/model_xiaomiqiche">
+	<meta property="og:time" content="2026-08-27 04:30:31">
+	<meta property="og:published_time" content="2026-08-27 04:30:31">
+	<meta property="og:updated_time" content="2026-08-27 04:30:31">
+	<meta property="og:type" content="news">
+	<meta property="og:author" content="新浪网">
+	<meta property="og:contentid" content="model_xiaomiqiche"/>
+	<meta property="article:author" content="新浪网" />
+	<meta property="article:published_time" content="2026-08-27 04:30:31" />
+	<meta property="article:modified_time" content="2026-08-27 04:30:31" />
+	<meta property="article:section" content="汽车车型">
+	<meta property="article:tag" content="汽车车型快讯"> 
+		<meta property="article:tag" content="汽车车型新闻"> 
+		<link rel="stylesheet" type="text/css" href="//i.sso.sina.com.cn/css/userpanel/v1/top_account_v2.css">
+	<script src='//n.sinaimg.cn/news/libs/jquery-1.11.1.min.js'></script>
+	<link href="//simg.sinajs.cn/products/news_finance/2018/pc_china_home/css/index-1edb9c.css" rel="stylesheet">
+	<!--组件加载器-->
+<script charset="utf-8" type="text/javascript" src="//finance.sina.com.cn/other/src/article-widgets.min.js"></script>
+	<style type="text/css">
+		ul.news-1 li{font-weight:normal;font-size:18px}
+		ul.news-2 li{font-size:18px}
+		.dropdown_cover li{text-align: center;line-height: 31px;}
+		.dropdown_cover a{float: none;width: 100%;height: 100%;padding-left: unset;line-height: inherit;color: #333;}
+	</style>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            background-color: #f5f5f5;
+            line-height: 1.6;
+        }
+
+        /* 头部样式 */
+        .header {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 200"><rect fill="%23667eea" width="1200" height="200"/><path fill="%23764ba2" opacity="0.3" d="M0,100 Q300,150 600,100 T1200,100 L1200,200 L0,200 Z"/></svg>');
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .header-content {
+            position: relative;
+            padding: 20px;
+        }
+
+        .header-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            letter-spacing: 8px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header-desc {
+            font-size: 16px;
+            opacity: 0.95;
+            max-width: 800px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 主内容区域 */
+        .main-container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        /* 左侧内容 - 图文列表 */
+        .left-section {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .news-item {
+            display: flex;
+			flex-direction: column;
+            gap: 15px;
+            padding: 20px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .news-item:hover {
+            background-color: #fafafa;
+        }
+
+        .news-item:last-child {
+            border-bottom: none;
+        }
+
+        .news-image {
+            width: 200px;
+            height: 140px;
+            border-radius: 8px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .news-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .news-title {
+            font-weight: 600;
+            color: #333;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+		.news-title a {
+			text-decoration: none;
+		    color: #0251d9;
+		}
+		
+		.news-info{
+			display: flex;
+			gap: 20px;
+		}
+
+        .news-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 13px;
+            color: #999;
+        }
+
+        .news-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .comment-count {
+            margin-left: auto;
+            color: #666;
+        }
+
+        /* 右侧内容 - 纯文本列表 */
+        .right-section {
+            width: 400px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			align-self: flex-start;
+        }
+
+        .text-item {
+            padding: 20px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .text-item:hover {
+            background-color: #fafafa;
+        }
+
+        .text-item:last-child {
+            border-bottom: none;
+        }
+
+        .text-item-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .text-item-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .text-item-author {
+            font-size: 14px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .text-item-content {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.8;
+            margin-bottom: 12px;
+        }
+
+        .text-item-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .text-item-images {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .text-item-image {
+            width: 120px;
+            height: 120px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+
+        .text-item-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .text-item-stats {
+            display: flex;
+            gap: 15px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 1024px) {
+            .main-container {
+                flex-direction: column;
+            }
+
+            .right-section {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                height: 150px;
+            }
+
+            .header-title {
+                font-size: 32px;
+                letter-spacing: 4px;
+            }
+
+            .header-desc {
+                font-size: 14px;
+            }
+
+            .news-item, .news-info {
+                flex-direction: column;
+            }
+
+            .news-image {
+                width: 100%;
+                height: 200px;
+            }
+
+            .main-container {
+                padding: 0 15px;
+                margin: 20px auto;
+            }
+        }
+		.nav-others {
+			left: 306px;
+		}
+    </style>
+<meta name="sudameta" content="dataid:wpcomos:296826" /></head>
+<body>
+	<!--主导航-->
+<div class="sina-header" id="sina-header">
+    <div class="sina-header-inner">
+        <div class="sina-nav">
+            <ul class="nav-list">
+                <li class="first" data-sudaclick="nav_home_p"><a href="//www.sina.com.cn/">新浪首页</a></li>
+                <li data-sudaclick="nav_news_p"><a href="//news.sina.com.cn/">新闻</a></li>
+                <li data-sudaclick="nav_sports_p"><a href="//sports.sina.com.cn/">体育</a></li>
+                <li data-sudaclick="nav_finance_p"><a href="//finance.sina.com.cn/">财经</a></li>
+                <li data-sudaclick="nav_ent_p"><a href="//ent.sina.com.cn/">娱乐</a></li>
+                <li data-sudaclick="nav_tech_p"><a href="//tech.sina.com.cn/">科技</a></li>
+                <li data-sudaclick="nav_blog_p"><a href="//blog.sina.com.cn/">博客</a></li>
+                <li data-sudaclick="nav_zhuanlan_p"><a href="http://zhuanlan.sina.com.cn/">专栏</a></li>
+                <li class="last" data-sudaclick="topnav_more_p"><a href="#" class="more" data-action="dropdown" data-target="more">更多<i class="icon icon-arrow"></i></a></li>
+                <!--鼠标滑过更多<a>标签添加class="sina15-on"-->
+            </ul>
+            <ul id="more" class="nav-others">
+                <li>
+					<a data-sudaclick="nav_auto_p" href="//auto.sina.com.cn/">汽车</a>
+					<a data-sudaclick="nav_edu_p" href="//edu.sina.com.cn/">教育</a>
+				</li>
+                <li>
+					<a data-sudaclick="nav_leju_p" href="//www.leju.com/#source=pc_sina_dbdh1&source_ext=pc_sina">房产</a>
+					<a data-sudaclick="nav_history_p"  href="//history.sina.com.cn/">历史</a>
+					<a data-sudaclick="nav_video_p" href="//video.sina.com.cn/">视频</a>
+					<a data-sudaclick="nav_book_p" href="//book.sina.com.cn/">读书</a>
+				</li>
+                <li class="nav-others-last">
+					<a data-sudaclick="nav_games_p" href="//games.sina.com.cn/">游戏</a>
+					<a data-sudaclick="nav_mail_p" href="//mail.sina.com.cn/">邮箱</a>
+					<a data-sudaclick="nav_guide_p" href="http://news.sina.com.cn/guide/">导航</a>
+				</li>
+            </ul>
+        </div>
+        <!--通行证组件start-->
+        <div class="sina-client">
+            <div class="sina-client-tl">
+                <a class="more" href="#" data-action="dropdown" data-target="mobileclient">移动客户端<i class="icon icon-arrow"></i></a>
+            </div>
+            <ul id="mobileclient" class="dropdown dropdown_cover">
+				<li><a target="_blank" href="https://c.weibo.cn/client/guide/download"  data-sudaclick="nav_app_weibo_p">新浪微博</a></li>
+				<li><a target="_blank" href="https://so.sina.cn/palmnews/web-sinanews-app-download.d.html" data-sudaclick="nav_app_news_p">新浪新闻</a></li>
+				<li><a target="_blank" href="https://finance.sina.com.cn/mobile/comfinanceweb.shtml" data-sudaclick="nav_app_finance_p">新浪财经</a></li>
+				<li><a target="_blank" href="https://blog.sina.com.cn/lm/z/app/" data-sudaclick="nav_app_blog_p">新浪博客</a></li>
+            </ul>
+        </div>
+        <!-- 我的收藏start -->
+        <div class="my-favor" id="my_favor" style="display:none;">
+            <a data-sudaclick="nav_myfav_p" href="http://my.sina.com.cn/#location=fav" target="_blank"><i></i>我的收藏</a>
+        </div>
+
+        <!-- 我的收藏end -->
+        <div id="SI_User" class="TAP14">
+            <div class="ac-rgst"><a data-sudaclick="nav_registered_invalid" href="https://login.sina.com.cn/signup/signup?entry=news" class="msg-link" target="_blank">注册</a></div>
+            <div class="ac-login">
+                <div class="ac-login-cnt "><a data-sudaclick="nav_login_invalid" href="#" class=""><span class="thumb"><img src="//i.sso.sina.com.cn/images/login/thumb_default.png"></span><span class="log-links">登录</span></a></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+<!--/主导航-->
+<!--页面顶导 end-->
+    <!-- 头部 -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="header-title">小米汽车</h1>
+            <p class="header-desc">小米汽车最新快讯，新浪聚合所有小米汽车相关的新闻快讯，并为你提供最新的相关资讯。<a href="https://tags.sina.com.cn/guide" target="_blank" style="
+    color: white;
+    font-size: 14px;
+"> >>>查看更多</a></p>
+        </div>
+    </header>
+
+    <!-- 主内容区域 -->
+    <div class="main-container">
+        <!-- 左侧：图文列表 -->
+        <section class="left-section">
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7880068362_1d5b04d0a06801ir9m.html" target="_blank">2026成都车展哪个品牌最火？3个维度看透流量密码+FAQ</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">本届车展8月21日-30日举办，展览面积22万平米、近120个品牌、1600辆展车，而普通观众日早鸟票仅19.9元，堪称“史上最亲民A级车展”...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-27 04:30:31</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/roll/2026-08-26/doc-iniprytk0873534.shtml" target="_blank">计划明年要出海了！小米汽车海外账号已上线 社媒和官网都已开启</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260826/579/w600h779/20260826/3b6e-5ed13e4e581836f2d8565baa915b7342.jpg" width="200" height="140" alt="计划明年要出海了！小米汽车海外账号已上线 社媒和官网都已开启" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">快科技8月26日消息，传了很久的小米汽车出海终于要正式落地推进了，不少国内网友都好奇，海外的消费者会不会也像国内用户一样期待小米汽车的到来...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 19:55:02</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7096020433_1a6f4add106801mve4.html" target="_blank">小米汽车与宜家跨界联动，展示智能可变大空间SUV</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260826ac/350/w690h460/20260826/b5bb-9117681858fb3acbcd601d035dbfebbb.jpg" width="200" height="140" alt="小米汽车与宜家跨界联动，展示智能可变大空间SUV" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">本文基于以下微博话题的智搜结果生成2026年8月26日，小米汽车与宜家家居展开跨界联动，在全国多地宜家商场开启“第N空间 自在的空间”特展，全面展示小米澎程系列“智能可变大空间SUV”的空间魔法...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 19:18:28</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_1644983660_620c756c02001uube.html?from=tech" target="_blank">小米汽车海外官网及社媒账号上线 官宣2027年进入欧洲市场</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">观点网讯：8月26日，小米汽车海外官网及社媒账号正式上线，并在显著位置标注“Officially coming to Europe in 2027”，正式官宣将于2027年进入欧洲市场...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 18:56:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/roll/2026-08-26/doc-iniprytq2324674.shtml" target="_blank">小米汽车海外官网正式上线</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260826/678/w1000h478/20260826/df07-da27dbb16cbcb1104bcbffead6d2a8d5.jpg" width="200" height="140" alt="小米汽车海外官网正式上线" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">8月26日，小米汽车海外官网正式上线。截至2026年8月17日，小米SU7系列累计交付突破50万台，并斩获2025年中国市场20万元以上价位轿车销量第一...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 18:47:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5952915720_162d2490806704qjw6.html" target="_blank">小米汽车：Ultra Club会员免费领取纽北成绩纪念冰箱贴</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260826/737/w660h877/20260826/f5af-805fccda5957101b957ca5fff6a3ef6c.jpg" width="200" height="140" alt="小米汽车：Ultra Club会员免费领取纽北成绩纪念冰箱贴" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">（来源：三言科技）8月26日消息，小米汽车今日宣布，小米汽车Ultra Club会员专属赠礼——纽北成绩纪念冰箱贴，现已开启限时免费领取...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 16:49:49</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_9021361755_219b70e5b02001udng.html" target="_blank">2026年小米澎程和小米汽车到底是什么关系？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260826s/424/w1265h759/20260826/59b5-abca0ea65af7934d0230e7c1295c5869.png" width="200" height="140" alt="2026年小米澎程和小米汽车到底是什么关系？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">不少朋友近期都关心小米澎程的品牌归属问题,这里我们直接把核心关系梳理清楚,再详细介绍两款车型的定位、适配场景和核心优势,方便大家根据自身需求参考选择...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 16:26:25</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879776542_1d5abd91e068013v7k.html" target="_blank">小米汽车9月交付计划的信息可靠吗？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260826ac/408/w518h690/20260826/225e-298372a342e12532e203412a9b588c59.jpg" width="200" height="140" alt="小米汽车9月交付计划的信息可靠吗？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">一、网传9月交付信息与官方口径存在出入“交付破3万”系误读：网传“小米澎程交付破3万”实为话题误传，该车型目前尚未上市，更未开启交付，真实指向的是小米汽车全系（SU7、YU7等）7月整体交付超3万台...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 16:02:13</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_2662447161_9eb1b83902001e6dk.html?from=digit" target="_blank">小米汽车全系亮相成都车展，小米澎程双车开放上车体验</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260826s/300/w720h380/20260826/4025-2af6b0592613e2aa64cb8d3818dba201.jpg" width="200" height="140" alt="小米汽车全系亮相成都车展，小米澎程双车开放上车体验" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">作为中西部汽车市场的年度风向标，本届车展汇聚了众多品牌的重磅新车。小米汽车携全系车型亮相10号馆H1004展位，其中，7月刚刚预售的小米澎程N90 Max和N70 Max在本届车展上正式亮相...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 15:34:44</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953740931_162dee08306703wdnq.html" target="_blank">小米汽车回应：澎程N90 Max智能电动门可实现开门杀预警与主动避障</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260826/424/w660h564/20260826/4875-9fa81c5d744567d18be5e3e60f78a015.jpg" width="200" height="140" alt="小米汽车回应：澎程N90 Max智能电动门可实现开门杀预警与主动避障" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">据介绍，小米澎程N90 Max的智能电动门通过9颗摄像头、4颗车门毫米波雷达和1颗前向激光雷达进行融合感知，可实现开门杀预警及开门避障两大功能...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 15:34:35</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923946_m1d5ae18ea03303s46s.html" target="_blank">19 特斯拉和小米汽车哪个好？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260827ac/533/w480h853/20260827/dfdd-c3933bb24601d22fe86e768deb0c97f9.jpg" width="200" height="140" alt="19 特斯拉和小米汽车哪个好？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">#一分钟精选视频扶持计划# 19特斯拉和小米汽车哪个好...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-26 05:52:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_1826017320_6cd6d02802001vxk0.html?from=tech" target="_blank">小米汽车：澎程N90 Max智能电动门可实现开门杀预警及开门避障</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260825s/120/w1440h1080/20260825/8774-2319125472fb06f82c5a4ef1e8a718bf.jpg" width="200" height="140" alt="小米汽车：澎程N90 Max智能电动门可实现开门杀预警及开门避障" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">N90 Max 的智能电动门，通过 9 颗摄像头、4 颗车门毫米波雷达、1 颗前向激光雷达融合感知，可实现开门杀预警及开门避障...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-25 23:32:08</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923681_m1d5ae17e103304qf6i.html" target="_blank">小米汽车也是请得起车模了</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260825ac/533/w480h853/20260825/a37d-ab317d3f094a0d307d294b90983019cc.jpg" width="200" height="140" alt="小米汽车也是请得起车模了" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车也是请得起车模了...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-25 16:38:37</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5328858693_13d9fee4502002hb22.html" target="_blank">小米汽车：澎程N90 Max的智能电动门能防“开门杀”</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260825s/764/w514h250/20260825/8565-63ea8c2254f74a99ab6ea63a8606b374.jpg" width="200" height="140" alt="小米汽车：澎程N90 Max的智能电动门能防“开门杀”" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">8月25日凌晨，小米汽车官方微博在答网友问中回应小米澎程N90 Max的智能电动门能不能防开门杀。N90 Max的智能电动门，通过9颗摄像头、4颗车门毫米波雷达、1颗前向激光雷达融合感知，可实现开门杀预警及开门避障...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-25 10:32:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/discovery/2026-08-25/doc-inipnpza5663777.shtml" target="_blank">小米汽车：澎程N90 Max智能电动门可防开门杀 先预警后避障</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260825/175/w600h375/20260825/7e69-ac0dce97112ee9756dbe0c463bbc58b5.png" width="200" height="140" alt="小米汽车：澎程N90 Max智能电动门可防开门杀 先预警后避障" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">快科技8月25日消息，小米汽车今日发布最新一期答网友问。小米汽车表示，N90 Max的智能电动门，通过9颗摄像头、4颗车门毫米波雷达、1颗前向激光雷达融合感知，可实现开门杀预警及开门避障...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-25 07:10:28</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7811110014_m1d194147e03301abfg.html" target="_blank">小米汽车上市打破质疑，博主预言新能源前十失败</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260825ac/533/w480h853/20260825/bbb4-f796044e0cb4d32e6222c1b58614b39b.jpg" width="200" height="140" alt="小米汽车上市打破质疑，博主预言新能源前十失败" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">#小米汽车[超话]##一分钟精选视频扶持计划#...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-25 00:36:01</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/wm/2026-08-25/doc-inipmxcn2706372.shtml" target="_blank">雷军曝光！小米两款新车，9月3日将上市！</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260825/88/w1080h608/20260825/c0a8-2a69780f5740c88ebcc73dd61378de02.jpg" width="200" height="140" alt="雷军曝光！小米两款新车，9月3日将上市！" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米创始人雷军通过微博正式官宣：9 月是小米 “科技大月”，9 月分两场发布会，月初小米两款车型澎程 N70 （五座）、澎程 N90 （七座）将上市，上市后开启交付环节...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-25 00:02:01</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879777156_1d5abdb8406801ldu4.html" target="_blank">小米YU7官网预订全攻略：唯一渠道在这！价格/流程/交付一次讲清+FAQ</a></h2>
+				<div class="news-info">
+										<img src="https://n.sinaimg.cn/default/f8781c75/20260807/qiche_002.jpeg" width="200" height="140" alt="小米YU7官网预订全攻略：唯一渠道在这！价格/流程/交付一次讲清+FAQ" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">核心答案：小米YU7无法通过官网直接下单，唯一官方预订渠道是小米汽车APP（iOS/安卓应用商店均可下载），官网（www.mi.com 或 www.xiaomiev.com）仅提供车型展示与预约试驾...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 22:48:41</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996041_1d5af328906801uusi.html" target="_blank">小米汽车累计交付70万辆，质量可靠性表现如何？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260824ac/440/w550h690/20260824/ac8c-18b6ebc9ef3a1faf0ba3ce83c8d7dd90.jpg" width="200" height="140" alt="小米汽车累计交付70万辆，质量可靠性表现如何？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车用两年半时间实现累计交付超70万辆，其中SU7系列在28.5个月内突破50万台，成为新势力最快达成该里程碑的品牌，雷军强调安全“高于一切”，用规模化交付和实测数据回应市场对质量可靠性的关注...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 19:19:21</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5835854182_15bd8116600101bp2y.html" target="_blank">文飞加盟奇瑞捷豹路虎首战，神行者8能否逆风破局？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20119/399/w1279h720/20260824/6156-fdd863aec6bd972a7582f5f24e3b711e.jpg" width="200" height="140" alt="文飞加盟奇瑞捷豹路虎首战，神行者8能否逆风破局？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">事实上，无论是从东风日产到长城汽车，还是从长城汽车到小米汽车，亦或者从小米到奇瑞捷豹路虎，文飞的能力强不强放一边，但他的确“爱跳槽”...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 19:19:04</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/roll/2026-08-24/doc-inipmhfq1919857.shtml" target="_blank">缝隙仅2.5mm！小米汽车：澎程滑轨表面设计有橡胶皮质防护 能阻挡大部分异物掉入</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260824/200/w600h400/20260824/df1f-2df018f34211f476c12d2d3b9a7c4c49.jpg" width="200" height="140" alt="缝隙仅2.5mm！小米汽车：澎程滑轨表面设计有橡胶皮质防护 能阻挡大部分异物掉入" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">快科技8月24日消息，近日，小米汽车发布答网友问第282集，针对澎程系列超长滑轨可靠性、N70 Max成床功能等问题进行集中解答...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 16:18:04</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5952915705_162d248f906703m74k.html" target="_blank">小米汽车：澎程滑轨表面设计有橡胶皮质，能阻挡大部分异物掉入内部</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260824/243/w660h383/20260824/909a-a4efcefc41581c997cc70ae7bbc7e838.jpg" width="200" height="140" alt="小米汽车：澎程滑轨表面设计有橡胶皮质，能阻挡大部分异物掉入内部" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">（来源：环球网资讯）来源：环球网【环球网科技综合报道】8月24日消息，关于网友“小米澎程的超长滑轨可靠性怎么样。小米澎程的长滑轨，拓展了滑动行程，并强化了材料结构强度和安全耐久测试标准...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 14:34:30</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_1463946293_57420c3502001qixm.html" target="_blank">小米全系车型亮相成都车展 澎程双车开放体验</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260824s/270/w150h120/20260824/3255-28801338642045ec3e7023c04b8251cd.webp" width="200" height="140" alt="小米全系车型亮相成都车展 澎程双车开放体验" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车携全系车型亮相10号馆H1004展位，其中7月开启预售的澎程N90 Max和N70 Max在本届车展正式开放上车体验...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 14:03:04</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996096_1d5af32c006801kxl8.html" target="_blank">小米yu7车模</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">近日，小米汽车正在全国门店掀起一股“试驾送车模”热潮，用户预约并完成YU7试驾即可领取一台1:64比例的合金回力车模，活动上线后迅速成为车迷圈讨论的焦点...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 12:00:29</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7880069028_1d5b04fa406801vwyi.html" target="_blank">小米note7gt</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">AI生成虚假事故：在小米新车尚未上市的情况下，网络上竟出现通过AI生成的该车型车祸图片和词条，用以制造负面话题。辟谣“雷军公开信”：2025年4月，一张伪造的“雷军致公众信”在网络上广泛传播，内容包含召回车辆、个人捐资等，小米汽车及时辟谣，证实该信件为伪造...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 11:59:57</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/stock/estate/integration/2026-08-24/doc-inipkriy6264612.shtml" target="_blank">小米汽车召回部分2024款小米牌SU7系列纯电动汽车 合计39.04万辆</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">本次召回范围内的车辆，由于车内应急机械拉手与内饰颜色接近，不易识别和操作。当发生严重碰撞导致整车低压系统失效等极端情形时，可能影响驾乘人员快速开启车门逃生和车外人员救援，存在安全隐患...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 11:24:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953189932_162d6782c06704vz6e.html" target="_blank">小米汽车答网友问（第282集）发布</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260823/355/w660h495/20260823/d87b-e52cd39c7f1e968e280e9e87360c2b08.jpg" width="200" height="140" alt="小米汽车答网友问（第282集）发布" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">（来源：IT之家）IT之家 8 月 23 日消息，小米汽车官方昨晚发布答网友问（第 282 集），针对澎程的超长滑轨可靠性如何、米澎程 N70 Max 能不能成床等问题进行了集中解答...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 09:42:07</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879849086_1d5acf47e06801gyk4.html" target="_blank">小米YU7车模在哪买？官方渠道/价格/防伪全攻略+FAQ</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">01开篇·结论前置想买小米汽车车模，直接选官方1:18合金全开模型（499元），唯一靠谱渠道就是小米汽车APP商城和线下门店，其他尺寸或渠道一律视为仿品...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 08:22:49</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953189932_162d6782c06704vyx8.html" target="_blank">九家车企因设计缺陷召回427.6万辆车   特斯拉占七成小米汽车“回炉”39万辆</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260824/598/w800h598/20260824/3d31-9fe1a033384c2c2db6511740bb27b16f.jpg" width="200" height="140" alt="九家车企因设计缺陷召回427.6万辆车   特斯拉占七成小米汽车“回炉”39万辆" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">同日，小米汽车、零跑汽车、小鹏汽车等8家车企均发布召回公告，其中小米汽车和零跑汽车分别召回超过39万辆、37万辆，召回数量分列第二和第三位...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 07:44:09</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879776543_1d5abd91f06801br16.html" target="_blank">小米SU7 Pro版2026款值得买吗？销量霸榜+700km续航，3个维度说透+FAQ</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米SU7 Pro版2026款是当前20万以上纯电轿车中综合实力最均衡的选择，没有之一。如果你追求智能驾控、续航扎实且不想被“韭菜税”收割，SU7 Pro版就是闭眼选的那一台...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-24 05:20:02</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_1654203637_629924f5020016xm2.html?from=tech" target="_blank">成都车展：小米澎程双车登场，N90 Max预售价29.99万元、N70 Max预售价25.99万元</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260823s/508/w1265h843/20260823/b389-70bf396936f95995b96bc8417fb3f520.png" width="200" height="140" alt="成都车展：小米澎程双车登场，N90 Max预售价29.99万元、N70 Max预售价25.99万元" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">作为中西部汽车市场的年度风向标，本届车展汇聚了众多品牌的重磅新车。小米汽车携全系车型亮相10号馆H1004展位，其中，7月刚刚预售的小米澎程N90 Max和N70 Max在本届车展上正式亮相...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 17:14:57</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879776542_1d5abd91e068013szc.html" target="_blank">2026成都车展小米汽车：澎程增程到底晚不晚？3个维度拆解+FAQ</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米现在入局增程赛道，不仅不晚，反而刚刚好。2026年7月30日，小米汽车正式发布第二产品系列——小米澎程，采用大电池增程技术路线，CLTC纯电续航最高505公里、亏电油耗最低5.7L/100km，直面外界“入局太晚”的质疑...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 16:16:57</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879777157_1d5abdb85068022yuu.html" target="_blank">小米SU7召回39万台：是主动负责还是被动整改？3个维度说清车主必知+FAQ</a></h2>
+				<div class="news-info">
+										<img src="https://n.sinaimg.cn/default/f8781c75/20260807/qiche_012.jpeg" width="200" height="140" alt="小米SU7召回39万台：是主动负责还是被动整改？3个维度说清车主必知+FAQ" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车史上最大规模召回实锤了——不是被动调查，而是主动向国家市场监督管理总局备案的缺陷产品召回。车主可致电小米汽车客服热线400-182-6888查询车辆是否在召回范围内，并免费获得整改服务...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 13:29:34</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996580_m1d5af34a403301u8v0.html" target="_blank">颜值小姐姐画面精选集·VOL.39</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260823ac/320/w480h640/20260823/8672-4eee7f38d330fee9c9386154716924bc.jpg" width="200" height="140" alt="颜值小姐姐画面精选集·VOL.39" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">成都车展，因为小米汽车的展台，让我认识了一位十分漂亮的美女，琳园长，不知道小米汽车会不会请她当模特...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 13:25:42</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879924057_m1d5ae195903301jcn0.html" target="_blank">成都车展小米展台美女琳园长亮相</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260824ac/320/w480h640/20260824/e7e8-700de5e8e3e928bb74789a521edc85ef.jpg" width="200" height="140" alt="成都车展小米展台美女琳园长亮相" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">成都车展，因为小米汽车的展台，让我认识了一位十分漂亮的美女，琳园长，不知道小米汽车会不会请她当模特...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 13:25:42</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7811062696_m1d1935ba803301hmzu.html" target="_blank">成都车展，因为小米汽车的展台，让我认识了一位十分漂亮的美女，琳园长…</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260823ac/320/w480h640/20260823/d699-0da6e6d86fab3c8d33d5a97207292d4f.jpg" width="200" height="140" alt="成都车展，因为小米汽车的展台，让我认识了一位十分漂亮的美女，琳园长…" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">成都车展，因为小米汽车的展台，让我认识了一位十分漂亮的美女，琳园长，不知道小米汽车会不会请她当模特...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 13:25:42</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7811110014_m1d194147e03301a9my.html" target="_blank">小米汽车成都车展发放折扇，专人检查后再发观众</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260823ac/533/w480h853/20260823/34fd-b9e5dff398e1bd548d0a9ed2639634fa.jpg" width="200" height="140" alt="小米汽车成都车展发放折扇，专人检查后再发观众" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">#2026成都车展# 有的时候还是非常佩服#小米汽车# 的他们给大家发的折扇礼物会专门有人来检查然后在发给观众...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 12:48:28</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996580_m1d5af34a403301u8qy.html" target="_blank">小米汽车今年怎么回事，成都车展琳园长都跑来当模特了</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260823ac/533/w480h853/20260823/b6d6-28f6530c62b5c51a461d403ae4d723bd.jpg" width="200" height="140" alt="小米汽车今年怎么回事，成都车展琳园长都跑来当模特了" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车今年怎么回事，成都车展琳园长都跑来当模特了[舔屏][舔屏][舔屏]...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 12:05:15</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996096_1d5af32c006801kx5e.html" target="_blank">小米汽车的增程式技术有哪些优势？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260823ac/350/w690h460/20260823/5199-d8c1877e142ced219671755daa49f4cf.jpg" width="200" height="140" alt="小米汽车的增程式技术有哪些优势？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">2026年7月30日，小米汽车正式发布旗下第二个产品系列——小米澎程，采用大电池增程技术路线，以最高505公里纯电续航和最低5.7L/100km亏电油耗，直面外界“入局太晚”的质疑...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 11:57:59</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7811110014_m1d194147e03301a97e.html?from=digit" target="_blank">小米澎程设计揭晓，首席设计师李田原谈空间新答案</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260823ac/199/w639h360/20260823/38fb-855f573ff787056417b9c2d49c3896a3.jpg" width="200" height="140" alt="小米澎程设计揭晓，首席设计师李田原谈空间新答案" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">从一张草图开始，小米汽车的第二个产品系列，逐渐成形。小米澎程，为什么这样设计。听小米汽车首席设计师李田原聊聊。这不是完整揭晓，而是关于空间新答案的开始...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 11:21:14</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_1912222221_71fa320d02001nu90.html" target="_blank">2026成都车展：小米汽车全系亮相</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260824s/266/w800h1066/20260824/2217-cfbb12e9b721a251dde448b2c1b41cbc.jpg" width="200" height="140" alt="2026成都车展：小米汽车全系亮相" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">作为中西部汽车市场的年度风向标，本届车展汇聚了众多品牌的重磅新车。小米汽车携全系车型亮相10号馆H1004展位，其中，7月刚刚预售的小米澎程N90 Max和N70 Max在本届车展上正式亮相...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 09:57:01</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/digi/2026-08-23/doc-inipfzve7188419.shtml" target="_blank">小米汽车：澎程系列滑轨表面设计有橡胶皮质，能阻挡大部分异物掉入内部</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260823/120/w1440h1080/20260823/8d82-8d8bd85dc4a8ec5b5d5c2f791612373a.jpg" width="200" height="140" alt="小米汽车：澎程系列滑轨表面设计有橡胶皮质，能阻挡大部分异物掉入内部" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">IT之家 8 月 23 日消息，小米汽车官方昨晚发布答网友问（第 282 集），针对澎程的超长滑轨可靠性如何、米澎程 N70 Max 能不能成床等问题进行了集中解答...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 07:57:17</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996059_1d5af329b06802hgf2.html" target="_blank">小米su7车祸</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">其中一批次覆盖2024年8月8日至2026年3月4日生产的车辆，共计339,069台；另一批次覆盖2023年12月27日至2024年8月16日生产的车辆，共计51,366台...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-23 05:27:01</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996679_1d5af3507068036sza.html" target="_blank">哨兵模式没有录像？3步自查+品牌方案对比，附小米/华为/日产实测+FAQ</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">核心结论：哨兵模式没有录像，90%是基础条件没满足——U盘未插、功能开关未开启或车辆电量过低自动关闭。目前主流新能源车型（如小米汽车、华为乾崑智驾、东风日产N7）均支持车机本地查看和手机APP远程调取，但不同品牌在免费/收费、远程查看能力上差异明显...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-22 23:46:38</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/2026-08-22/doc-inipferi7221788.shtml" target="_blank">小米汽车全系车型亮相成都车展，澎程双车开放上车体验</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/finance/transform/43/w550h293/20260822/4a51-49b4c3fa65b17a848a50babfe6618bce.jpg" width="200" height="140" alt="小米汽车全系车型亮相成都车展，澎程双车开放上车体验" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">新浪科技讯 8月22日晚间消息，2026成都车展期间，小米汽车携全系车型参展。车展上，小米澎程完成了第一批小订车主的开门仪式，全国门店同步开放上车体验...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-22 21:47:33</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879776495_1d5abd8ef06801c5fo.html" target="_blank">小米YU7内饰配置全解析：5个版本轮胎/续航差异超400km，Pro版性价比最高？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米YU7内饰配置到底怎么样。截至目前（2026年8月22日），小米汽车官方尚未公布YU7车型的内饰细节、具体价格以及购车补贴政策...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-22 19:53:13</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7880069028_1d5b04fa406801vsee.html" target="_blank">小米汽车的哨兵模式和特斯拉的哨兵模式有什么区别？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260822ac/292/w402h690/20260822/fa0a-3d26e5bd16bfa21c1cf29828301a040d.jpg" width="200" height="140" alt="小米汽车的哨兵模式和特斯拉的哨兵模式有什么区别？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米与特斯拉的哨兵模式核心区别在于：小米支持手机远程实时查看车辆周围画面，而特斯拉目前仅支持离线本地存储录像，无法远程在线查看...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-22 18:44:23</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996685_1d5af350d06802edro.html" target="_blank">小米汽车国内增长原因揭秘：生态+流量+渠道三位一体，两年半交付70万辆+FAQ</a></h2>
+				<div class="news-info">
+										<img src="https://n.sinaimg.cn/default/f8781c75/20260807/qiche_006.jpeg" width="200" height="140" alt="小米汽车国内增长原因揭秘：生态+流量+渠道三位一体，两年半交付70万辆+FAQ" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车国内增长的核心答案只有一句话：生态+流量+渠道，三个轮子一起转，硬生生把跨界降维打成了降维打击。更可怕的是，SU7车主中83%拥有5件以上小米生态产品——这群人下单前基本没进过竞品门店...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-22 15:46:02</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5952915720_162d2490806704ptu6.html" target="_blank">小米汽车召回部分2024款SU7系列纯电动汽车</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">召回编号S2026M0096V：自即日起，召回2024年8月8日至2026年3月4日生产的部分2024款小米SU7系列纯电动汽车，共计339069台...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-21 19:22:08</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953740931_162dee08306703vr56.html" target="_blank">小米汽车召回部分2024款小米牌SU7系列纯电动汽车</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">（来源：界面新闻）据市场监管总局网站消息，日前，小米汽车科技有限公司根据《缺陷汽车产品召回管理条例》《缺陷汽车产品召回管理条例实施办法》的要求，向国家市场监督管理总局备案了召回计划...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-21 18:23:44</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7880068362_1d5b04d0a06801ikna.html" target="_blank">小米YU7标准版23.35万、GT版38.99万，两款车差价15.64万到底值不值？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">2026年5月21日，小米汽车正式推出YU7系列两款新车型——YU7标准版与YU7 GT，售价分别为23.35万元和38.99万元，进一步补全了从主流家用SUV到高性能运动SUV的产品矩阵[1]...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-21 14:53:24</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996919_m1d5af35f7033026b32.html" target="_blank">女生开了小米汽车发现车技退步，每次倒车入库自己只用画车位！</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260821ac/533/w480h853/20260821/c99e-ef3012293ba51590440c1117c93e9126.jpg" width="200" height="140" alt="女生开了小米汽车发现车技退步，每次倒车入库自己只用画车位！" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">女生开了小米汽车发现车技退步，每次倒车入库自己只用画车位...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-21 12:04:18</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_1826017320_6cd6d02802001vm8q.html?from=tech" target="_blank">小米汽车答网友问（第281集）发布</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260821s/564/w798h566/20260821/31b4-e24b253991b75340378c1e9fee49120a.png" width="200" height="140" alt="小米汽车答网友问（第281集）发布" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">您也可以到小米汽车 APP 进入“购车”-“N70”-“3D 展厅”页面，感受空间场景变化。最后选择一二排，核心考虑的不是“哪张座椅更容易旋转”，而是对坐以后两个最实际的用户体验问题：对坐空间够不够、上下车是否便利...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-21 11:08:32</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953466437_162dab0450670b9snw.html" target="_blank">小米精英驾驶・2026高阶驾驶培训北京站报名开启</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260821/39/w660h979/20260821/5c33-4a4bf408c3f1a2485524ac63f988639d.jpg" width="200" height="140" alt="小米精英驾驶・2026高阶驾驶培训北京站报名开启" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">（来源：三言科技）8月21日消息，小米汽车今日宣布开启小米精英驾驶・2026高阶驾驶培训北京站报名。小米汽车表示，高阶驾驶培训将理论与实操相结合，全方位提升车主驾驶技能...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-21 10:35:47</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/roll/2026-08-21/doc-ininzpqy1520879.shtml" target="_blank">雨天别乱充电停车 小米汽车送上2张海报 建议收藏</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260821/766/w600h966/20260821/f09c-66c8093ef878e8fca0a041746540c9d8.jpg" width="200" height="140" alt="雨天别乱充电停车 小米汽车送上2张海报 建议收藏" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">快科技8月21日消息，进入多雨季节，电动车充电、停车暗藏不少风险。小米汽车对外发布两张安全提示海报，把雨季用车重点整理出来，提醒车主多留意细节，规避安全隐患...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-21 06:54:09</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7811110014_m1d194147e03301a874.html" target="_blank">听听小米车主给想买或者准备入手小米汽车的朋友们的一些建议！</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260822ac/533/w480h853/20260822/9ba0-223461eb0bfef140bb9b890da42ee845.jpg" width="200" height="140" alt="听听小米车主给想买或者准备入手小米汽车的朋友们的一些建议！" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">听听小米车主给想买或者准备入手小米汽车的朋友们的一些建议。#一分钟精选视频扶持计划#...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-21 00:59:58</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/jjxw/2026-08-20/doc-ininysmm8603442.shtml" target="_blank">二季度少赚46亿，小米遭遇“业绩坎”？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260820s/755/w1080h475/20260820/4d66-96a4e68ca55ce40b3526b38507fcbd54.jpg" width="200" height="140" alt="二季度少赚46亿，小米遭遇“业绩坎”？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">文｜雷达财经 周慧编辑｜孟帅8月19日，在2026世界机器人大会现场，结束4个月汽车工厂实训的小米新一代人形机器人正式对外亮相...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 21:02:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/stock/relnews/hk/2026-08-20/doc-ininynce7937997.shtml" target="_blank">小米汽车业务近两年半毛利率变化汇总 最高达26.4%</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260820/137/w600h337/20260820/77ae-acbf9fd2b7ab1ec7fde77e079a1047ee.jpg" width="200" height="140" alt="小米汽车业务近两年半毛利率变化汇总 最高达26.4%" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">转折点出现在2025年第二季度之后。该季度回落至25.5%,较前一季度下滑0.9个百分点;第四季度跌至22.7%,环比降幅扩大至2.8个百分点...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 19:24:41</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7811156769_m1d194cb2103303pzbu.html" target="_blank">小米澎程N90车标确认挂小米标，英文标识亮相</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260822ac/200/w640h360/20260822/9464-64a2c34670f72549e3cca242a199bf55.jpg" width="200" height="140" alt="小米澎程N90车标确认挂小米标，英文标识亮相" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">拍了段#小米澎程N90#的车标特写，跟大家聊两句。澎程作为小米汽车全新SUV系列，车头依然悬挂经典MI标，雷总亲自确认：“澎程是小米汽车的一个产品线，挂小米标”...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 17:52:37</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7880069024_1d5b04fa006803efu8.html" target="_blank">小米YU7 GT运动套装能选吗？质保、座椅、续航3个维度讲透+FAQ</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米YU7 GT运动套装原厂选装不影响质保，可以放心选；真正影响质保的是提车后自行找第三方加装。YU7 GT已于近期上市，指导价38.99万元起，满配42.99万元（YU7 GT+车漆+21寸轮毂+内饰+GT运动套装），GT运动套装包含碳纤维大灯饰板、碳纤维风道口、碳纤维后扰流板、碳纤维鸭尾等...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 14:20:53</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996689_1d5af351106801d4tc.html" target="_blank">小米汽车销量增近300%，2026年55万辆目标保守还是激进？3个维度拆解+FAQ</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车的增长已进入“明牌”阶段：2025年交付41.18万辆、同比增近300%，2026年55万辆目标反而被业内视为保守...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 14:18:53</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923805_1d5ae185d06801p4r0.html" target="_blank">小米汽车销量暴涨的秘密：2年60万辆、月销2.4万+，凭什么改写高端新能源格局+FAQ</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车已经用销量证明自己：从2024年4月交付算起，不到两年累计交付突破60万辆，真实车主超70万，2026年月销稳定在2.4万台以上...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 12:10:11</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923803_1d5ae185b06801jpa0.html" target="_blank">小米汽车销量暴涨300%！连续4个月霸榜，凭什么是它？3个维度拆解增长密码+FAQ</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车已坐稳高端新能源的头号黑马位置：2026年8月销量数据显示，SU7连续四月登顶20万以上轿车销量榜首，5月单月卖出24023台，累计交付超60万台只用了不到两年...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 12:07:46</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923946_m1d5ae18ea03303rf2s.html" target="_blank">女生开了小米汽车发现车技退步，每次倒车入库自己只用画车位</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260821ac/533/w480h853/20260821/1d1d-e1dcfe551541a9db1082f92bb13482f4.jpg" width="200" height="140" alt="女生开了小米汽车发现车技退步，每次倒车入库自己只用画车位" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">女生开了小米汽车发现车技退步，每次倒车入库自己只用画车位...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 09:30:06</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879995970_1d5af324206802e5be.html" target="_blank">小米汽车增长数据</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260820ac/278/w690h388/20260820/0625-0a3ce4b1257fb6f709042866b505f4e0.jpg" width="200" height="140" alt="小米汽车增长数据" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">2025年销量突破40万辆、同比增长近300%后，小米汽车在2026年正以55万辆年销目标开启新一轮冲刺，但产品力狂飙与舆论场风波之间的拉扯，也让这家新势力车企站在了新的十字路口...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 08:42:54</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879776543_1d5abd91f06801bl6e.html" target="_blank">小米汽车销量增长的原因是什么</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260820ac/408/w518h690/20260820/3dbd-23b68e092fa68cd7d9b642f223a042f1.jpg" width="200" height="140" alt="小米汽车销量增长的原因是什么" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车销量持续攀升的核心驱动力，源于产品力、交付能力与品牌势能的正向循环，2026年第二季度单季交付已突破10.4万台，SU7系列累计交付超50万辆...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 08:42:28</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/stock/relnews/hk/2026-08-20/doc-ininxeka2232532.shtml" target="_blank">小米汽车回应澎程系列对坐模式设计及后备厢空间</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260820/101/w600h301/20260820/c88c-041e309a30a149acbebc010898c80f9d.jpg" width="200" height="140" alt="小米汽车回应澎程系列对坐模式设计及后备厢空间" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">【CNMO科技消息】8月20日,@小米汽车发布小米汽车答网友问(第281集),就用户关注的澎程N70大床模式、澎程系列对坐模式设计及后备厢空间问题作出官方解答...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-20 07:08:28</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923803_1d5ae185b06801jo96.html" target="_blank">小米汽车月销稳站3万+台，距55万辆年目标还差多少？3个维度拆解增长底色+FAQ</a></h2>
+				<div class="news-info">
+										<img src="https://n.sinaimg.cn/default/f8781c75/20260807/qiche_003.jpeg" width="200" height="140" alt="小米汽车月销稳站3万+台，距55万辆年目标还差多少？3个维度拆解增长底色+FAQ" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">其中SU7在5月拿下20万元以上轿车市场（不分能源类型）销量第一，YU7位列1-4月终端销量SUV第二名。增长底色扎实，但55万辆年度目标的前7个月完成度仅39%，剩余5个月月均需交付约6.7万台才能收口——这是小米汽车2026年最真实的成绩单与挑战...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 20:49:40</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/stock/relnews/hk/2026-08-19/doc-ininwawr9357740.shtml" target="_blank">贡献度超两成!小米汽车二季度营收同比增长近16%,卢伟冰:澎程系列订单量超预期</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260819/795/w1675h720/20260819/c280-20de4d5228d1cb6b9996e21ecf6e8bad.jpg" width="200" height="140" alt="贡献度超两成!小米汽车二季度营收同比增长近16%,卢伟冰:澎程系列订单量超预期" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">8月18日晚间,小米集团(01810.HK)发布2026年第二季度财报。小米集团总裁卢伟冰在财报电话会上表示,第二季度,外部环境依然充满挑战,存储等核心零部件成本持续处于高位,消费市场需求仍在缓慢恢复,行业竞争也更加激烈...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 19:26:43</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/jjxw/2026-08-19/doc-ininwawm7024300.shtml" target="_blank">贡献度超两成！小米汽车二季度营收同比增长近16%，卢伟冰：澎程系列订单量超预期</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260819/795/w1675h720/20260819/c280-20de4d5228d1cb6b9996e21ecf6e8bad.jpg" width="200" height="140" alt="贡献度超两成！小米汽车二季度营收同比增长近16%，卢伟冰：澎程系列订单量超预期" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">每经记者｜李星    每经编辑｜余婷婷              8月18日晚间，小米集团（01810.HK）发布2026年第二季度财报...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 19:25:13</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879776356_1d5abd864068014d4w.html" target="_blank">小米4S店爆改巨型手办盒，央视点赞城市名片</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车把4S店展厅直接爆改成了巨型手办盒，借助升降幕布和射灯营造出均匀柔光的“实车陈列柜”效果，这一改造甚至登上了央视，成为城市品牌名片...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 17:06:11</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/roll/2026-08-19/doc-ininvwqs2571410.shtml" target="_blank">小米汽车二季度营收超240亿元，亏损收窄！55万辆年销压力仍在，小米澎程能否突围？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260819/290/w1080h810/20260819/896b-8964589c92da1d57d5e443af6ddeb11d.jpg" width="200" height="140" alt="小米汽车二季度营收超240亿元，亏损收窄！55万辆年销压力仍在，小米澎程能否突围？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">来源：时代周报8月18日，小米集团（01810.HK）披露了2026年上半年业绩公告。小米在财报中提到，“2026年第二季度，地缘不确定性仍存，存储等核心器件成本大幅上涨，叠加行业竞争激烈，给我们的业务带来压力”...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 15:38:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923379_1d5ae16b306801lz2w.html" target="_blank">小米4S店爆改巨型手办盒，登上央视成城市名片</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车把4S店展厅直接爆改成了巨型手办盒，借助升降幕布和射灯营造出均匀柔光的“实车陈列柜”效果，这一改造甚至登上了央视，成为城市品牌名片...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 14:47:14</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879848955_1d5acf3fb06803a5aq.html" target="_blank">小米YU7参数配置到底怎么样？CLTC续航覆盖633-835km，GT版零百仅2.92秒</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车旗下SUV车型YU7的完整参数配置已通过公开渠道释出。[1]这组参数配置信息发布于2026年7月25日，内容主要围绕不同版本对应的轮胎规格与CLTC续航展开...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 12:56:36</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/csj/2026-08-19/doc-ininvmyq8375964.shtml" target="_blank">小米汽车财报拆解：销量增长、毛利承压，但仍未走出亏损</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/front20260819ac/480/w898h382/20260819/cf1c-33c9f2e4c7a0f6db17efdd2a7b1e4bfb.jpg" width="200" height="140" alt="小米汽车财报拆解：销量增长、毛利承压，但仍未走出亏损" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">杰西卡 发自 副驾寺智能车参考 | 公众号 AI4Auto规模不断扩大的同时，小米汽车进入新的考验期。但另一面，小米二季度汽车收入增长慢于交付增长，创新业务毛利率继续承压，包含汽车和AI业务在内的板块仍然处于投入期，经营亏损26亿元...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 12:42:19</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7811044869_m1d193160503301lpck.html" target="_blank">北京车展上，小米汽车首席设计师李田原，现身阿维塔展台，切身体验</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260819ac/40/w480h360/20260819/7dff-3e43e1b26d73bf1e7795be7e1bf3d792.jpg" width="200" height="140" alt="北京车展上，小米汽车首席设计师李田原，现身阿维塔展台，切身体验" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">北京车展上，小米汽车首席设计师李田原，现身阿维塔展台，切身体验。#长安汽车##阿维塔 ##雷军##雷军[超话]#...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 12:16:44</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996919_m1d5af35f70330264hw.html" target="_blank">小米汽车既然给李副总吃盒饭，那就不能说他好话！</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260819ac/533/w480h853/20260819/d16d-64ede14c4960787d18a3866758b6bd7c.jpg" width="200" height="140" alt="小米汽车既然给李副总吃盒饭，那就不能说他好话！" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车既然给李副总吃盒饭，那就不能说他好话。#小米澎程N70二排空间比腿长##小米澎程N70深度评测来了#...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 12:08:07</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996919_m1d5af35f70330264f2.html" target="_blank">原来五座车也能这么好玩？小米汽车达成销量目标就靠它！</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260819ac/200/w640h360/20260819/69a1-a12de55f4e6983a0a0139e94fcf64f66.jpg" width="200" height="140" alt="原来五座车也能这么好玩？小米汽车达成销量目标就靠它！" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">原来五座车也能这么好玩。小米汽车达成销量目标就靠它。#小米澎程N70二排空间比腿长# #小米澎程N70深度评测来了#...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 12:00:01</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/roll/2026-08-19/doc-ininvmyt7097520.shtml" target="_blank">七夕限定 | 到店试驾小米汽车，领卡皮巴拉磁吸玩偶</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/front20260819ac/478/w896h382/20260819/f666-7ceca634960d86bb65cfff74c2d12c27.jpg" width="200" height="140" alt="七夕限定 | 到店试驾小米汽车，领卡皮巴拉磁吸玩偶" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">磁吸玩偶NFC版-卡皮巴拉全国限量10000个，先到先得，送完即止兑换券有效期为15天，请在有效期内完成兑换。活动规则：活动为预约制需提前预约试驾，试驾车型不限，零售顾问将联系您确认到店试驾时间，试驾完成即可参与领取磁吸玩偶兑换券活动，全国限量10000个，先到先得，送完即止...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 12:00:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923871_1d5ae189f06801eqrk.html" target="_blank">小米SU7 Ultra纽北限定版值得买吗？价格/性能/稀缺性3个维度说清+FAQ</a></h2>
+				<div class="news-info">
+										<img src="https://n.sinaimg.cn/default/f8781c75/20260807/qiche_007.jpeg" width="200" height="140" alt="小米SU7 Ultra纽北限定版值得买吗？价格/性能/稀缺性3个维度说清+FAQ" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">核心判断：小米SU7 Ultra纽北限定版是冲着“纽北光环+限量稀缺”去的赛道特别版，钱包够厚、追求极致性能的玩家闭眼冲，家庭唯一用车请直接选普通版...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 11:55:07</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_1095802822_41509fc602701chxu.html?from=finance" target="_blank">小米利润大幅度下滑，怪汽车业务吗？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20109/399/w1280h719/20260819/ee3e-304e3f6a8d975fbc83ae7de10c18c810.jpg" width="200" height="140" alt="小米利润大幅度下滑，怪汽车业务吗？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">【文/财圈社道哥说车 麻建宇】2025年首次实现年度盈利后，小米的汽车业务在2026年重回“冰窖”。8月18日，小米集团发布二季度及上半年业绩...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 09:23:56</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996424_1d5af340806801ng90.html" target="_blank">小米汽车全年交付41万辆，2026年销量目标是多少？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车2025年全年交付量突破41万辆，超额完成年初30万辆的目标，而雷军已于2026年初正式将全年销量目标上调至55万辆，这一目标能否如期兑现，正成为市场关注的焦点...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 08:23:17</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996045_1d5af328d06801vm7e.html" target="_blank">小米汽车在92亿元研发投入中占比有多大？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260819ac/277/w690h387/20260819/219e-7f94be0d2ee4fc9a9e5d4931f8f2a644.jpg" width="200" height="140" alt="小米汽车在92亿元研发投入中占比有多大？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">雷军公布小米2026年Q2单季研发投入92亿元，但财报未单列汽车板块的研发拆分，结合历史数据可推算汽车研发占集团总研发的大头...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 08:12:09</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7880069124_1d5b0500406801fnn2.html" target="_blank">小米汽车毛利率24.3%凭什么这么高？SU7和YU7怎么选更值？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米集团2025年财报显示，汽车业务毛利率达到24.3%，全年交付41.1万辆，首次实现年度盈利。小米汽车不是靠高定价，而是靠规模效应、供应链议价和技术自研把成本打了下来...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 06:17:17</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996685_1d5af350d06802e14m.html" target="_blank">小米SU7系列交付量突破50万台，28.5个月跑出最快纪录，现在买还来得及吗？+FAQ</a></h2>
+				<div class="news-info">
+										<img src="https://n.sinaimg.cn/default/f8781c75/20260807/qiche_011.jpeg" width="200" height="140" alt="小米SU7系列交付量突破50万台，28.5个月跑出最快纪录，现在买还来得及吗？+FAQ" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米SU7系列用约28.5个月交出50万台交付答卷，直接刷新国产纯电轿跑细分市场的最快交付纪录，这一里程碑正式落地。2026年8月17日，小米汽车官方宣布SU7系列累计交付量突破50万台；从2024年3月28日第一代SU7上市算起，只用了不到两年半时间，就完成了一场从0到50万台的跨越...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 04:13:41</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7880068743_1d5b04e8706801p2lo.html" target="_blank">小米汽车二季度亏损26亿元，何时能盈利？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米集团2026年上半年成绩单刚出炉，营收2080.6亿元但净利润下滑超四成，其中最受关注的汽车业务二季度仍亏了26亿元，何时能盈利成了眼下最大的悬念...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 03:53:03</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879849019_1d5acf43b06801dvmg.html" target="_blank">小米汽车交付量突破10万台对业绩贡献有多大？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车在2026年第二季度首次实现单季交付量突破10万台，以239亿元的汽车收入成为集团上半年增长最强劲的引擎，但该业务目前仍处于战略性亏损阶段...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 02:32:23</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996030_1d5af327e06801ftt0.html" target="_blank">小米汽车业务在Q2财报中表现如何？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">一、汽车业务核心数据表现创收能力：智能电动汽车及AI等创新业务收入249亿元，同比增长17.1%；其中智能电动汽车收入239亿元...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 02:09:17</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7880068743_1d5b04e8706801p2dg.html" target="_blank">小米汽车二季度交付量表现如何？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260819ac/351/w690h461/20260819/2c4d-db2dd01f45c7fbb4062f98b4b59866d4.jpg" width="200" height="140" alt="小米汽车二季度交付量表现如何？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">一、交付量突破10万台，创单季新高交付数据：二季度小米汽车交付104199辆，同比增28.2%，环比一季度80856辆增长明显...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-19 00:22:49</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5952915720_162d2490806704p9so.html" target="_blank">小米汽车二季度“喜忧参半”：营收增长、亏损持续</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">来源：@财联社APP微博财联社8月18日讯（记者 徐昊）8月18日，小米集团披露2026年第二季度财报，当期集团总收入1089亿元，集团经调整净利润62亿元...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 23:02:39</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/roll/2026-08-18/doc-inintxxs0003876.shtml" target="_blank">小米汽车二季度“喜忧参半”：营收增长、亏损持续 澎程系列订单超预期｜车企半年报</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/default/feedbackpics/transform/116/w550h366/20180418/kHEh-fzihnep5208598.png" width="200" height="140" alt="小米汽车二季度“喜忧参半”：营收增长、亏损持续 澎程系列订单超预期｜车企半年报" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">转自：财联社财联社8月18日讯（记者 徐昊）8月18日，小米集团披露2026年第二季度财报，当期集团总收入1089亿元，集团经调整净利润62亿元...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 21:05:03</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/jjxw/2026-08-18/doc-inintxxm7360087.shtml" target="_blank">小米汽车二季度“喜忧参半”：营收增长、亏损持续 澎程系列订单超预期</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/default/feedbackpics/transform/116/w550h366/20180326/oOd4-fysqfnf9443669.png" width="200" height="140" alt="小米汽车二季度“喜忧参半”：营收增长、亏损持续 澎程系列订单超预期" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">财联社8月18日讯（记者 徐昊）8月18日，小米集团披露2026年第二季度财报，当期集团总收入1089亿元，集团经调整净利润62亿元...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 21:04:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953189932_162d6782c06704vjn0.html" target="_blank">小米汽车二季度交付量增长28%</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">2026年二季度，智能电动汽车及AI等创新业务分部经营亏损26亿元，毛利率为19.2%。小米新车交付量达到104199辆，同比增长28.2%...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 20:49:39</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879849019_1d5acf43b06801dvhe.html" target="_blank">小米汽车SU7累计交付50万台后全年目标是多少？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车SU7系列刚刚在8月17日达成50万台累计交付里程碑，雷军同步确认全年销量目标为50万辆，这意味着下半年小米汽车需加速交付节奏...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 20:24:39</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923611_1d5ae179b06801ux94.html" target="_blank">小米汽车业务单季亏损26亿，预计何时能实现盈利？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米刚发布2026年Q2财报，总营收1089亿元、经调整净利润62亿元，最受关注的汽车业务当季交付超10.4万台但仍亏损26亿元...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 20:12:47</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996050_1d5af329206801oi2w.html" target="_blank">小米汽车第二季度交付超10万台，收入表现如何？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260818ac/338/w690h448/20260818/eb55-73b63ede4fb60af15fc0f7da05c591ca.jpg" width="200" height="140" alt="小米汽车第二季度交付超10万台，收入表现如何？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米集团发布2026年第二季度财报，智能电动汽车及AI等创新业务收入249亿元，当季新车交付104199台，但该板块仍处于亏损状态，引发市场关注...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 19:17:21</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996041_1d5af328906801ui12.html" target="_blank">小米汽车未来有哪些新车型规划？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">一、Q2财报中的汽车业务表现交付与收入双增长：2026年Q2小米智能电动汽车及AI等创新业务收入249亿元，同比增长17.1%；当季新车交付104,199台，同比增长28.2%...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 18:25:48</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879776479_1d5abd8df06801au90.html" target="_blank">小米汽车连续三个月交付“30000+”为何不公布具体数字？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车今年4月至7月已连续四个月交付量稳定在3万台以上，但官方始终只公布“超3万台”的区间数据，而拒绝披露精确数字，这一策略源于雷军“不参与销量数字内卷”的明确表态...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 17:57:21</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923942_m1d5ae18e60330202he.html" target="_blank">小米汽车碳纤维尾翼被造谣，博主辟谣称系车主改装</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260819ac/533/w480h853/20260819/20dd-0501ddb321e5ba48a0b04a4d910b752b.jpg" width="200" height="140" alt="小米汽车碳纤维尾翼被造谣，博主辟谣称系车主改装" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">网上对小米的造谣又来了。这次盯上的是小米汽车的“碳纤维尾翼”，见开头视频。幸好网上明辨是非的网友还是很多的，有博主直接出视频辟谣，称视频开头晃动的所谓“碳纤维尾翼”，其实不是原装的碳纤维尾翼，这只是车主自己改装的...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 09:30:06</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923946_m1d5ae18ea03303r4yk.html" target="_blank">小米汽车碳纤维尾翼被造谣，实为车主改装</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260819ac/533/w480h853/20260819/39b1-710080e31a74f01cdd095e01ab9979be.jpg" width="200" height="140" alt="小米汽车碳纤维尾翼被造谣，实为车主改装" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">网上对小米的造谣又来了。这次盯上的是小米汽车的“碳纤维尾翼”，见开头视频。幸好网上明辨是非的网友还是很多的，有博主直接出视频辟谣，称视频开头晃动的所谓“碳纤维尾翼”，其实不是原装的碳纤维尾翼，这只是车主自己改装的...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 09:30:06</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5182171545_134e1a99902002icmq.html?from=auto" target="_blank">小米汽车：小米SU7系列累计交付突破50万台，港股汽车ETF天弘(159028)标的指数昨日收涨2.62%</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260818s/722/w989h2133/20260818/4ada-86eb2fd0101faa70434d96a213c85062.jpg" width="200" height="140" alt="小米汽车：小米SU7系列累计交付突破50万台，港股汽车ETF天弘(159028)标的指数昨日收涨2.62%" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">截至2026年8月17日收盘，港股汽车ETF天弘(159028)跟踪的恒生港股通汽车主题指数(HSSCAM)强势上涨2.62%，成分股商汤-W上涨8.90%，中创新航、五一视界、吉利汽车等个股跟涨...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-18 09:15:42</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/wm/2026-08-17/doc-ininrkkm6951563.shtml" target="_blank">【汽车】小米SU7系列交付突破50万台</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260817s/798/w399h399/20260817/646d-31ad46172e3fdd46403eff801d8639e4.jpg" width="200" height="140" alt="【汽车】小米SU7系列交付突破50万台" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">8月17日，小米汽车宣布小米SU7系列历时28.5个月交付突破50万台。据悉，从2024年3月初代SU7首发，到2025年SU7 Ultra登场，再到今年3月新一代SU7焕新迭代共两年半时间...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 18:10:14</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5696766151_1538dc0c700101vkro.html?from=digit" target="_blank">小米汽车：小米SU7系列累计交付突破50万台</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20117/398/w1278h720/20260724/9286-c63e154f3fd09d8285c18c646372c49d.jpg" width="200" height="140" alt="小米汽车：小米SU7系列累计交付突破50万台" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">人民财讯8月17日电，据小米汽车消息，小米SU7系列累计交付突破50万台...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 17:13:23</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953466437_162dab0450670b9aaw.html" target="_blank">小米汽车详解澎程系列“蜻蜓大灯”设计</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260817/246/w660h386/20260817/bbb3-1b43434ded44464db8b59628fad52e88.jpg" width="200" height="140" alt="小米汽车详解澎程系列“蜻蜓大灯”设计" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">（来源：环球网资讯）来源：环球网【环球网科技综合报道】8月17日消息，小米汽车在回应网友“小米澎程系列的前大灯和尾灯，设计上有什么思考...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 16:34:43</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879777292_1d5abdc0c06801fgf8.html" target="_blank">小米电池膨胀会爆炸吗？小米龙甲电池55℃满电实测不起火不爆炸，500J底部抗撞，安全配置值得买吗？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">如果内部压力继续积累，确实可能破坏隔膜，最终引发电芯热失控...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 16:32:09</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953189932_162d6782c06704vfks.html" target="_blank">雷军：小米SU7发布28.5个月，该系列累计交付突破50万辆</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260817/345/w660h485/20260817/3062-8037b73bdb77f209a3e86c556b52befc.jpg" width="200" height="140" alt="雷军：小米SU7发布28.5个月，该系列累计交付突破50万辆" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">（来源：三言科技）8月17日消息，今日，小米集团董事长雷军在社交平台宣布，小米 SU7 系列交付量正式突破 50 万台。"据悉，小米 SU7 是小米汽车推出的首款车型，上市初期曾经历产能爬坡阶段，随后交付量稳步提升...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 16:04:44</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5328858693_13d9fee4502002gxh6.html" target="_blank">小米汽车App“车辆助手”开启公测招募，支持对话查询车辆状态</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260817s/450/w620h630/20260817/f020-f7ccd12272892b20af44a607e9abc05e.png" width="200" height="140" alt="小米汽车App“车辆助手”开启公测招募，支持对话查询车辆状态" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">8月17日，小米汽车官方账号发文：小米汽车APP「车辆助手」公测体验官开启招募。专属手机车辆小助手来了。本功能尚在测试迭代，面向全量车主招募体验官，本次将结合报名信息综合筛选体验官...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 15:55:00</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879848900_1d5acf3c406803a2ku.html" target="_blank">小米汽车龙甲电池过热怎么办？55℃满电不起火，车主3步应急，产业链气凝胶需求会持续吗？</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车电池过热时，车主的第一反应是什么。尽管小米龙甲电池在55℃高温满电条件下可实现热失控后无热蔓延、不起火、不爆炸[1]，但安全冗余不等于零风险，掌握正确应急操作仍是车主的必修课...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 15:14:24</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/roll/2026-08-17/doc-ininreat7822465.shtml" target="_blank">雷军回应小米SU7交付破50万台：感谢每一位车主的信任与支持</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260817/600/w600h800/20260817/c5ab-5bdb98da519a68983ec9201f2459d7ce.jpg" width="200" height="140" alt="雷军回应小米SU7交付破50万台：感谢每一位车主的信任与支持" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">快科技8月17日消息，小米创办人、董事长兼CEO雷军今日发文官宣：小米SU7 系列累计交付量已突破50万台，从首批车辆开启交付算起，用时仅仅 28.5 个月...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 15:08:54</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879924061_m1d5ae195d03301ij5g.html" target="_blank">雷军宣布小米SU7系列28.5个月交付突破50万台</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260818ac/533/w480h853/20260818/76b4-e224b7c7468c5fe83d98d4c74bb9b6ad.jpg" width="200" height="140" alt="雷军宣布小米SU7系列28.5个月交付突破50万台" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">8月17日，雷军宣布，2024年3月28日，小米SU7正式发布。仅用28.5个月，小米SU7系列累计交付量就突破50万台，平均每天交付超过580台...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 14:38:30</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953740931_162dee08306703v5be.html" target="_blank">小米汽车SU7系列累计交付突破50万台</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">（来源：北京商报）北京商报讯（记者 蔺雨葳）8月17日， 小米汽车宣布，小米汽车SU7系列，上市28.5个月交付突破50万台...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 14:36:57</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_1912222221_71fa320d02001nbz6.html" target="_blank">小米SU7系列累计交付突破50万台 里程碑时刻</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260818s/266/w800h1066/20260818/6959-9e809c6ba91dd43276f42aa866b835b2.jpg" width="200" height="140" alt="小米SU7系列累计交付突破50万台 里程碑时刻" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">易车讯 8月17日，小米汽车官宣：小米SU7系列累计交付突破50万台。作为参考，新一代小米SU7于今年3月19日上市，共推出3款车型，售价区间21.99-30.39万元...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 14:00:26</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/roll/2026-08-17/doc-ininreat7764093.shtml" target="_blank">小米汽车全系将亮相2026成都国际车展：高管直播带你云逛展</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260817/141/w600h6741/20260817/518e-4bf1ecf5da0a263c4f68e904bfae5016.jpg" width="200" height="140" alt="小米汽车全系将亮相2026成都国际车展：高管直播带你云逛展" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">快科技8月17日消息，小米汽车放出202成都国际车展完整逛展攻略，本届展会小米会把旗下所有在售、新款车型全部带到现场。本届车展举办时间是8月21日到8月30日，展馆位置在中国西部国际博览城10号馆H1004，一共10天展期，想实地看车的可以直接认准这个展位...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 13:52:28</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/roll/2026-08-17/doc-ininreat7763649.shtml" target="_blank">SU7系列交付破50万台 用时28.5个月：雷军曾称小米要造出媲美保时捷梦想之车</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260817/120/w600h1120/20260817/ebbb-85b73bbdedd6aed6a35710b3acca0e37.jpg" width="200" height="140" alt="SU7系列交付破50万台 用时28.5个月：雷军曾称小米要造出媲美保时捷梦想之车" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">快科技8月17日消息，小米首款量产纯电轿跑SU7的累计交付销量，近期正式突破了50万台大关，创下了国内纯电轿跑品类全新的交付速度纪录...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 13:51:52</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953189932_162d6782c06704vf4m.html" target="_blank">小米汽车今日宣布，小米 SU7 系列 28.5 个月交付突破 50 万台。</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车今日宣布，小米 SU7 系列 28.5 个月交付突破 50 万台...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 13:35:41</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://finance.sina.com.cn/tech/digi/2026-08-17/doc-ininqxur7057787.shtml" target="_blank">小米 SU7 系列交付突破 50 万台，用时 28.5 个月</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260817/55/w1052h1403/20260817/7222-72728f6913527dba5c2453d6c4c0f4ea.png" width="200" height="140" alt="小米 SU7 系列交付突破 50 万台，用时 28.5 个月" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">IT之家 8 月 17 日消息，小米汽车今日宣布，小米 SU7 系列 28.5 个月交付突破 50 万台，感谢每一位车主的信任与支持...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 13:32:01</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_1826017320_6cd6d02802001vbe0.html?from=tech" target="_blank">小米SU7系列交付突破50万台，用时28.5个月</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260817s/55/w1052h1403/20260817/334f-a08664028435af3fe6e9f3600e3bb142.png" width="200" height="140" alt="小米SU7系列交付突破50万台，用时28.5个月" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">IT之家 8 月 17 日消息，小米汽车今日宣布，小米 SU7 系列 28.5 个月交付突破 50 万台，感谢每一位车主的信任与支持...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 13:32:01</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923803_1d5ae185b06801jjpq.html" target="_blank">小米su7黑武士</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">一、黑色力量的视觉重塑：从“隐藏”到“雕琢”减法设计：小米汽车为YU7 GT推出的“武士黑”定制色，核心思路不是把细节藏起来，而是通过纯黑基底吸收几乎所有光线，...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 06:23:40</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923187_1d5ae15f3068018b0y.html" target="_blank">小米su7分期购车流程</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米SU7分期购车流程已经非常清晰，目前官方主推“3年0息”金融方案，结合限时购车权益，最低首付几万元就能提车走人...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-17 06:23:37</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996689_1d5af351106801d1ei.html" target="_blank">小米汽车针对此次事件有哪些具体的改进措施？</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260816ac/408/w518h690/20260816/33b6-1ceefcc6195d7ac3f6622b60590ab341.jpg" width="200" height="140" alt="小米汽车针对此次事件有哪些具体的改进措施？" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车在经历舆论风波后，已从紧急响应、产品宣传、用户沟通三个维度推出多项具体改进措施，核心动作包括成立专项小组公开调查进展、优化安全提示标注、以及建立常态化辟谣机制...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-16 20:18:16</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923187_1d5ae15f3068018ap6.html" target="_blank">提供一下小米SU7 Ultra纽北圈速的官方视频</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米官方至今没有再发布新的SU7 Ultra纽北圈速视频，所有公开的官方动态仍是2024年10月发布的原型车圈速挑战纪录片...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-16 20:14:32</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879777156_1d5abdb8406801kxuc.html" target="_blank">小米SU7二手车现在多少钱？2024款新车21.59万起，二手17万-28万，质保还能转移吗</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米SU7二手车热度高，2024款新车21.59万起，车龄1-2年的二手挂牌价普遍17万-28万，折价3万-8万。官方质保：整车5年/10万公里，电池电机8年/16万公里[1]...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-16 19:04:27</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879848955_1d5acf3fb06803a102.html" target="_blank">小米汽车车展图片</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260816ac/408/w518h690/20260816/de64-49b864535ee0163db334199933749a62.jpg" width="200" height="140" alt="小米汽车车展图片" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车在2026年北京车展的亮相引起了不少关注，从最新进展到现场人气，网上讨论热度一直很高。这里为你呈现不同视角的小米汽车车展图片...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-16 09:02:25</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7857201851_v1d45362bb06801getm.html" target="_blank">小米汽车升降车标专利：双车标轮换升降，轻量化延长续航</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车一项升降车标专利正式获授权，采用双车标轮换升降的轻量化设计，不仅能一键切换“金标”和普通车标提升仪式感，还能通过降低结构重量来延长车辆续航...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-16 08:27:16</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879848955_1d5acf3fb06803a0my.html" target="_blank">小米澎程N90官宣！5.2米+505km+20万起，大七座增程要变天？+FAQ</a></h2>
+				<div class="news-info">
+										<img src="https://n.sinaimg.cn/default/f8781c75/20260807/qiche_018.jpeg" width="200" height="140" alt="小米澎程N90官宣！5.2米+505km+20万起，大七座增程要变天？+FAQ" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米澎程N90就是2026年最值得等的大七座增程SUV。8月15日新车官宣，7月8日品牌发布，8月14日宣布全系参展成都车展...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-16 00:38:34</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879924060_m1d5ae195c03301zpbo.html?from=digit" target="_blank">小米汽车做了一枚智能指环，全新交互方式</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260816ac/320/w480h640/20260816/1358-38f3c553e6bdab8881311dc5c9a71f55.jpg" width="200" height="140" alt="小米汽车做了一枚智能指环，全新交互方式" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车做了一枚智能指环，全新交互方式#小米汽车[超话]#...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 17:28:06</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_5953740931_162dee08306703uz3a.html" target="_blank">小米汽车详解澎程门把手：采用三重安全冗余设计 极端场景也能开门</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/spider20260815/395/w660h535/20260815/cc71-6b1d1bc908dd00744f0165b51f98e4b6.jpg" width="200" height="140" alt="小米汽车详解澎程门把手：采用三重安全冗余设计 极端场景也能开门" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">（来源：环球网资讯）来源：环球网【环球网科技综合报道】8月15日消息，日前小米汽车在回应网友“小米澎程的门把手，有什么安全设计考虑...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 15:05:23</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7880069028_1d5b04fa406801v20i.html" target="_blank">小米yu7官网预订</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">截至2026年8月，小米YU7已经历上市初期的疯狂订购、交付爬坡和多次版本迭代，现在通过小米汽车官方APP即可进行新车预订或选购现车，但需警惕各类非官方预订骗局和高仿链接...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 13:05:19</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996096_1d5af32c006801ktf0.html" target="_blank">小米汽车澎程系列即将发布</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260815ac/408/w690h518/20260815/b9c8-281bd4b9f0cb570edecb9336dce0c4a8.jpg" width="200" height="140" alt="小米汽车澎程系列即将发布" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车第二款系列产品“SkyNomad澎程”已正式亮相技术发布会，以其智能可变大空间和全系支持92号汽油的核心卖点，成为车市焦点，预计9月正式上市...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 10:02:56</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996059_1d5af329b06802guu2.html" target="_blank">小米汽车谈小米澎程</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260815ac/408/w518h690/20260815/34b3-91c6f33818e445ed4fa08331b8ba59be.jpg" width="200" height="140" alt="小米汽车谈小米澎程" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">澎程全系搭载12个安全气囊，经历23万次仿真测试与175次实车碰撞测试；增程器进气口抬升至前风挡下方（离地1109mm），泄压阀移至尾门上方（离地950mm），涉水设计对标路虎级防护...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 10:02:40</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879776495_1d5abd8ef06801bw56.html" target="_blank">小米汽车解答澎程系列涉水能力</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260815ac/557/w690h667/20260815/2215-97289a945b5e1ba46fd61dfe1444b4b2.jpg" width="200" height="140" alt="小米汽车解答澎程系列涉水能力" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车通过最新一期《答网友问》，详细回应了澎程系列的涉水能力，不仅亮出了N90 Max最高750mm的涉水深度和3分钟应急浮水能力，更反复划清使用边界，强调这是暴雨内涝时的“应急冗余”而非越野工具...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 10:02:34</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879776542_1d5abd91e068013m6k.html" target="_blank">小米汽车全系亮相北京车展</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260815ac/206/w690h316/20260815/7112-b2ef59a5156ef3a470b1426a2e3f1bf3.jpg" width="200" height="140" alt="小米汽车全系亮相北京车展" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">定制服务展区：小米还展出了私人定制服务车型，如玉麒紫水晶配色、嫩芽黄SU7等，展示了单月仅40台的极致工艺能力，车标采用白陶瓷与24K金结合，卡钳为定制绿色运动款...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 09:57:15</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879777156_1d5abdb8406801kvai.html" target="_blank">小米汽车亮相北京国际车展</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260815ac/355/w465h690/20260815/f564-81586d2d479763d6a8ee85bef0743f44.jpg" width="200" height="140" alt="小米汽车亮相北京国际车展" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">2026年北京车展上，小米汽车以“全家族”阵容高调亮相，雷军亲自站台宣布累计交付突破65.5万辆，同时一款代表技术野心的VGT概念车首次在国内公开，成为全场焦点...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 09:56:25</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879996059_1d5af329b06802gute.html" target="_blank">小米汽车成都车展位置</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260815ac/350/w690h460/20260815/e220-602feae3742929dd390eefa62171acc0.jpg" width="200" height="140" alt="小米汽车成都车展位置" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">小米汽车在今年成都车展的展台位置锁定在新馆A4厅A402展位，这将是其全系车型首次在成都集中亮相，展台规模和互动体验均大幅升级...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 09:56:20</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7879923187_1d5ae15f30680189fg.html" target="_blank">小米汽车亮相广州车展</a></h2>
+				<div class="news-info">
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">一、 全系车型亮相，展台人气爆棚人气焦点：在2026年广州车展上，小米汽车展台成为全场人流最密集的区域之一，其火爆程度甚至令同行感叹“小米不语，只是一味的火爆”...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 09:56:15</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			            <article class="news-item">
+				<h2 class="news-title"><a href="https://k.sina.com.cn/article_7811058073_m1d193499903301dnty.html" target="_blank">买小米汽车不用久等了</a></h2>
+				<div class="news-info">
+										<img src="http://n.sinaimg.cn/sinakd20260815ac/320/w480h640/20260815/64ef-f7293e9c3662a58a91c2874ff1f3ef8c.jpg" width="200" height="140" alt="买小米汽车不用久等了" class="news-image"/>
+										<div class="news-content">
+						<div>
+							<span style="font-size: 14px;color: #666">买小米汽车不用久等了‼️#小米汽车[超话]##雷军[超话]##新能源汽车[超话]#...</span>
+						</div>
+						<div class="news-meta">
+							<span>2026-08-15 08:43:49</span>
+						</div>
+					</div>
+				</div>
+            </article>
+			        </section>
+
+        <!-- 右侧：纯文本列表 -->
+		<aside class="right-section">
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://n.sinaimg.cn/sinakd10203/360/w180h180/20221208/975c-8817d1a047230a93519e5412c0529894.jpg" width='40' height='40' alt="九派新闻" class="text-item-avatar">
+                    <span class="text-item-author">九派新闻</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336472724179328.html" target="_blank"><p class="text-item-text">【#小米两门轿跑测试车曝光#】#小米汽车再添轿跑新品#8月27日，博主“拉面师傅Design”发布视频，曝光一款全身伪装的小米测试车。该车低矮紧凑、线条流畅，车头修长，尾灯疑似沿用家族环形设计，配大尺寸扩散器，被推测为两门轿跑，处早期测试阶段，动力与上市时间未明。另悉，小米SU7系列上市约28.5个月交付破50万台，小米汽车正持续扩围产品阵线。（快科技）@徽视点</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 10:28:27</span>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://n.sinaimg.cn/sinakd10200/360/w180h180/20221208/4bf2-3f224f3ce3440992ef8b53fc94119377.jpg" width='40' height='40' alt="新浪科技" class="text-item-avatar">
+                    <span class="text-item-author">新浪科技</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336471569699621.html" target="_blank"><p class="text-item-text">【#小米神秘车型现身#】今日，博主@拉面师傅Design 发布了一段视频，并配文称：“小米神秘车型现身喽”。
+
+视频里这款新车被黑色伪装布全部覆盖，暂未展示完整设计细节。不少网友根据车身轮廓推测，这大概率是小米正在研发的两门轿跑新品。
+
+从流传出来的谍照可以看出，这台测试车整体车身低矮，侧面线条简洁流畅，运动姿态鲜明。整车尺寸偏向紧凑，车头部分设计偏修长，进一步烘托出轿跑的运动氛围。
+
+虽然车尾被伪装材料遮挡严实，但依旧能够看出尾灯大概率延续小米家族环形设计语言。后包围造型富有冲击力，大尺寸扩散器十分醒目，强化了整车的性能感。
+
+现阶段这台车依旧处于早期测试阶段，厚重的伪装也说明外观、配置还有调整空间。关于它的动力配置、所搭载平台以及预计上市时间，外界均没有确切消息，所有判断都仅为基于谍照的猜测。
+
+随着SU7系列的市场热度走高，小米汽车正在持续丰富自身的产品阵容。SU7系列在约28.5个月时间里，累计交付已经突破50万台，市场表现亮眼。（快科技）</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 10:23:52</span>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://n.sinaimg.cn/sinakd10201/360/w180h180/20210122/6faf-khxeamw3504255.jpg" width='40' height='40' alt="王冬" class="text-item-avatar">
+                    <span class="text-item-author">王冬</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336468568408307.html" target="_blank"><p class="text-item-text">小米推出全球电动汽车网站
+
+中国电动车企业今年的重点是出海，小米也不例外。小米刚刚推出了全球网站和全球社交媒体账号，为明年进军欧洲市场做准备，同时也在积极寻找欧洲的经销商和分销合作伙伴。
+
+新网站是xiaomiauto.com。网站内容不多，包含一些可以追溯到2023年的新闻，还有一个版块重点介绍了五个研发中心，其中一个位于德国慕尼黑。
+
+不知道明年小米汽车进军欧洲后能够掀起多大的波澜呢。#小米##新能源大牛说##汽车资讯#</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 10:11:55</span>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://tvax1.sinaimg.cn/crop.0.0.512.512.180/a57153ebly8h7prwmy1n3j20e80e8t8u.jpg" width='40' height='40' alt="新言财经" class="text-item-avatar">
+                    <span class="text-item-author">新言财经</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336468554781319.html" target="_blank"><p class="text-item-text">【#小米两门轿跑谍照曝光#】#小米神秘两门车现身路试#8月27日消息，今日，博主“拉面师傅Design”发布了一段视频，并配文称：“小米神秘车型现身喽”。
+
+视频里这款新车被黑色伪装布全部覆盖，暂未展示完整设计细节。不少网友根据车身轮廓推测，这大概率是小米正在研发的两门轿跑新品。
+
+从流传出来的谍照可以看出，这台测试车整体车身低矮，侧面线条简洁流畅，运动姿态鲜明。整车尺寸偏向紧凑，车头部分设计偏修长，进一步烘托出轿跑的运动氛围。
+
+虽然车尾被伪装材料遮挡严实，但依旧能够看出尾灯大概率延续小米家族环形设计语言。后包围造型富有冲击力，大尺寸扩散器十分醒目，强化了整车的性能感。
+
+现阶段这台车依旧处于早期测试阶段，厚重的伪装也说明外观、配置还有调整空间。关于它的动力配置、所搭载平台以及预计上市时间，外界均没有确切消息，所有判断都仅为基于谍照的猜测。
+
+随着SU7系列的市场热度走高，小米汽车正在持续丰富自身的产品阵容。SU7系列在约28.5个月时间里，累计交付已经突破50万台，市场表现亮眼。（快科技）</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 10:11:53</span>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://n.sinaimg.cn/sinakd10202/358/w179h179/20221213/8447-1b8546f9c02ac946629a2471454047b8.jpg" width='40' height='40' alt="快科技官方" class="text-item-avatar">
+                    <span class="text-item-author">快科技官方</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336466867881929.html" target="_blank"><p class="text-item-text">【小米两门轿跑车型曝光：车身紧凑、尾部扩散器显眼】博主晒出全伪装的小米全新测试车谍照，网友根据轮廓推测是两门轿跑，该测试车车身低矮，线条流畅，尺寸偏紧凑，车头修长，疑似沿用小米家族环形尾灯设计，配备大尺寸扩散器。目前该车仍处于早期测试阶段，外观、配置仍有调整空间。 ​</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 10:05:11</span>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://tvax1.sinaimg.cn/crop.0.0.1080.1080.180/008vJ2Qdly8h84judoxghj30u00u0jsp.jpg" width='40' height='40' alt="电车出海" class="text-item-avatar">
+                    <span class="text-item-author">电车出海</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336446609134354.html" target="_blank"><p class="text-item-text">终于等到你～
+
+#电车出海##大v聊车##小米汽车海外官网正式上线# ​</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 08:44:41</span>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://n.sinaimg.cn/sinakd10202/358/w179h179/20221213/8447-1b8546f9c02ac946629a2471454047b8.jpg" width='40' height='40' alt="快科技官方" class="text-item-avatar">
+                    <span class="text-item-author">快科技官方</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336441451448494.html" target="_blank"><p class="text-item-text">【9月7日机圈上演神仙打架：小米华为发布会撞档】博主数码闲聊站暗示，9月7日当天不止华为一家举办发布会，TOP5阵营中还有两家大厂也将在同一天发布新品，其中一家是小米。爆料称小米将在9月7日发布全新的阔折叠旗舰小米18 Fold以及全新的小米汽车澎程系列。 ​</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 08:24:11</span>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://n.sinaimg.cn/sinakd10200/360/w180h180/20250606/18d1-e7bbc887edcc88e10ddd40d48a11575b.jpg" width='40' height='40' alt="虫数码" class="text-item-avatar">
+                    <span class="text-item-author">虫数码</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336403694585310.html" target="_blank"><p class="text-item-text">小米已经准备好了，出海后，你觉得小米汽车年销量会达到什么样一个水平？ ​</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 05:54:09</span>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://tvax1.sinaimg.cn/crop.0.0.600.600.180/008GUaOnly8ifv3wgt06rj30go0gogn9.jpg" width='40' height='40' alt="小瀚说车" class="text-item-avatar">
+                    <span class="text-item-author">小瀚说车</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336353434239384.html" target="_blank"><p class="text-item-text">15万级-轿跑SUV极狐阿尔法T7配置-预售版
+
+极狐阿尔法T7正式开启预售，提供增程、纯电双动力，预售补贴价13.78-17.48万元。全系搭载宁德时代极光电池和800V的3C快充平台，车内搭载与小米YU7类似的全景天际屏P-HUD，乾崑版搭载舱内激光雷达的华为ADS智驾方案。还有国家大剧院级调音的21扬音响、副驾零重力按摩座椅等高端配置。
+
+说起极狐，它其实是比问界还要早的和华为深度合作的车企。客观来说，极狐的车用料配置一直都很扎实：麦格纳制造工艺、华为智驾、宁德时代电池这些核心硬件都不含糊，但品牌声量和销量一直不温不火，后来不得不靠性价比来维持存在感。
+不过这次阿尔法T7很明显在产品定义上借鉴了小米和华为的成功思路：把FUV外观、高阶智驾、豪华配置这些用户感知强的东西直接拉满，再用13万级的起售价切入市场。小瀚觉得这对整个行业其实是好事：有小米、华为这种产品定义能力和技术能力强的玩家先把产品标准立起来，再由北汽这种供应链和成本控制能力更强的车企，把同样有产品力的车型价格打下来，普惠更多家庭。
+
+虽然还没出正式价格，但我觉得极狐T7已经可以预定一个爆款了。小瀚也抽空去试驾下北汽这套智驾和华为方案的差别(如果店里允许也给大家录个视频)，详细的配置解读等正式上市后给大家更新。
+#极狐t7##极狐阿尔法t7#</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 02:34:26</span>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://n.sinaimg.cn/sinakd10203/358/w179h179/20201208/274d-keyancw9518726.jpg" width='40' height='40' alt="电影娱乐家" class="text-item-avatar">
+                    <span class="text-item-author">电影娱乐家</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336300750113857.html" target="_blank"><p class="text-item-text">小米汽车品牌代言人苏炳添喜提别克MPV，看来雷总要尽早布局mpv市场了。 ​</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-26 23:05:05</span>
+                </div>
+            </article>
+			
+						
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://tvax3.sinaimg.cn/crop.0.0.450.450.50/002wVUFrly8h8vgt7mcs2j60ci0ci0t002.jpg?KID=imgbed,tva&Expires=1787808754&ssig=9zLzR70F%2F6" width='40' height='40' alt="新浪热点" class="text-item-avatar">
+                    <span class="text-item-author">新浪热点</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336460053447488.html" target="_blank"><p class="text-item-text">【#侯卓成回应感情现状#】#侯卓成认为自己没做错#8月27日，侯卓成开启直播，回应与杨汝晴的感情现状以及此前的聊天记录争议。
+ 
+他透露，自己和杨汝晴并没有分手，但原定8月22日的订婚计划已经推迟。在他看来，二人当下都处在比较脆弱的阶段，需要先消化处理好相关事件与情绪，再去推进订婚这件事。
+ 
+ ​</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-27 09:38:06</span>
+                    <a href="https://www.sina.cn/news/detail/5336460053447488.html" target="_blank"><div class="text-item-stats">
+                        <span>转发(56)</span>
+                        <span>评论(4)</span>
+                    </div></a>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://tvax3.sinaimg.cn/crop.0.0.1080.1080.50/007Ceuz1ly8iga89rcxq5j30u00u0gnw.jpg?KID=imgbed,tva&Expires=1787808754&ssig=FdTf%2FG%2BH3c" width='40' height='40' alt="圆·柰" class="text-item-avatar">
+                    <span class="text-item-author">圆·柰</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5336274334388983.html" target="_blank"><p class="text-item-text">#侯卓成杨汝晴推迟订婚了#
+
+原定八月末订婚推迟，谨慎考虑一下吧，希望杨姐幸福，尊重她的考量和选择，毕竟是一路看过来的，真心祝愿你们能有个好结局，以两个人都愿意且幸福的前提下 
+#侯卓成称自己没做错什么# ​</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-26 21:20:07</span>
+                    <a href="https://www.sina.cn/news/detail/5336274334388983.html" target="_blank"><div class="text-item-stats">
+                        <span>转发(0)</span>
+                        <span>评论(4)</span>
+                    </div></a>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://tvax4.sinaimg.cn/crop.0.0.972.972.50/006mAU1Qly8hiwwe2f505j30r00r0dh4.jpg?KID=imgbed,tva&Expires=1787808754&ssig=o9nFNw95V%2F" width='40' height='40' alt="我又不舒服了" class="text-item-avatar">
+                    <span class="text-item-author">我又不舒服了</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5328935589250528.html" target="_blank"><p class="text-item-text">#侯卓成公开打车记录# 事情起因是王垲智被前女友指控，为了自证清白，他晒出了和侯卓成的私聊截图。结果呢，自证没成，倒把即将十月领证的侯卓成拖下了水。
+
+侯卓成这波反应算快的。先是发长文承认三年前口无遮拦，但强调是王垲智主动邀约，自己以正在恋爱为由拒绝了。随后又公开了打车记录并报案，说 ​</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-06 15:18:34</span>
+                    <a href="https://www.sina.cn/news/detail/5328935589250528.html" target="_blank"><div class="text-item-stats">
+                        <span>转发(0)</span>
+                        <span>评论(4)</span>
+                    </div></a>
+                </div>
+            </article>
+			            <article class="text-item">
+                <div class="text-item-header">
+                    <img src="https://tvax1.sinaimg.cn/crop.0.0.753.753.50/001DjCJOly8h8vghz8v0gj60kx0kxmxm02.jpg?KID=imgbed,tva&Expires=1787808754&ssig=qYy19Qa3Jh" width='40' height='40' alt="羊城晚报" class="text-item-avatar">
+                    <span class="text-item-author">羊城晚报</span>
+                </div>
+                <div class="text-item-content">
+					<a href="https://www.sina.cn/news/detail/5328878194400555.html" target="_blank"><p class="text-item-text">【媒体评｜大家骂得这么狠，是因为真的把恋综当“代餐”了】#王垲智塌房##侯卓成回应##心疼杨汝晴#，三小时占据热搜半壁江山。一个恋综嘉宾的私生活翻车，愣是演变成了一场全网公审。
+
+网友的情绪烈度，远超事件本身的分量。有人逐帧分析聊天记录，有人扒时间线，有人跑到侯卓成评论区喊“天塌了”。一 ​</p></a>
+                </div>
+                <div class="text-item-footer">
+                    <span>2026-08-06 11:30:30</span>
+                    <a href="https://www.sina.cn/news/detail/5328878194400555.html" target="_blank"><div class="text-item-stats">
+                        <span>转发(34)</span>
+                        <span>评论(20)</span>
+                    </div></a>
+                </div>
+            </article>
+			        </aside>
+    </div>
+	<script type="text/javascript" src="//tech.sina.com.cn/js/717/20140827/index2014/top.js" charset="gb2312"></script>
+    <script language='javascript' charset='utf-8' src='//i.sso.sina.com.cn/js/ssologin.js'></script>
+    <script type="text/javascript" src="//i.sso.sina.com.cn/js/outlogin_layer.js" charset="utf-8"></script>
+    <script type="text/javascript" src="//news.sina.com.cn/sso/user_panel_new_version.js" charset="utf-8"></script>
+    <script charset="utf-8" type="text/javascript" src="//n.sinaimg.cn/common/channelnav/js/nav.js"></script>
+	<script type="text/javascript">
+        var FEED_CARD_INFO = {
+            requireLogin: function(){
+              var UserPanel = SINA_USER_PANEL;
+              UserPanel.setOutLoginMiddle();
+              UserPanel.getOutLogin().show();
+              // 可添加提示
+              __SinaTopBar__.user.showTip('<span>温馨提示: </span>您已经完成兴趣设置，建议登录后保存。');
+            },
+            isLogin: function(){
+              if(window.SINA_OUTLOGIN_LAYER){
+                return window.SINA_OUTLOGIN_LAYER.isLogin();
+              }
+              return false;
+            }
+        };
+    </script>
+    
+<script type="text/javascript" src="//simg.sinajs.cn/products/news_finance/2018/pc_china_home/js/index-2b1eed.js"></script>
+	
+<script src="https://pluto.sina.cn/gk/match?id=1"></script><script src="https://n.sinaimg.cn/default/7bd4e141/20251210/log.js"></script></body>
+</html>

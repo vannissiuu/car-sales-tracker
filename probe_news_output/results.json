@@ -1,0 +1,951 @@
+[
+  {
+    "id": "16888_news_home",
+    "source": "车主之家资讯 news.16888.com（首页/列表结构侦察）",
+    "url": "https://news.16888.com/",
+    "brand": null,
+    "confidence": "search_confirmed",
+    "note": "与已验证可用的 xl.16888.com 同域名家族（16888.com）。搜索确认该子域存在且有新闻列表，但没搜到明确的『按品牌筛选』入口，本条只是用来侦察页面结构（是否有 tag/搜索/品牌筛选功能可用），不代表能按品牌构造 URL。",
+    "requested_at": "2026-08-27T02:32:14.447995+00:00",
+    "ok": true,
+    "status_code": 200,
+    "elapsed_ms": 1120,
+    "final_url": "https://news.16888.com/",
+    "redirected": false,
+    "content_type": "text/html; charset=utf-8",
+    "apparent_encoding": "utf-8",
+    "declared_encoding": "utf-8",
+    "content_bytes": 49423,
+    "raw_saved_to": "raw/16888_news_home.html",
+    "looks_blocked": false,
+    "rss_parse": null,
+    "rss_parse_error": "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）",
+    "is_rss_like": false,
+    "pandas_tables": null,
+    "pandas_tables_error": "pandas.read_html 未找到表格或解析失败: `Import html5lib` failed.  Use pip or conda to install the html5lib package.",
+    "bs4_heuristic_items": [
+      {
+        "title": "343个城市>>",
+        "link": "https://www.16888.com/AreaList/",
+        "date": null
+      },
+      {
+        "title": "长城H9力魂版正式上市 限时优惠焕新价21.49-23.29万",
+        "link": "https://news.16888.com/a/2026/0826/24882642.html",
+        "date": "2026-08-26"
+      },
+      {
+        "title": "全新宝马i3后排堪比5系？操控好设计强就看价格了！",
+        "link": "https://news.16888.com/a/2026/0826/24882379.html",
+        "date": "2026-08-26"
+      },
+      {
+        "title": "一汽丰田2027款bZ5正式上市 售价12.98-19.98万",
+        "link": "https://news.16888.com/a/2026/0826/24882465.html",
+        "date": "2026-08-26"
+      },
+      {
+        "title": "广深两地2026年第8期拍牌价出炉 深圳铁牌均价下调",
+        "link": "https://news.16888.com/a/2026/0825/24878610.html",
+        "date": "2026-08-25"
+      },
+      {
+        "title": "存在起火风险 部分进口丰田SUPRA召回",
+        "link": "https://news.16888.com/a/2026/0824/24874428.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "部分银河M9/领克900/领克10EM-P/领克07/领克08召回",
+        "link": "https://news.16888.com/a/2026/0824/24874416.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "安全存隐患 部分进口捷尼赛思G80召回",
+        "link": "https://news.16888.com/a/2026/0824/24874252.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "应急机械拉手与内饰颜色接近 部分2024款小米SU7召回",
+        "link": "https://news.16888.com/a/2026/0824/24874218.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "特斯拉召回部分国产及进口车型 涉及Model 3等",
+        "link": "https://news.16888.com/a/2026/0824/24874199.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "应急机械拉手与内饰颜色接近 部分零跑C11和C01召回",
+        "link": "https://news.16888.com/a/2026/0824/24874178.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "应急机械拉手与内饰颜色接近 小鹏G6/P7+/X9召回",
+        "link": "https://news.16888.com/a/2026/0824/24874171.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "应急机械拉手与内饰颜色接近 部分极氪007和极氪X召回",
+        "link": "https://news.16888.com/a/2026/0824/24874149.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "安全存隐患 将近7万辆iCAR 03及风云X3召回",
+        "link": "https://news.16888.com/a/2026/0824/24874058.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "53452辆纳米06/风神L8/eπ007/eπ008召回",
+        "link": "https://news.16888.com/a/2026/0824/24874039.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "应急机械拉手开启盖板缺少专用提示标识 46850辆极狐考拉召回",
+        "link": "https://news.16888.com/a/2026/0824/24873866.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "车内应急机械拉手与内饰颜色接近 部分红旗EH7及天工08召回",
+        "link": "https://news.16888.com/a/2026/0824/24873837.html",
+        "date": "2026-08-24"
+      },
+      {
+        "title": "长城H10成都首秀，这辆SUV凭什么成为全家人的潮流新宠？",
+        "link": "https://news.16888.com/a/2026/0821/24870050.html",
+        "date": "2026-08-21"
+      },
+      {
+        "title": "​一台车搞定日常与远方  高山7SUV版把出行的将就变成讲究",
+        "link": "https://news.16888.com/a/2026/0819/24864121.html",
+        "date": "2026-08-19"
+      },
+      {
+        "title": "油价调整最新消息：汽柴油每升下调0.18/0.19元",
+        "link": "https://news.16888.com/a/2026/0814/24848909.html",
+        "date": "2026-08-14"
+      }
+    ],
+    "bs4_heuristic_count": 20,
+    "best_extraction": "bs4_heuristic",
+    "best_extraction_count": 20
+  },
+  {
+    "id": "16888_news_category_qcwh",
+    "source": "车主之家资讯 news.16888.com 分类列表页样例（汽车文化分类）",
+    "url": "https://news.16888.com/qcwh/index_list_9.html",
+    "brand": null,
+    "confidence": "search_confirmed",
+    "note": "搜索直接命中的分类列表页，URL 形如 /<分类拼音缩写>/index_list_<N>.html，用于确认列表页 HTML 结构、翻页方式，为后续人工找品牌入口探路。",
+    "requested_at": "2026-08-27T02:32:19.084709+00:00",
+    "ok": true,
+    "status_code": 200,
+    "elapsed_ms": 1321,
+    "final_url": "https://news.16888.com/qcwh/index_list_9.html",
+    "redirected": false,
+    "content_type": "text/html; charset=utf-8",
+    "apparent_encoding": "utf-8",
+    "declared_encoding": "utf-8",
+    "content_bytes": 26823,
+    "raw_saved_to": "raw/16888_news_category_qcwh.html",
+    "looks_blocked": false,
+    "rss_parse": null,
+    "rss_parse_error": "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）",
+    "is_rss_like": false,
+    "pandas_tables": null,
+    "pandas_tables_error": "pandas.read_html 未找到表格或解析失败: `Import html5lib` failed.  Use pip or conda to install the html5lib package.",
+    "bs4_heuristic_items": [
+      {
+        "title": "343个城市>>",
+        "link": "https://www.16888.com/AreaList/",
+        "date": null
+      },
+      {
+        "title": "油价调整最新消息：汽柴油每升下调0.4/0.42元",
+        "link": "https://news.16888.com/a/2026/0618/24693834.html",
+        "date": null
+      },
+      {
+        "title": "玛莎拉蒂新款格雷嘉正式上市 售价57.88万起",
+        "link": "https://news.16888.com/a/2026/0805/24823971.html",
+        "date": null
+      },
+      {
+        "title": "油价调整最新消息：汽柴油每升下调0.41/0.43元",
+        "link": "https://news.16888.com/a/2026/0604/24657826.html",
+        "date": null
+      },
+      {
+        "title": "2026年5月汽车销量排行榜 零跑A10成新黑马",
+        "link": "https://news.16888.com/a/2026/0617/24687455.html",
+        "date": null
+      },
+      {
+        "title": "2026年7月汽车销量排行榜 零跑A10销量火爆",
+        "link": "https://news.16888.com/a/2026/0814/24846142.html",
+        "date": null
+      },
+      {
+        "title": "2026上半年汽车销量排行榜解读 理想i6异军突起",
+        "link": "https://news.16888.com/a/2026/0721/24778840.html",
+        "date": null
+      },
+      {
+        "title": "交强险6月1日后价格大改！最低可降到每年475元？",
+        "link": "https://news.16888.com/a/2026/0529/24643291.html",
+        "date": "6月1日"
+      },
+      {
+        "title": "油价调整最新消息：汽柴油每升上涨0.54/0.56元",
+        "link": "https://news.16888.com/a/2026/0731/24812910.html",
+        "date": null
+      },
+      {
+        "title": "新款别克GL8陆尚官图发布 将8月13日上市",
+        "link": "https://news.16888.com/a/2026/0803/24818770.html",
+        "date": "8月13日"
+      },
+      {
+        "title": "比亚迪宋Ultra DM-i上市 售价12.99-15.99万",
+        "link": "https://news.16888.com/a/2026/0529/24641591.html",
+        "date": null
+      },
+      {
+        "title": "全新宝马i3后排堪比5系？操控好设计强就看价格了！",
+        "link": "https://news.16888.com/a/2026/0826/24882379.html",
+        "date": null
+      },
+      {
+        "title": "60万你买9系旗舰还是它？国产奔驰GLE L值得等吗？",
+        "link": "https://news.16888.com/a/2026/0826/24881908.html",
+        "date": null
+      },
+      {
+        "title": "7万能买“新款A6L”？奇瑞艾瑞泽7这设计要火？",
+        "link": "https://news.16888.com/a/2026/0826/24879451.html",
+        "date": null
+      },
+      {
+        "title": "综合续航2300km！方程豹钛9只卷性价比？",
+        "link": "https://news.16888.com/a/2026/0825/24878590.html",
+        "date": null
+      },
+      {
+        "title": "捷达也下海造电车了？空间大智能不错大家能认吗？",
+        "link": "https://news.16888.com/a/2026/0825/24878280.html",
+        "date": null
+      },
+      {
+        "title": "新世代BMW iX3和Model Y有何区别？",
+        "link": "https://news.16888.com/a/2026/0824/24875782.html",
+        "date": null
+      },
+      {
+        "title": "5万多代步车选它不出错？五菱缤果Pro怎么买",
+        "link": "https://news.16888.com/a/2026/0824/24875627.html",
+        "date": null
+      },
+      {
+        "title": "3款主流10万纯电中型车 同样价格谁更量大管饱？",
+        "link": "https://news.16888.com/a/2026/0821/24870109.html",
+        "date": null
+      },
+      {
+        "title": "2.6万公里电池故障，五菱4S店拒绝更换电池包",
+        "link": "https://tousu.16888.com/detail-tid-113162.html",
+        "date": null
+      }
+    ],
+    "bs4_heuristic_count": 20,
+    "best_extraction": "bs4_heuristic",
+    "best_extraction_count": 20
+  },
+  {
+    "id": "sina_tagsnews_byd",
+    "source": "新浪汽车旧版标签聚合 tags.news.sina.com.cn（中文原词）",
+    "url": "https://tags.news.sina.com.cn/%E6%AF%94%E4%BA%9A%E8%BF%AA",
+    "brand": "比亚迪",
+    "confidence": "search_confirmed",
+    "note": "搜索直接命中：『比亚迪 - 最新比亚迪实时滚动快讯...』标题的标签聚合页，URL 是中文品牌名直接 percent-encode，理论上可以对任意品牌名直接构造。",
+    "requested_at": "2026-08-27T02:32:23.449529+00:00",
+    "ok": true,
+    "status_code": 200,
+    "elapsed_ms": 1626,
+    "final_url": "https://tags.news.sina.com.cn/%E6%AF%94%E4%BA%9A%E8%BF%AA",
+    "redirected": false,
+    "content_type": "text/html;charset=utf-8",
+    "apparent_encoding": "utf-8",
+    "declared_encoding": "utf-8",
+    "content_bytes": 187461,
+    "raw_saved_to": "raw/sina_tagsnews_byd.html",
+    "looks_blocked": false,
+    "rss_parse": null,
+    "rss_parse_error": "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）",
+    "is_rss_like": false,
+    "pandas_tables": null,
+    "pandas_tables_error": "pandas.read_html 未找到表格或解析失败: `Import html5lib` failed.  Use pip or conda to install the html5lib package.",
+    "bs4_heuristic_items": [
+      {
+        "title": "陕西商州举行2026年保障比亚迪用工集中欢送仪式",
+        "link": "https://finance.sina.com.cn/roll/2026-08-27/doc-inipthnz9095137.shtml",
+        "date": null
+      },
+      {
+        "title": "工信部公示：比亚迪腾势Z9S申报电耗百公里12.6度",
+        "link": "https://finance.sina.com.cn/stock/aigc/bwdt/gxbqcnyxh/2026-08-27/doc-inipthpc5862597.shtml",
+        "date": null
+      },
+      {
+        "title": "10万级B级纯电轿车怎么选？秦MAX EV通勤出游实测+FAQ",
+        "link": "https://k.sina.com.cn/article_7879777177_1d5abdb990680170oc.html",
+        "date": null
+      },
+      {
+        "title": "20-25万配置高的车，智驾哪家强？",
+        "link": "https://k.sina.com.cn/article_7879776391_1d5abd88706801iu5a.html",
+        "date": null
+      },
+      {
+        "title": "20-25万预算，理想L6和比亚迪海豹08怎么选？",
+        "link": "https://k.sina.com.cn/article_7879776391_1d5abd88706801iu58.html",
+        "date": null
+      },
+      {
+        "title": "20-25万配置天花板？这3款车把30万级配置拉下马",
+        "link": "https://k.sina.com.cn/article_7879776391_1d5abd88706801iu56.html",
+        "date": null
+      },
+      {
+        "title": "宋Ultra EV价格详情全解析：15.19万起，四款配置怎么选？+FAQ",
+        "link": "https://k.sina.com.cn/article_7879996684_1d5af350c06801my7m.html",
+        "date": null
+      },
+      {
+        "title": "海狮06EV闪充值得买吗？9分钟补能710km，15万级纯电SUV新标杆+FAQ",
+        "link": "https://k.sina.com.cn/article_7879996096_1d5af32c006801kz0w.html",
+        "date": null
+      },
+      {
+        "title": "AION S 2026款值得买吗？8.98万起续航505km，3个维度说清+FAQ",
+        "link": "https://k.sina.com.cn/article_7879776495_1d5abd8ef06801c7z4.html",
+        "date": null
+      },
+      {
+        "title": "海狮06EV深度解析：2026款比亚迪中型纯电SUV的三大升级，值得买吗？+FAQ",
+        "link": "https://k.sina.com.cn/article_7879777164_1d5abdb8c0680302ty.html",
+        "date": null
+      },
+      {
+        "title": "海狮05EV值得买吗？11.99万起标配超100项，闪充续航540km起+FAQ",
+        "link": "https://k.sina.com.cn/article_7879848955_1d5acf3fb06803afj6.html",
+        "date": null
+      },
+      {
+        "title": "比亚迪海狮05EV天神之眼值得买吗？3个维度说清智驾平权真相+FAQ",
+        "link": "https://k.sina.com.cn/article_7879923805_1d5ae185d06801pfd2.html",
+        "date": null
+      },
+      {
+        "title": "纯电车闪充技术10分钟能充多少电？实际体验如何？",
+        "link": "https://k.sina.com.cn/article_7879776391_1d5abd88706801iu4y.html",
+        "date": null
+      },
+      {
+        "title": "二季度全球新能源车销量涨10.4%，中国车企加速出海",
+        "link": "https://k.sina.com.cn/article_5953466437_162dab0450670bacj8.html",
+        "date": null
+      },
+      {
+        "title": "比亚迪大汉ev2026款的电池寿命是多久？",
+        "link": "https://k.sina.com.cn/article_7879777157_1d5abdb85068023538.html",
+        "date": null
+      },
+      {
+        "title": "海豹08 EV 905旗舰版值得买吗？3个维度说清+FAQ",
+        "link": "https://k.sina.com.cn/article_7879777157_1d5abdb8506802352i.html",
+        "date": null
+      },
+      {
+        "title": "海豹08 EV 905旗舰型值得买吗？21.69万买905km续航+9分钟闪充，3个维度说清+FAQ",
+        "link": "https://k.sina.com.cn/article_7879996685_1d5af350d06802evsw.html",
+        "date": null
+      },
+      {
+        "title": "11.99万起的海狮05EV闪充有多快？实测5分钟充好9分钟饱，10万级纯电SUV新王+FAQ",
+        "link": "https://k.sina.com.cn/article_7879777164_1d5abdb8c0680302pg.html",
+        "date": null
+      },
+      {
+        "title": "品牌整体进化，创造汽车产业新模式",
+        "link": "https://k.sina.com.cn/article_6824573189_196c6b90502002sfry.html",
+        "date": null
+      },
+      {
+        "title": "纯电/插混动力，轴距3米多，海洋网旗舰SUV马上就来！",
+        "link": "https://finance.sina.com.cn/wm/2026-08-27/doc-inipthnz8940659.shtml",
+        "date": null
+      }
+    ],
+    "bs4_heuristic_count": 20,
+    "best_extraction": "bs4_heuristic",
+    "best_extraction_count": 20
+  },
+  {
+    "id": "sina_tags_brand_wenjie",
+    "source": "新浪汽车新版标签聚合 tags.sina.com.cn/brand_<拼音>",
+    "url": "https://tags.sina.com.cn/brand_wenjie",
+    "brand": "问界",
+    "confidence": "search_confirmed",
+    "note": "搜索直接命中：『问界 - 最新问界实时滚动快讯...』，URL 是纯 ASCII 拼音，比中文 URL 更适合批量构造（不用处理编码）。同一套系统下还搜到 tags.sina.com.cn/model_qinplus（车型级）。",
+    "requested_at": "2026-08-27T02:32:28.291356+00:00",
+    "ok": true,
+    "status_code": 200,
+    "elapsed_ms": 2284,
+    "final_url": "https://tags.sina.com.cn/brand_wenjie",
+    "redirected": false,
+    "content_type": "text/html;charset=utf-8",
+    "apparent_encoding": "utf-8",
+    "declared_encoding": "utf-8",
+    "content_bytes": 193987,
+    "raw_saved_to": "raw/sina_tags_brand_wenjie.html",
+    "looks_blocked": false,
+    "rss_parse": null,
+    "rss_parse_error": "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）",
+    "is_rss_like": false,
+    "pandas_tables": null,
+    "pandas_tables_error": "pandas.read_html 未找到表格或解析失败: `Import html5lib` failed.  Use pip or conda to install the html5lib package.",
+    "bs4_heuristic_items": [
+      {
+        "title": "通勤增程车，雷克萨斯传统豪华 vs 新势力谁靠谱？3个维度说清+FAQ",
+        "link": "https://k.sina.com.cn/article_7879849086_1d5acf47e06801h45y.html",
+        "date": null
+      },
+      {
+        "title": "自动紧急制动哪些汽车有？实测这3个品牌最靠谱+FAQ",
+        "link": "https://k.sina.com.cn/article_7879777164_1d5abdb8c06802zz1g.html",
+        "date": null
+      },
+      {
+        "title": "自动避让系统车型推荐：理想/蔚来/问界谁更靠谱？+FAQ",
+        "link": "https://k.sina.com.cn/article_7879776495_1d5abd8ef06801c6u6.html",
+        "date": null
+      },
+      {
+        "title": "2026年哪些电车保值率最高？3个维度揭晓答案+FAQ",
+        "link": "https://k.sina.com.cn/article_7879996096_1d5af32c006801kxga.html",
+        "date": null
+      },
+      {
+        "title": "10万预算想买问界全时四驱？真相是M5和M7怎么选+FAQ",
+        "link": "https://k.sina.com.cn/article_7879923805_1d5ae185d06801p8q8.html",
+        "date": null
+      },
+      {
+        "title": "问界M9新款2026款究竟值不值得买？140项升级配六激光雷达，轴距加长136mm，能否夺回9系王座？",
+        "link": "https://k.sina.com.cn/article_7879996684_1d5af350c06801mqua.html",
+        "date": null
+      },
+      {
+        "title": "2026年自动避让系统车型推荐：蔚来理想问界谁更靠谱？3个维度说清+FAQ",
+        "link": "https://k.sina.com.cn/article_7880068362_1d5b04d0a06801ilja.html",
+        "date": null
+      },
+      {
+        "title": "2026年高端车最佳品牌竟是它？问界M9销量口碑双第一",
+        "link": "https://k.sina.com.cn/article_7879776391_1d5abd88706801iq56.html",
+        "date": null
+      },
+      {
+        "title": "10万买问界全时四驱？M5/M7对比后真相很扎心+FAQ",
+        "link": "https://k.sina.com.cn/article_7879776541_1d5abd91d06801x0mu.html",
+        "date": null
+      },
+      {
+        "title": "10万预算想买问界全时四驱？M5/M7两款车对比，差的不只是3万+FAQ",
+        "link": "https://k.sina.com.cn/article_7879995975_1d5af324706801fsgg.html",
+        "date": null
+      },
+      {
+        "title": "本田和豪华新势力哪个值得选？舒适智能售后3维度对比+FAQ",
+        "link": "https://k.sina.com.cn/article_7879923803_1d5ae185b06801jqes.html",
+        "date": null
+      },
+      {
+        "title": "问界上市前测试车多少台",
+        "link": "https://k.sina.com.cn/article_7879923805_1d5ae185d06801p5r2.html",
+        "date": null
+      },
+      {
+        "title": "赛力斯上半年研发投入同比增348",
+        "link": "https://k.sina.com.cn/article_7880068271_1d5b04caf06802h4eq.html",
+        "date": null
+      },
+      {
+        "title": "30-40万新能源车，售后服务哪家强？推荐榜单有参考价值吗？",
+        "link": "https://k.sina.com.cn/article_7879776391_1d5abd88706801ipi4.html",
+        "date": null
+      },
+      {
+        "title": "问界M0.9儿童车15800元值吗？在哪买？3个维度讲透+FAQ",
+        "link": "https://k.sina.com.cn/article_7879848955_1d5acf3fb06803a74u.html",
+        "date": null
+      },
+      {
+        "title": "我其实觉得鸿蒙智行需要做好不同品牌的产品矩阵",
+        "link": "https://k.sina.com.cn/article_7879996580_m1d5af34a403301u43o.html",
+        "date": null
+      },
+      {
+        "title": "2026汽车品牌口碑榜：传统丰田宝马，新能源蔚来问界",
+        "link": "https://k.sina.com.cn/article_7879776391_1d5abd88706801iooc.html",
+        "date": null
+      },
+      {
+        "title": "买车选品牌，20万预算该选问界还是BBA新能源？",
+        "link": "https://k.sina.com.cn/article_7879776391_1d5abd88706801io58.html",
+        "date": null
+      },
+      {
+        "title": "20-25万主动刹车靠谱的车哪款好",
+        "link": "https://k.sina.com.cn/article_7879995970_1d5af324206802e1i2.html",
+        "date": null
+      },
+      {
+        "title": "问界正式进军两座敞篷小跑车市场，推出问界M0.9，这动力行",
+        "link": "https://k.sina.com.cn/article_7811058073_m1d193499903301dpn0.html",
+        "date": null
+      }
+    ],
+    "bs4_heuristic_count": 20,
+    "best_extraction": "bs4_heuristic",
+    "best_extraction_count": 20
+  },
+  {
+    "id": "sina_tags_model_xiaomiqiche",
+    "source": "新浪汽车新版标签聚合 tags.sina.com.cn/model_<拼音>",
+    "url": "https://tags.sina.com.cn/model_xiaomiqiche",
+    "brand": "小米汽车",
+    "confidence": "search_confirmed",
+    "note": "搜索直接命中：『小米汽车 - 最新小米汽车实时滚动快讯...』。注意小米汽车用的是 model_ 前缀而不是 brand_ 前缀，说明 brand_/model_ 的划分不完全等于我们业务上的『品牌』概念，需要探针实测两种前缀。",
+    "requested_at": "2026-08-27T02:32:33.818735+00:00",
+    "ok": true,
+    "status_code": 200,
+    "elapsed_ms": 1233,
+    "final_url": "https://tags.sina.com.cn/model_xiaomiqiche",
+    "redirected": false,
+    "content_type": "text/html;charset=utf-8",
+    "apparent_encoding": "utf-8",
+    "declared_encoding": "utf-8",
+    "content_bytes": 154985,
+    "raw_saved_to": "raw/sina_tags_model_xiaomiqiche.html",
+    "looks_blocked": false,
+    "rss_parse": null,
+    "rss_parse_error": "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）",
+    "is_rss_like": false,
+    "pandas_tables": null,
+    "pandas_tables_error": "pandas.read_html 未找到表格或解析失败: `Import html5lib` failed.  Use pip or conda to install the html5lib package.",
+    "bs4_heuristic_items": [
+      {
+        "title": "2026成都车展哪个品牌最火？3个维度看透流量密码+FAQ",
+        "link": "https://k.sina.com.cn/article_7880068362_1d5b04d0a06801ir9m.html",
+        "date": null
+      },
+      {
+        "title": "计划明年要出海了！小米汽车海外账号已上线 社媒和官网都已开启",
+        "link": "https://finance.sina.com.cn/tech/roll/2026-08-26/doc-iniprytk0873534.shtml",
+        "date": null
+      },
+      {
+        "title": "小米汽车与宜家跨界联动，展示智能可变大空间SUV",
+        "link": "https://k.sina.com.cn/article_7096020433_1a6f4add106801mve4.html",
+        "date": null
+      },
+      {
+        "title": "小米汽车海外官网及社媒账号上线 官宣2027年进入欧洲市场",
+        "link": "https://k.sina.com.cn/article_1644983660_620c756c02001uube.html?from=tech",
+        "date": null
+      },
+      {
+        "title": "小米汽车海外官网正式上线",
+        "link": "https://finance.sina.com.cn/roll/2026-08-26/doc-iniprytq2324674.shtml",
+        "date": null
+      },
+      {
+        "title": "小米汽车：Ultra Club会员免费领取纽北成绩纪念冰箱贴",
+        "link": "https://k.sina.com.cn/article_5952915720_162d2490806704qjw6.html",
+        "date": null
+      },
+      {
+        "title": "2026年小米澎程和小米汽车到底是什么关系？",
+        "link": "https://k.sina.com.cn/article_9021361755_219b70e5b02001udng.html",
+        "date": null
+      },
+      {
+        "title": "小米汽车9月交付计划的信息可靠吗？",
+        "link": "https://k.sina.com.cn/article_7879776542_1d5abd91e068013v7k.html",
+        "date": null
+      },
+      {
+        "title": "小米汽车全系亮相成都车展，小米澎程双车开放上车体验",
+        "link": "https://k.sina.com.cn/article_2662447161_9eb1b83902001e6dk.html?from=digit",
+        "date": null
+      },
+      {
+        "title": "小米汽车回应：澎程N90 Max智能电动门可实现开门杀预警与主动避障",
+        "link": "https://k.sina.com.cn/article_5953740931_162dee08306703wdnq.html",
+        "date": null
+      },
+      {
+        "title": "19 特斯拉和小米汽车哪个好？",
+        "link": "https://k.sina.com.cn/article_7879923946_m1d5ae18ea03303s46s.html",
+        "date": null
+      },
+      {
+        "title": "小米汽车：澎程N90 Max智能电动门可实现开门杀预警及开门避障",
+        "link": "https://k.sina.com.cn/article_1826017320_6cd6d02802001vxk0.html?from=tech",
+        "date": null
+      },
+      {
+        "title": "小米汽车也是请得起车模了",
+        "link": "https://k.sina.com.cn/article_7879923681_m1d5ae17e103304qf6i.html",
+        "date": null
+      },
+      {
+        "title": "小米汽车：澎程N90 Max的智能电动门能防“开门杀”",
+        "link": "https://k.sina.com.cn/article_5328858693_13d9fee4502002hb22.html",
+        "date": null
+      },
+      {
+        "title": "小米汽车：澎程N90 Max智能电动门可防开门杀 先预警后避障",
+        "link": "https://finance.sina.com.cn/tech/discovery/2026-08-25/doc-inipnpza5663777.shtml",
+        "date": null
+      },
+      {
+        "title": "小米汽车上市打破质疑，博主预言新能源前十失败",
+        "link": "https://k.sina.com.cn/article_7811110014_m1d194147e03301abfg.html",
+        "date": null
+      },
+      {
+        "title": "雷军曝光！小米两款新车，9月3日将上市！",
+        "link": "https://finance.sina.com.cn/wm/2026-08-25/doc-inipmxcn2706372.shtml",
+        "date": "9月3日"
+      },
+      {
+        "title": "小米YU7官网预订全攻略：唯一渠道在这！价格/流程/交付一次讲清+FAQ",
+        "link": "https://k.sina.com.cn/article_7879777156_1d5abdb8406801ldu4.html",
+        "date": null
+      },
+      {
+        "title": "小米汽车累计交付70万辆，质量可靠性表现如何？",
+        "link": "https://k.sina.com.cn/article_7879996041_1d5af328906801uusi.html",
+        "date": null
+      },
+      {
+        "title": "文飞加盟奇瑞捷豹路虎首战，神行者8能否逆风破局？",
+        "link": "https://k.sina.com.cn/article_5835854182_15bd8116600101bp2y.html",
+        "date": null
+      }
+    ],
+    "bs4_heuristic_count": 20,
+    "best_extraction": "bs4_heuristic",
+    "best_extraction_count": 20
+  },
+  {
+    "id": "sina_tags_brand_biyadi_guess",
+    "source": "新浪汽车新版标签聚合 tags.sina.com.cn/brand_biyadi（推测）",
+    "url": "https://tags.sina.com.cn/brand_biyadi",
+    "brand": "比亚迪",
+    "confidence": "inferred_pattern",
+    "note": "按 brand_wenjie 的命名规律推测比亚迪应该是 brand_biyadi，没有被搜索直接命中，可能 404 或需要别的 slug（比如带后缀），探针就是要验证。",
+    "requested_at": "2026-08-27T02:32:38.240309+00:00",
+    "ok": true,
+    "status_code": 200,
+    "elapsed_ms": 1197,
+    "final_url": "https://tags.sina.com.cn/guide",
+    "redirected": true,
+    "content_type": "text/html; charset=utf-8",
+    "apparent_encoding": "utf-8",
+    "declared_encoding": "utf-8",
+    "content_bytes": 304659,
+    "raw_saved_to": "raw/sina_tags_brand_biyadi_guess.html",
+    "looks_blocked": false,
+    "rss_parse": null,
+    "rss_parse_error": "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）",
+    "is_rss_like": false,
+    "pandas_tables": null,
+    "pandas_tables_error": "pandas.read_html 未找到表格或解析失败: `Import html5lib` failed.  Use pip or conda to install the html5lib package.",
+    "bs4_heuristic_items": [
+      {
+        "title": "Angelababy",
+        "link": "https://tags.sina.com.cn/star_angelababy",
+        "date": null
+      },
+      {
+        "title": "这个杀手不太冷静",
+        "link": "https://tags.sina.com.cn/film_zhegeshashoubutailengjing",
+        "date": null
+      },
+      {
+        "title": "我是真的讨厌异地恋",
+        "link": "https://tags.sina.com.cn/film_woshizhendetaoyanyidilian",
+        "date": null
+      },
+      {
+        "title": "我们的样子像极了爱情",
+        "link": "https://tags.sina.com.cn/film_womendeyangzixiangjileaiqing",
+        "date": null
+      },
+      {
+        "title": "世界上最爱我的人",
+        "link": "https://tags.sina.com.cn/film_shijieshangaizuowoderen",
+        "date": null
+      },
+      {
+        "title": "我在时间尽头等你",
+        "link": "https://tags.sina.com.cn/film_woaishijianjintoudengni",
+        "date": null
+      },
+      {
+        "title": "少年派的奇幻漂流",
+        "link": "https://tags.sina.com.cn/film_lifeofpi",
+        "date": null
+      },
+      {
+        "title": "被嫌弃的松子的一生",
+        "link": "https://tags.sina.com.cn/film_memoriesofmatsuko",
+        "date": null
+      },
+      {
+        "title": "穿条纹睡衣的男孩",
+        "link": "https://tags.sina.com.cn/film_theboyinthestripedpajamas",
+        "date": null
+      },
+      {
+        "title": "本杰明·巴顿奇事",
+        "link": "https://tags.sina.com.cn/film_thecuriouscaseofbenjaminbutton",
+        "date": null
+      },
+      {
+        "title": "西西里的美丽传说",
+        "link": "https://tags.sina.com.cn/film_malèna",
+        "date": null
+      },
+      {
+        "title": "请以你的名字呼唤我",
+        "link": "https://tags.sina.com.cn/film_callmebyyourname",
+        "date": null
+      },
+      {
+        "title": "达拉斯买家俱乐部",
+        "link": "https://tags.sina.com.cn/film_dallasbuyersclub",
+        "date": null
+      },
+      {
+        "title": "老爸老妈的浪漫史",
+        "link": "https://tags.sina.com.cn/tv_howimetyourmother",
+        "date": null
+      },
+      {
+        "title": "孤单又灿烂的神鬼怪",
+        "link": "https://tags.sina.com.cn/tv_goblin",
+        "date": null
+      },
+      {
+        "title": "逃避虽可耻但有用",
+        "link": "https://tags.sina.com.cn/tv_thefulltimewifeescapes",
+        "date": null
+      },
+      {
+        "title": "知否知否应是绿肥红瘦",
+        "link": "https://tags.sina.com.cn/tv_thestoryofminglan",
+        "date": null
+      },
+      {
+        "title": "三生三世十里桃花",
+        "link": "https://tags.sina.com.cn/tv_eternallove",
+        "date": null
+      },
+      {
+        "title": "大明王朝1566",
+        "link": "https://tags.sina.com.cn/tv_mingdynasty1566",
+        "date": null
+      },
+      {
+        "title": "与青春有关的日子",
+        "link": "https://tags.sina.com.cn/tv_dayswithyouth",
+        "date": null
+      }
+    ],
+    "bs4_heuristic_count": 20,
+    "best_extraction": "bs4_heuristic",
+    "best_extraction_count": 20
+  },
+  {
+    "id": "mydrivers_tag_biyadi",
+    "source": "快科技（mydrivers）news.mydrivers.com/tag/<拼音>.htm",
+    "url": "https://news.mydrivers.com/tag/biyadi.htm",
+    "brand": "比亚迪",
+    "confidence": "search_confirmed",
+    "note": "搜索直接命中『比亚迪最新资讯-快科技』及子车型页 biyadisong.htm（比亚迪宋），说明这套 tag 系统精细到车型级，URL 全 ASCII 拼音。快科技是综合科技媒体不是汽车垂直站，但确实有独立汽车频道。",
+    "requested_at": "2026-08-27T02:32:42.969924+00:00",
+    "ok": true,
+    "status_code": 200,
+    "elapsed_ms": 1093,
+    "final_url": "https://news.mydrivers.com/tag/biyadi.htm",
+    "redirected": false,
+    "content_type": "text/html",
+    "apparent_encoding": "utf-8",
+    "declared_encoding": "ISO-8859-1",
+    "content_bytes": 42043,
+    "raw_saved_to": "raw/mydrivers_tag_biyadi.html",
+    "looks_blocked": false,
+    "rss_parse": null,
+    "rss_parse_error": "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）",
+    "is_rss_like": false,
+    "pandas_tables": null,
+    "pandas_tables_error": "pandas.read_html 未找到表格或解析失败: `Import html5lib` failed.  Use pip or conda to install the html5lib package.",
+    "bs4_heuristic_items": [
+      {
+        "title": "比亚迪何志奇：再过几年轴距低于2800mm的车都会消失",
+        "link": "//news.mydrivers.com/1/1146/1146572.htm",
+        "date": null
+      },
+      {
+        "title": "比亚迪智能轮胎专利曝光：四轮可据路况自动充放气互不干扰",
+        "link": "//news.mydrivers.com/1/1146/1146532.htm",
+        "date": null
+      },
+      {
+        "title": "历时33天！比亚迪丝路万里行活动收官 车队成功抵达新加坡",
+        "link": "//news.mydrivers.com/1/1146/1146522.htm",
+        "date": null
+      },
+      {
+        "title": "迎战比亚迪海獭！日本车铃木e SKY亮相：电池用的是比亚迪",
+        "link": "//news.mydrivers.com/1/1146/1146238.htm",
+        "date": null
+      },
+      {
+        "title": "日本最大进口车经销商谈为什么卖比亚迪：他们全球销量第一",
+        "link": "//news.mydrivers.com/1/1146/1146096.htm",
+        "date": null
+      },
+      {
+        "title": "比亚迪海洋网要搞大动作！全新MPV被曝年底上市",
+        "link": "//news.mydrivers.com/1/1145/1145809.htm",
+        "date": null
+      },
+      {
+        "title": "预售24.99万起 比亚迪大汉内饰官图发布：能担旗舰之名",
+        "link": "//news.mydrivers.com/1/1145/1145580.htm",
+        "date": null
+      },
+      {
+        "title": "续航900km还配冰箱彩电沙发！比亚迪海狮08成都车展亮相",
+        "link": "//news.mydrivers.com/1/1145/1145462.htm",
+        "date": null
+      },
+      {
+        "title": "最亮的仔！比亚迪第三代唐成都首秀：850km续航 超大星环屏",
+        "link": "//news.mydrivers.com/1/1145/1145401.htm",
+        "date": null
+      },
+      {
+        "title": "续航1008km 比亚迪旗舰纯电轿车大汉预售：24.99万起",
+        "link": "//news.mydrivers.com/1/1145/1145364.htm",
+        "date": null
+      },
+      {
+        "title": "豫ICP备2023031922号-1",
+        "link": "https://beian.miit.gov.cn/",
+        "date": null
+      },
+      {
+        "title": "豫公网安备 41010502003949号",
+        "link": "http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=41010502003949",
+        "date": null
+      }
+    ],
+    "bs4_heuristic_count": 12,
+    "best_extraction": "bs4_heuristic",
+    "best_extraction_count": 12
+  },
+  {
+    "id": "mydrivers_tag_wenjie_guess",
+    "source": "快科技 news.mydrivers.com/tag/wenjie.htm（推测）",
+    "url": "https://news.mydrivers.com/tag/wenjie.htm",
+    "brand": "问界",
+    "confidence": "inferred_pattern",
+    "note": "按 biyadi.htm 的命名规律推测问界是 wenjie.htm，没有被搜索命中过，问界是 2022 年才出现的新品牌，快科技这套 tag 系统是否覆盖到未知，探针验证。",
+    "requested_at": "2026-08-27T02:32:47.129178+00:00",
+    "ok": true,
+    "status_code": 200,
+    "elapsed_ms": 482,
+    "final_url": "https://news.mydrivers.com/tag/wenjie.htm",
+    "redirected": false,
+    "content_type": "text/html",
+    "apparent_encoding": "utf-8",
+    "declared_encoding": "ISO-8859-1",
+    "content_bytes": 21000,
+    "raw_saved_to": "raw/mydrivers_tag_wenjie_guess.html",
+    "looks_blocked": false,
+    "rss_parse": null,
+    "rss_parse_error": "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）",
+    "is_rss_like": false,
+    "pandas_tables": null,
+    "pandas_tables_error": "pandas.read_html 未找到表格或解析失败: `Import html5lib` failed.  Use pip or conda to install the html5lib package.",
+    "bs4_heuristic_items": [
+      {
+        "title": "特斯拉坚持纯视觉引争议！华为：我们用激光雷达 这是好处",
+        "link": "//news.mydrivers.com/1/975/975548.htm",
+        "date": null
+      },
+      {
+        "title": "问界接连卖爆！余承东力挺增程式：曾喊话快淘汰纯燃油车",
+        "link": "//news.mydrivers.com/1/863/863530.htm",
+        "date": null
+      },
+      {
+        "title": "豫ICP备2023031922号-1",
+        "link": "https://beian.miit.gov.cn/",
+        "date": null
+      },
+      {
+        "title": "豫公网安备 41010502003949号",
+        "link": "http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=41010502003949",
+        "date": null
+      }
+    ],
+    "bs4_heuristic_count": 4,
+    "best_extraction": "bs4_heuristic",
+    "best_extraction_count": 4
+  },
+  {
+    "id": "d1ev_search_byd",
+    "source": "第一电动 d1ev.com 站内搜索 /search?q=<关键词>",
+    "url": "https://d1ev.com/search?q=%E6%AF%94%E4%BA%9A%E8%BF%AA",
+    "brand": "比亚迪",
+    "confidence": "search_confirmed",
+    "note": "搜索命中了同结构的 /search?q=蔚来、/search?q=汽车，说明 q= 参数可以放任意关键词（含品牌名），是新能源垂直媒体，对比亚迪/问界/小米汽车这类新能源相关品牌覆盖度应该不错。",
+    "requested_at": "2026-08-27T02:32:50.648143+00:00",
+    "ok": true,
+    "status_code": 502,
+    "elapsed_ms": 4155,
+    "final_url": "https://d1ev.com/search?q=%E6%AF%94%E4%BA%9A%E8%BF%AA",
+    "redirected": false,
+    "content_type": "text/html; charset=utf-8",
+    "apparent_encoding": "ascii",
+    "declared_encoding": "utf-8",
+    "content_bytes": 619,
+    "raw_saved_to": "raw/d1ev_search_byd.html",
+    "looks_blocked": false,
+    "rss_parse": null,
+    "rss_parse_error": "feedparser 解析出 0 条 entries（大概率不是 RSS/Atom）",
+    "is_rss_like": false,
+    "pandas_tables": null,
+    "pandas_tables_error": "跳过（状态码非200或疑似被拦截）",
+    "bs4_heuristic_items": [],
+    "bs4_heuristic_count": 0,
+    "best_extraction": "none",
+    "best_extraction_count": 0
+  }
+]

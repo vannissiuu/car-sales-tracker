@@ -1,0 +1,529 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=Edge,chrome=1" />
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+<meta name="mobile-agent" content="format=xhtml; url=" />
+<title>汽车行业新闻，最新汽车新闻，汽车新闻网 – 车主之家</title>
+<meta name="keywords" content="汽车新闻,最新汽车新闻,今日汽车新闻,汽车行业新闻"/><meta name="description" content="车主之家汽车新闻网站提供最新、最全、最准确的汽车行业动态、国内外新车、独家报道、黑幕曝光、政策法规、生活八卦等汽车新闻。足不出户，掌握今日汽车行业新闻动态。"/><link rel="shortcut icon" type="image/x-icon" href="//a.img16888.com/common/images/favicon.ico" />
+<link rel="stylesheet" href="//a.img16888.com/news/global/global.css?t=2022006291007" type="text/css" />
+
+<link rel="stylesheet" type="text/css" href="//s.img16888.com/dist/css/??news/details.css?t=2022006291007" />
+<script type="text/javascript" src="//a.img16888.com/common/js/jquery-1.3.2.min.js"></script>
+<script type="text/javascript" src="//a.img16888.com/common/js/common.js?t=2022006291007"></script>
+<script type="text/javascript" src="//a.img16888.com/common/js/lazyimg.js?t=2022006291007"></script>
+<script type="text/javascript" src="//a.img16888.com/common/js/openwin.js?t=2022006291007"></script>
+<script type="text/javascript" src="//a.img16888.com/common/js/loadcardata.js?t=2022006291007"></script>
+<script type="text/javascript">
+var news = {};
+news.load_icon_40 = '<span style="text-align:center; display:block; padding:10px;"><img width="40" src="//a.img16888.com/common/images/ico_loading.gif" /></span>';
+news.load_icon_20 = '<img width="20" src="//a.img16888.com/common/images/ico_loading.gif" />';
+news.show_hide = function(_this,box,callback,className){
+var _show_,_hide_;
+function _hide(time){
+clearTimeout(_show_);
+_hide_ = setTimeout(function(){
+getObj(box).style.display='none';
+},50);
+}
+function _show(){
+clearTimeout(_hide_);
+_show_ = setTimeout(function(){
+getObj(box).style.display='block';
+},50);
+}
+function box_mouseover(){
+_removeEvent(_this,'mouseout',_hide);
+_show();
+}
+_bindEvent(_this,'mouseout',_hide);
+_bindEvent(getObj(box),'mouseover',box_mouseover);
+_bindEvent(getObj(box),'mouseout',_hide);
+news.async_load_callback = callback;
+if(getObj(box).style.display=='none'){
+if(className){
+
+}
+getObj(box).style.display='block';
+}
+else{
+if(className){
+
+}
+getObj(box).style.display='none';
+}
+}
+function changeBoxClick(tab,box,currentClass,box2){
+
+var tab = $(tab);
+var box = $(box);
+var box2 = $(box2);
+tab.click(function(){
+var index = tab.index(this);
+tab.removeClass(currentClass);
+tab.eq(index).addClass(currentClass);
+box.css({display:'none'});
+box.eq(index).css({display:'block'});
+if(box2.length>1){
+box2.css({display:'none'});
+box2.eq(index).css({display:'block'});
+}
+});
+}
+$(function(){
+_cardata.init();
+if(!cookie.get('set_area') || !cookie.get('set_cityId')){
+_callbyserver('//lib.16888.com/lib/ip.php?type=idAndNameJson&callback=setSiteInfo',2000);
+}
+});
+</script>
+<script type="text/javascript">var _speedMark = new Date();</script>
+</head>
+
+<body>
+<div class="site-nav">
+    <div class="wrapper clearfix">
+        <div class="change-city substation-city g-ml200 citylist clearfix f_l">
+            <i class="ico"></i>
+            <span class="J_substationCity_name"><a href="http://sz.16888.com" target="_blank">进入深圳车市</a></span>
+        </div>
+        <div class="citytop clearfix f_l">
+            <span>城市站：</span>
+                                     <a href="https://sz.16888.com" target="_blank">深圳</a>
+                                    <a href="https://bj.16888.com" target="_blank">北京</a>
+                                    <a href="https://sh.16888.com" target="_blank">上海</a>
+                                    <a href="https://tj.16888.com" target="_blank">天津</a>
+                                    <a href="https://gz.16888.com" target="_blank">广州</a>
+                                    <a href="https://cq.16888.com" target="_blank">重庆</a>
+                                    <a href="https://cd.16888.com" target="_blank">成都</a>
+                                    <a href="https://cs.16888.com" target="_blank">长沙</a>
+                                    <a href="https://wh.16888.com" target="_blank">武汉</a>
+                        <a href="https://www.16888.com/AreaList/" class="last" target="_blank">343个城市>></a>
+        </div>
+        <!--siteLogin  -->
+        <div class="site-login clearfix f_r">
+            <div class="login-user clearfix f_l J_loginUser">
+                <span>您好！请</span>
+                <a href="https://my.16888.com/?mod=login" target="_blank">登录</a>
+                <span>或</span>
+                <a href="https://my.16888.com/?mod=register" target="_blank">注册</a>
+            </div>
+            <a href="javascript:;" class="last-new J_webApp">
+                <span><i class="ico"></i><em>移动应用</em><i class="ico i2"></i></span>
+                <div></div>
+                <div class="qrcode">
+                    <span onClick="window.open('https://www.16888.com/app/index.html')">车主之家APP</span>
+                    <span onClick="window.open('https://www.16888.com/app/offer.html')">汽车报价APP</span>
+                    <span onClick="window.open('https://www.16888.com/app/wab.html')">手机车主之家</span>
+                    <span onClick="window.open('https://www.16888.com/app/wx.html')">微信公众号</span>
+                    <span onClick="window.open('https://www.16888.com/app/minprogram.html')">小程序</span>
+                </div>
+            </a>
+        </div>
+        <!--siteLogin -->
+    </div>
+</div>
+<div class="navnew">
+    <div class="wrapper">
+        <ul class="clearfix">
+            <li class="on">
+                <a href="https://news.16888.com" target="_blank">新闻</a>
+            </li>
+            <li>
+                <a href="https://guide.16888.com/index_0_0_0_0_0_0_1.html" target="_blank">评测</a>
+            </li>
+            <li>
+                <a href="https://video.16888.com" target="_blank">视频</a>
+            </li>
+            <li>
+                <a href="https://pic.16888.com" target="_blank">图库</a>
+            </li>
+            <li>
+                <a href="https://auto.16888.com" target="_blank">车型</a>
+            </li>
+            <li>
+                <a href="https://price.16888.com" target="_blank">报价</a>
+            </li>
+            <li>
+                <a href="https://hangqing.16888.com" target="_blank">行情</a>
+            </li>
+            <li class="nw-3">
+                <a href="https://dealer.16888.com" target="_blank">经销商</a>
+            </li>
+            <li>
+                <a href="https://tm.16888.com" target="_blank">特卖</a>
+            </li>
+            <li>
+                <a href="https://buy.16888.com" target="_blank">团购</a>
+            </li>
+            <li>
+                <a href="https://chezhan.16888.com" target="_blank">车展</a>
+            </li>
+            <li class="nw-3">
+                <a href="https://top.16888.com" target="_blank">排行榜</a>
+            </li>
+            <li>
+                <a href="https://yongche.16888.com" target="_blank">用车</a>
+                <!--<a href="https://wenda.16888.com" target="_blank">问答</a>-->
+            </li>
+            <li>
+                <a href="https://tousu.16888.com" target="_blank">投诉</a>
+            </li>
+            <li>
+                <a href="https://xl.16888.com" target="_blank">销量</a>
+            </li>
+        </ul>
+        <div class="logo">
+            <a href="https://www.16888.com" target="_blank" title="车主之家">
+                <img src="//s.img16888.com/dist/images/index/v2/logo.jpg" width="179" height="96" alt="车主之家">
+            </a>
+        </div>
+    </div>
+</div>
+<div class="car-crumbs">
+    <div class="wrapper">
+        <div class="car-crumbs-list clearfix">
+            <a href="https://auto.16888.com/form.html#1" target="_blank" class="miniature">微型车</a>
+            <a href="https://auto.16888.com/form.html#2" target="_blank" class="small-scale">小型车</a>
+            <a href="https://auto.16888.com/form.html#3" target="_blank" class="compact">紧凑型车</a>
+            <a href="https://auto.16888.com/form.html#4" target="_blank" class="medium-sized">中型车</a>
+            <a href="https://auto.16888.com/form.html#5" target="_blank" class="medium-large">中大型车</a>
+            <a href="https://auto.16888.com/form.html#8" target="_blank" class="large">大型车</a>
+            <a href="https://auto.16888.com/form.html#9" target="_blank" class="sports">跑车</a>
+            <a href="https://auto.16888.com/form.html#7" target="_blank" class="suv">SUV</a>
+            <a href="https://auto.16888.com/form.html#6" target="_blank" class="mpv">MPV</a>
+            <a href="https://auto.16888.com/ev.html" target="_blank" class="energy">新能源</a>
+            <a href="https://auto.16888.com/imported.html" target="_blank" class="parallel">平行进口</a>
+        </div>
+    </div>
+</div>
+<div style="text-align:center; width:980px; margin:10px auto;" class="cardataclass" id="cardata_20_0_1_0_1"></div>
+<div style="text-align:center; width:980px; margin:10px auto;" class="cardataclass" id="cardata_147_0_1_0_1"></div>
+<!-- web_site [[-->
+<div class="web_site">
+<div class="search_box f_r">
+<script type="text/javascript">
+news._search = function(){
+if(!$("#newsKwd").val()){
+alert('请输入关键字');
+return false;
+}
+}
+</script>
+    <form action="http://so.16888.com/cse/search" method="get" onsubmit="return news._search();" target="_blank">
+    	<input name="q" id="newsKwd" class="search_text" value="请输入关键词" onclick="if(this.value=='请输入关键词') this.value='';"/>
+        <input type="submit" value="搜索" class="search_nav"/>
+        <input type="hidden" name="s" value="11178913492611122319">
+        <input type="hidden" name="entry" value="1">
+    </form>
+        <div class="down_table" style="display:none;">
+        	<p>抱歉，没有符合条件的内容</p>
+            <a href="#">大众</a>
+            <a href="#">上海大众</a>
+            <a href="#">一汽大众</a>
+            <a href="#">进口大众</a>
+        </div>
+    </div>
+当前位置：<a href="https://www.16888.com/">车主之家</a> &gt; <a href="https://news.16888.com">新闻</a> &gt; 汽车新闻</div>
+<!--]] web_site -->
+<div class="head_menu">
+    <ul>
+        <li class="w67"><a href="https://news.16888.com"  class="on">新闻</a></li>
+        <li class="w67"><a href="https://guide.16888.com" >导购</a></li>
+        <li class="w67"><a href="https://hangqing.16888.com"  >行情</a></li>
+        <li class="w67"><a href="https://cheshang.16888.com" >车商</a></li>
+        <li class="w67"><a href="https://video.16888.com" >视频</a></li>
+        <li class="w67"><a href="https://czxw.16888.com" >车展</a></li>
+        <li class="w94"><a href="https://yongche.16888.com" >用车知识</a></li>
+        <li class="w94"><a href="https://yangche.16888.com" >养车费用</a></li>
+        <li class="w94"><a href="https://jiashi.16888.com" >驾驶技巧</a></li>
+        <li class="w94"><a href="https://photonews.16888.com" >图片新闻</a></li>
+        <li class="w94"><a href="http://blog.16888.com" class="">汽车专栏</a></li>
+        <li class="w95"><a href="http://special.16888.com" class="">专题汇总</a></li>
+    </ul>
+</div>
+
+<div class="menu_list">
+<span>栏目分类：</span><a href="/" class="on">全部</a>|<a href="/hydt/" >行业动态</a>|<a href="/gnxc/" >国内新车</a>|<a href="/gwxc/" >国外新车</a>|<a href="/djxw/" >独家新闻</a>|<a href="/hmbg/" >黑幕曝光</a>|<a href="/zcfg/" >政策法规</a>|<a href="/gdft/" >人物访谈</a>|<a href="/shbg/" >生活八卦</a>|<a href="/qcwh/" >汽车文化</a></div>
+
+<!-- main_box [[-->
+<div class="wrap">
+<div class="main_left f_l">
+        <!-- 新闻列表 [[-->
+        <div class="news_list">
+        	<h1><span class="f_r">浏览模式：<a href="/index.html" class="ico_pic_b">图文模式</a> | <a href="/index_list.html" class="ico_news">标题模式</a>排序：<a href="/index_list.html" class="on">按时间排序</a> | <a href="/index_list_1_1.html" >按浏览次数</a></span>汽车新闻</h1>
+        	        	        	            <ul>                <li><span class="f_r">2026-08-26</span><a href="/gnxc/index.html" class="f_gray">【国内新车】</a><a href="https://news.16888.com/a/2026/0826/24882642.html" target="_blank" class="f_red">长城H9力魂版正式上市 限时优惠焕新价21.49-23.29万</a></li>
+                                                                <li><span class="f_r">2026-08-26</span><a href="/gnxc/index.html" class="f_gray">【国内新车】</a><a href="https://news.16888.com/a/2026/0826/24882379.html" target="_blank" class="f_red">全新宝马i3后排堪比5系？操控好设计强就看价格了！</a></li>
+                                                                <li><span class="f_r">2026-08-26</span><a href="/gnxc/index.html" class="f_gray">【国内新车】</a><a href="https://news.16888.com/a/2026/0826/24882465.html" target="_blank" class="f_red">一汽丰田2027款bZ5正式上市 售价12.98-19.98万</a></li>
+                                                                <li><span class="f_r">2026-08-25</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0825/24878610.html" target="_blank" >广深两地2026年第8期拍牌价出炉 深圳铁牌均价下调</a></li>
+                                                                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874428.html" target="_blank" >存在起火风险 部分进口丰田SUPRA召回</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874416.html" target="_blank" >部分银河M9/领克900/领克10EM-P/领克07/领克08召回</a></li>
+                                                                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874252.html" target="_blank" >安全存隐患 部分进口捷尼赛思G80召回</a></li>
+                                                                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874218.html" target="_blank" >应急机械拉手与内饰颜色接近 部分2024款小米SU7召回</a></li>
+                                                                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874199.html" target="_blank" >特斯拉召回部分国产及进口车型 涉及Model 3等</a></li>
+                                                                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874178.html" target="_blank" >应急机械拉手与内饰颜色接近 部分零跑C11和C01召回</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874171.html" target="_blank" >应急机械拉手与内饰颜色接近 小鹏G6/P7+/X9召回</a></li>
+                                                                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874149.html" target="_blank" >应急机械拉手与内饰颜色接近 部分极氪007和极氪X召回</a></li>
+                                                                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874058.html" target="_blank" >安全存隐患 将近7万辆iCAR 03及风云X3召回</a></li>
+                                                                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24874039.html" target="_blank" >53452辆纳米06/风神L8/eπ007/eπ008召回</a></li>
+                                                                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24873866.html" target="_blank" >应急机械拉手开启盖板缺少专用提示标识 46850辆极狐考拉召回</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-08-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0824/24873837.html" target="_blank" >车内应急机械拉手与内饰颜色接近 部分红旗EH7及天工08召回</a></li>
+                                                                <li><span class="f_r">2026-08-21</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0821/24870050.html" target="_blank" >长城H10成都首秀，这辆SUV凭什么成为全家人的潮流新宠？</a></li>
+                                                                <li><span class="f_r">2026-08-19</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0819/24864121.html" target="_blank" >​一台车搞定日常与远方  高山7SUV版把出行的将就变成讲究</a></li>
+                                                                <li><span class="f_r">2026-08-14</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0814/24848909.html" target="_blank" >油价调整最新消息：汽柴油每升下调0.18/0.19元</a></li>
+                                                                <li><span class="f_r">2026-08-14</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0814/24846142.html" target="_blank" >2026年7月汽车销量排行榜 零跑A10销量火爆</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-08-13</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0813/24845849.html" target="_blank" >领克07GT“提车即旅行”：一场交付仪式背后的品类革命与用户共谋</a></li>
+                                                                <li><span class="f_r">2026-07-31</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0731/24813110.html" target="_blank" >安全存隐患 广汽丰田召回部分铂智7</a></li>
+                                                                <li><span class="f_r">2026-07-31</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0731/24812910.html" target="_blank" >油价调整最新消息：汽柴油每升上涨0.54/0.56元</a></li>
+                                                                <li><span class="f_r">2026-07-27</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0727/24800346.html" target="_blank" >广深两地2026年第7期拍牌价出炉 深圳牌最低仅需1万元</a></li>
+                                                                <li><span class="f_r">2026-07-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0724/24794629.html" target="_blank" >前空簧滑柱总成缺陷 33473辆小鹏X9召回</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-07-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0724/24794607.html" target="_blank" >17360辆阿尔法·罗密欧Giulia/Stelvio召回</a></li>
+                                                                <li><span class="f_r">2026-07-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0724/24794595.html" target="_blank" >安全带存安全隐患 部分进口捷尼赛思G90召回</a></li>
+                                                                <li><span class="f_r">2026-07-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0724/24794495.html" target="_blank" >内后视镜可能脱落 国产MINI COOPER纯电等召回</a></li>
+                                                                <li><span class="f_r">2026-07-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0724/24794463.html" target="_blank" >16万辆进口捷豹I-Pace/路虎揽胜/发现/卫士召回</a></li>
+                                                                <li><span class="f_r">2026-07-24</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0724/24794435.html" target="_blank" >发动机舱存起火隐患 部分进口捷尼赛思G90召回</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-07-22</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0722/24787985.html" target="_blank" >雷总对9系SUV续航发问 大电池增程VS纯电你更青睐哪一种？</a></li>
+                                                                <li><span class="f_r">2026-07-22</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0722/24781362.html" target="_blank" >2026年6月汽车销量排行榜 零跑C10年内新高</a></li>
+                                                                <li><span class="f_r">2026-07-21</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0721/24778840.html" target="_blank" >2026上半年汽车销量排行榜解读 理想i6异军突起</a></li>
+                                                                <li><span class="f_r">2026-07-17</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0717/24773040.html" target="_blank" >油价调整最新消息：汽柴油每升上涨0.24/0.25元</a></li>
+                                                                <li><span class="f_r">2026-07-06</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0706/24740628.html" target="_blank" >油价调整最新消息：汽柴油每升下调0.75/0.78元</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-07-02</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0702/24732793.html" target="_blank" >小米SU7首期月供仅538元？YU7老车主竟遭权益背刺？</a></li>
+                                                                <li><span class="f_r">2026-07-01</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0701/24730487.html" target="_blank" >鸿蒙智行6月交付50624台 不被看好的尚界Z7系列交付竟破万？</a></li>
+                                                                <li><span class="f_r">2026-06-29</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0629/24719858.html" target="_blank" >前驱动轴缺陷 部分进口奔驰S级/国产E级召回</a></li>
+                                                                <li><span class="f_r">2026-06-25</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0625/24711910.html" target="_blank" >广深两地2026年第6期拍牌价出炉 深圳拍牌价继续下降</a></li>
+                                                                <li><span class="f_r">2026-06-18</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0618/24693878.html" target="_blank" >国产普拉多/进口皇冠/雷克萨斯GX/UX召回</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-06-18</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0618/24693852.html" target="_blank" >电池存热失控风险 部分国产沃尔沃EX30召回</a></li>
+                                                                <li><span class="f_r">2026-06-18</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0618/24693834.html" target="_blank" >油价调整最新消息：汽柴油每升下调0.4/0.42元</a></li>
+                                                                <li><span class="f_r">2026-06-17</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0617/24691254.html" target="_blank" >一箱油又省近20元！油价6月18日24点下调！</a></li>
+                                                                <li><span class="f_r">2026-06-17</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0617/24687455.html" target="_blank" >2026年5月汽车销量排行榜 零跑A10成新黑马</a></li>
+                                                                <li><span class="f_r">2026-06-15</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0615/24683673.html" target="_blank" >存在安全隐患 部分进口欧陆系列召回</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-06-10</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0610/24673674.html" target="_blank" >月销前十五竟无一台燃油车！燃油车真的不行了吗？</a></li>
+                                                                <li><span class="f_r">2026-06-09</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0609/24670626.html" target="_blank" >5月大型SUV销量盘点 榜单前十竟有四台是蔚来！</a></li>
+                                                                <li><span class="f_r">2026-06-09</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0609/24669595.html" target="_blank" >5月中大型SUV销量盘点 小米YU7月销竟比问界M7低？</a></li>
+                                                                <li><span class="f_r">2026-06-05</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0605/24661628.html" target="_blank" >智界V9 U+首批车主等急了？订单太火爆导致产能跟不上？</a></li>
+                                                                <li><span class="f_r">2026-06-04</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0604/24657826.html" target="_blank" >油价调整最新消息：汽柴油每升下调0.41/0.43元</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-06-04</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0604/24657355.html" target="_blank" >车重超1.8吨即“菜车”？莲花CEO是搬起石头砸自己的脚？</a></li>
+                                                                <li><span class="f_r">2026-06-04</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0604/24656234.html" target="_blank" >比亚迪发布2026年5月汽车销量情况</a></li>
+                                                                <li><span class="f_r">2026-06-03</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0603/24653938.html" target="_blank" >比亚迪5月销量突破38.3万辆告别同比下滑！海外销量迎来暴涨！</a></li>
+                                                                <li><span class="f_r">2026-06-02</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0602/24651523.html" target="_blank" >主要新势力品牌5月销量盘点 零跑月销竟突破了8万台！</a></li>
+                                                                <li><span class="f_r">2026-06-01</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0601/24649276.html" target="_blank" >小米穿界失败！鸿蒙智行5月销量环比暴增41%的功臣竟是它？</a></li>
+            </ul>                                    <ul>                <li><span class="f_r">2026-06-01</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0601/24648670.html" target="_blank" >比亚迪城区领航兜底有没有猫腻？跟智驾险有何区别？</a></li>
+                                                                <li><span class="f_r">2026-06-01</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0601/24646816.html" target="_blank" >安全存隐患 部分进口帕里斯帝召回</a></li>
+                                                                <li><span class="f_r">2026-06-01</span><a href="/hydt/index.html" class="f_gray">【行业动态】</a><a href="https://news.16888.com/a/2026/0601/24646802.html" target="_blank" >转向柱控制模块缺陷 北京奔驰召回国产C级等车型</a></li>
+                                                                <li><span class="f_r">2026-05-29</span><a href="/zcfg/index.html" class="f_gray">【政策法规】</a><a href="https://news.16888.com/a/2026/0529/24643291.html" target="_blank" >交强险6月1日后价格大改！最低可降到每年475元？</a></li>
+                                                                <li><span class="f_r">2026-05-26</span><a href="/qcwh/index.html" class="f_gray">【汽车文化】</a><a href="https://news.16888.com/a/2026/0526/24630890.html" target="_blank" >瑞虎8环塔营地成赛车课堂？为新疆少年点燃赛车梦想！</a></li>
+            </ul>                                                
+                        <div class="page" style="text-align:center;padding:30px 0;border-top:#e4e4e4 1px dashed;margin-top:20px;"> <b>1</b> <a href="/index_list_2.html">2</a> <a href="/index_list_3.html">3</a> <a href="/index_list_4.html">4</a> <a href="/index_list_5.html">5</a> ... <a href="/index_list_15.html">15</a>  <a class="f12" href="/index_list_2.html">下一页</a></div>
+                    </div>
+        <!--]] 新闻列表 -->
+    </div>
+    
+    <div class="main_right f_r">
+<!--车展-->
+<!--排行-->
+<!-- 排行 [[-->
+<div class="right_box">
+<h1><div class="f_r"><a href="http://news.16888.com/index_1_1.html" class="no">更多&gt;&gt;</a></div><span>汽车新闻阅读排行</span></h1>
+    <div class="right_list">
+    	<ul>
+    		        	<li><a href="https://news.16888.com/a/2026/0618/24693834.html" target="_blank">油价调整最新消息：汽柴油每升下调0.4/0.42元</a></li>
+        	        	<li><a href="https://news.16888.com/a/2026/0805/24823971.html" target="_blank">玛莎拉蒂新款格雷嘉正式上市 售价57.88万起</a></li>
+        	        	<li><a href="https://news.16888.com/a/2026/0604/24657826.html" target="_blank">油价调整最新消息：汽柴油每升下调0.41/0.43元</a></li>
+        	        	<li><a href="https://news.16888.com/a/2026/0617/24687455.html" target="_blank">2026年5月汽车销量排行榜 零跑A10成新黑马</a></li>
+        	        	<li><a href="https://news.16888.com/a/2026/0814/24846142.html" target="_blank">2026年7月汽车销量排行榜 零跑A10销量火爆</a></li>
+        	        	<li><a href="https://news.16888.com/a/2026/0721/24778840.html" target="_blank">2026上半年汽车销量排行榜解读 理想i6异军突起</a></li>
+        	        	<li><a href="https://news.16888.com/a/2026/0529/24643291.html" target="_blank">交强险6月1日后价格大改！最低可降到每年475元？</a></li>
+        	        	<li><a href="https://news.16888.com/a/2026/0731/24812910.html" target="_blank">油价调整最新消息：汽柴油每升上涨0.54/0.56元</a></li>
+        	        	<li><a href="https://news.16888.com/a/2026/0803/24818770.html" target="_blank">新款别克GL8陆尚官图发布 将8月13日上市</a></li>
+        	        	<li><a href="https://news.16888.com/a/2026/0529/24641591.html" target="_blank">比亚迪宋Ultra DM-i上市 售价12.99-15.99万</a></li>
+        	        </ul>
+    </div>
+</div>
+<!--]] 排行 -->
+<!--推荐阅读-->
+        
+        <!-- 推荐阅读 [[-->
+        <div class="right_box">
+        	<h1><div class="f_r"><a href="http://special.16888.com" target="_blank" class="no">更多&gt;&gt;</a></div><span>推荐阅读</span></h1>
+            <div class="pic_list">
+            	<ul>
+                	<li><a target="_blank" href="https://news.16888.com/a/2026/0826/24882379.html"><img src="//i.img16888.com/news/area/hd/2026/08/26174221602__area.jpg"></a><a target="_blank" href="https://news.16888.com/a/2026/0826/24882379.html" class="name">全新宝马i3后排堪比5系？操控好设计强就看价格了！</a></li>
+                	<li><a target="_blank" href="https://news.16888.com/a/2026/0826/24881908.html"><img src="//i.img16888.com/news/area/hd/2026/08/26160151591__area.jpg"></a><a target="_blank" href="https://news.16888.com/a/2026/0826/24881908.html" class="name">60万你买9系旗舰还是它？国产奔驰GLE L值得等吗？</a></li>
+                	<li><a target="_blank" href="https://news.16888.com/a/2026/0826/24879451.html"><img src="//i.img16888.com/news/area/hd/2026/08/26140209507__area.jpg"></a><a target="_blank" href="https://news.16888.com/a/2026/0826/24879451.html" class="name">7万能买“新款A6L”？奇瑞艾瑞泽7这设计要火？</a></li>
+                	<li><a target="_blank" href="https://news.16888.com/a/2026/0825/24878590.html"><img src="//i.img16888.com/news/area/hd/2026/08/2517394799__area.jpg"></a><a target="_blank" href="https://news.16888.com/a/2026/0825/24878590.html" class="name">综合续航2300km！方程豹钛9只卷性价比？</a></li>
+                	<li><a target="_blank" href="https://news.16888.com/a/2026/0825/24878280.html"><img src="//i.img16888.com/news/area/hd/2026/08/25145522973__area.jpg"></a><a target="_blank" href="https://news.16888.com/a/2026/0825/24878280.html" class="name">捷达也下海造电车了？空间大智能不错大家能认吗？</a></li>
+                	<li><a target="_blank" href="https://news.16888.com/a/2026/0824/24875782.html"><img src="//i.img16888.com/news/area/hd/2026/08/24172524217__area.jpg"></a><a target="_blank" href="https://news.16888.com/a/2026/0824/24875782.html" class="name">新世代BMW iX3和Model Y有何区别？</a></li>
+                	<li><a target="_blank" href="https://news.16888.com/a/2026/0824/24875627.html"><img src="//i.img16888.com/news/area/hd/2026/08/24163513288__area.jpg"></a><a target="_blank" href="https://news.16888.com/a/2026/0824/24875627.html" class="name">5万多代步车选它不出错？五菱缤果Pro怎么买</a></li>
+                	<li><a target="_blank" href="https://news.16888.com/a/2026/0821/24870109.html"><img src="//i.img16888.com/news/area/hd/2026/08/21204358454__area.jpg"></a><a target="_blank" href="https://news.16888.com/a/2026/0821/24870109.html" class="name">3款主流10万纯电中型车 同样价格谁更量大管饱？</a></li>
+	
+                </ul>
+            </div>
+        </div>
+        <!--]] 推荐阅读 -->
+        
+      
+<!--微博论坛-->
+<script> 
+$(function(){changeBoxClick(".right_box h1 span a",".right_box .right_list_t",'on','.right_box .box2');});
+</script>  
+        <!-- 精华 [[-->
+        <div class="right_box">
+        	<h1>
+<div class="f_r box2"><a class="no nav_ts" target="_blank" href="https://tousu.16888.com/tousu.html">我要投诉</a></div>
+<span style="padding:0;"><a href="javascript:;" class="on">投诉</a></span></h1>
+            <div class="right_list_t list_ts">
+<h3><i class="f_l">标题</i><i class="f_r">时间</i></h3>
+            	<ul>
+                	<li><span>05-27</span><a href="https://tousu.16888.com/detail-tid-113163.html" target="_blank">要求退回定金</a></li>
+                	<li><span>04-01</span><a href="https://tousu.16888.com/detail-tid-113162.html" target="_blank">2.6万公里电池故障，五菱4S店拒绝更换电池包</a></li>
+                	<li><span>02-13</span><a href="https://tousu.16888.com/detail-tid-113161.html" target="_blank">5个月1万公里一汽丰田普拉多变速箱故障，拖着不修，还不提供代步车</a></li>
+                	<li><span>12-20</span><a href="https://tousu.16888.com/detail-tid-113160.html" target="_blank">上汽大众帕萨特变速箱故障频发</a></li>
+                	<li><span>11-14</span><a href="https://tousu.16888.com/detail-tid-113159.html" target="_blank">阳泉致益店承诺不兑现又卖故障车</a></li>
+                	<li><span>11-10</span><a href="https://tousu.16888.com/detail-tid-113158.html" target="_blank">阳泉广汽丰田致益店  承诺不兑现，又卖故障车</a></li>
+                	<li><span>11-02</span><a href="https://tousu.16888.com/detail-tid-113157.html" target="_blank">阳泉致益4S店   承诺不兑现，又卖故障车</a></li>
+                	<li><span>10-04</span><a href="https://tousu.16888.com/detail-tid-113156.html" target="_blank">极氪001电吸门夹手质量风险造成人伤</a></li>
+	
+                </ul>
+            </div>
+        </div>
+        <!--]] 精华 -->
+        
+       
+<!--车主实用工具-->
+
+		<!-- 百度广告 [[-->
+		<div class="right_box">
+			<script type="text/javascript">
+				(function() {
+					var s = "_" + Math.random().toString(36).slice(2);
+					document.write('<div style="" id="' + s + '"></div>');
+					(window.slotbydup = window.slotbydup || []).push({
+						id: "u4527662",
+						container: s
+					});
+				})();
+			</script>
+			<script type="text/javascript" src="//cpro.baidustatic.com/cpro/ui/c.js" async="async" defer="defer" >
+			</script>
+		</div>
+		<!--]] 百度广告 -->
+
+        <!-- 车主实用工具 [[-->
+        <div class="right_box">
+        	<h1><span>车主实用工具</span></h1>
+            <div class="tool_list">
+            	<ul>
+					<li><a target="_blank" href="http://baojia.16888.com">真实报价</a></li>
+                	<li><a target="_blank" href="https://pk.16888.com">车型对比</a></li>
+                	<li><a target="_blank" href="https://price.16888.com/">汽车报价</a></li>
+                    <li><a target="_blank" href="https://auto.16888.com">车型大全</a></li>
+                	<li><a target="_blank" href="https://pic.16888.com">车型图库</a></li>
+                    <li><a target="_blank" href="https://dealer.16888.com">4S店大全</a></li>
+                	<li><a target="_blank" href="https://buy.16888.com">汽车团购</a></li>
+                	<li><a target="_blank" href="https://tousu.16888.com">汽车投诉</a></li>
+                    <li><a target="_blank" href="http://logo.16888.com">车标大全</a></li>
+                	<li><a target="_blank" href="https://top.16888.com/">汽车排行</a></li>
+                	<li><a target="_blank" href="http://baojia.16888.com/realbaojia/Calculator/type-1">购车计算</a></li>
+                    <li><a target="_blank" href="http://app.16888.com/gz/">车牌估值</a></li>
+                	<li><a target="_blank" href="http://app.16888.com/jx/">车牌吉凶</a></li>
+					<li><a target="_blank" href="http://baojia.16888.com/realbaojia/Calculator/type-3">车险计算</a></li>
+                    <li><a target="_blank" href="http://baojia.16888.com/realbaojia/Calculator/type-2">车贷计算</a></li>
+                	<li><a target="_blank" href="https://www.chexiu.com/">汽车电商</a></li>
+                	<li><a target="_blank" href="http://www.carbox.com.cn/">汽车用品</a></li>
+                </ul>
+            </div>
+        </div>
+        <!--]] 车主实用工具 -->
+    
+
+<!--汽车导购-->
+</div>
+    
+</div>
+<!--]] main_box -->
+
+<!-- 友情链接 [[-->
+<div class="link_box">
+<h1>友情链接<span>联系QQ：82505 </span></h1>
+    <div class="link_con">
+    	<ul>
+    		        	<li><a href="http://www.qqddc.com/" target="_blank" title="全球电动车网">全球电动车网</a></li>
+        	        	<li><a href="http://www.t139.com/" target="_blank" title="T139汽车改装 ">T139汽车改装 </a></li>
+        	        	<li><a href="http://www.chezhilv.cn/" target="_blank" title="车之旅">车之旅</a></li>
+        	        	<li><a href="http://www.guocar.com/" target="_blank" title="国产汽车 ">国产汽车 </a></li>
+        	        	<li><a href="http://www.cwddd.com/ " target="_blank" title="畅网">畅网</a></li>
+        	        	<li><a href="http://bbs.360che.com/ " target="_blank" title="卡车之家论坛">卡车之家论坛</a></li>
+        	        	<li><a href="http://qiche.cncn.com/" target="_blank" title="长途汽车查询">长途汽车查询</a></li>
+        	        	<li><a href="http://guangzhou.anjuke.com/" target="_blank" title="广州房产网">广州房产网</a></li>
+        	        	<li><a href="http://cn.makepolo.com/ " target="_blank" title="企业名录">企业名录</a></li>
+        	        	<li><a href="http://news.jc001.cn/" target="_blank" title="建材新闻">建材新闻</a></li>
+        	        	<li><a href="http://news.gaotie.cn/ " target="_blank" title="高铁新闻">高铁新闻</a></li>
+        	        	<li><a href="http://news.szhk.com/" target="_blank" title="最新新闻">最新新闻</a></li>
+        	        	<li><a href="http://news.zol.com.cn/" target="_blank" title="新闻中心">新闻中心</a></li>
+        	        	<li><a href="http://news.cncn.com/" target="_blank" title="旅游资讯">旅游资讯</a></li>
+        	        	<li><a href="http://www.changtu.com/" target="_blank" title="汽车票网上订票">汽车票网上订票</a></li>
+        	        	<li><a href="http://zj.offcn.com" target="_blank" title="浙江人事考试网">浙江人事考试网</a></li>
+        	        	<li><a href="http://www.wed114.cn/index.html" target="_blank" title="婚纱摄影">婚纱摄影</a></li>
+        	        	<li><a href="http://bbs.pcauto.com.cn/" target="_blank" title="汽车论坛 ">汽车论坛 </a></li>
+        	        	<li><a href="http://www.autotimes.com.cn/" target="_blank" title=" 汽车时代网"> 汽车时代网</a></li>
+        	        	<li><a href="http://t.qianzhan.com/" target="_blank" title="科技新闻">科技新闻</a></li>
+        	        	<li><a href="http://www.evpartner.com/" target="_blank" title="电车资源">电车资源</a></li>
+        	        	<li><a href="http://www.okeycar.com/" target="_blank" title="平行进口车">平行进口车</a></li>
+        	        	<li><a href="https://www.dycjy.com" target="_blank" title="抵押车交易网">抵押车交易网</a></li>
+        	        	<li><a href="https://www.akd.cn/" target="_blank" title="澳康达二手车">澳康达二手车</a></li>
+        	        	<li><a href="http://huoche.tianqi.com/" target="_blank" title="火车票网上查询">火车票网上查询</a></li>
+        	        	<li><a href="http://www.chekb.com/" target="_blank" title="汽车口碑网">汽车口碑网</a></li>
+        	        	<li><a href="http://www.chinacar.com.cn/" target="_blank" title="中国汽车网">中国汽车网</a></li>
+        	        	<li><a href="http://www.belltrip.cn/" target="_blank" title="驼铃户外活动网">驼铃户外活动网</a></li>
+        	        	<li><a href="http://dealer.xcar.com.cn/" target="_blank" title="汽车4S店">汽车4S店</a></li>
+        	        </ul>
+    </div>
+</div>
+<!--]] 友情链接 -->
+<style type="text/css"> 
+.clear { clear:both; height:0; overflow:hidden;}
+img { border:0;}
+.foot { width:980px; margin:0 auto; margin-top:10px; overflow:hidden; text-align:center; line-height:25px; color:#666; font-size:12px; margin-top:10px; border-top:1px solid #cdcdcd; padding-top:10px;}
+</style>
+<div style="clear:both; position:relative;"></div>
+<div class="foot"> 
+<a href="http://www.ebs.gov.cn/EntCertificate.aspx?domainId=38bb38b1-552b-48b8-b27a-fb676fd75217" target="_blank"><img style="float:left; margin:30px 0 10px 200px;" src="https://a.img16888.com/common/images/govicon.gif" /></a>
+<a target="_blank" href="http://www.cyberpolice.cn"><img src="https://s.img16888.com/dist/images/common/footerjc.gif" alt="网络警察" style="float: right; margin-top: 15px; margin-right:110px;"></a>
+<a id="J_goTop" href="javascript:;"><img src="https://s.img16888.com/dist/images/common/go_top.gif" alt="返回顶部" style="float: right; clear: right; margin-right: 160px;"></a>
+<a target="_blank" href="https://www.16888.com/about/">关于我们</a> | <a target="_blank" href="https://www.16888.com/about/index_lianxi.html">联系我们</a>
+     | <a target="_blank" href="https://www.16888.com/about/index_job/1-1.html">加入我们</a> | <a href="https://m.16888.com" target="_blank">手机版</a> | <a target="_blank" href="https://www.16888.com/about/index_ditu.html">网站地图</a> | <a target="_blank" href="https://4s.16888.com">好卖车</a> | <a target="_blank" href="https://www.16888.com/join/">分站加盟</a><br>
+版权所有：车主之家（www.16888.com）  <br>
+ 备案号：<a target="_blank" href="https://beian.miit.gov.cn">粤ICP备06021273号</a>   电信与信息业务经营许可证号：<a target="_blank" href="https://www.16888.com/icp.html">粤B2－20080314</a><br>
+  深圳30年网络信息杰出贡献企业   深圳电子商务协会监事单位   深圳四川商会理事单位
+</div>
+<script type="text/javascript" src="//s.img16888.com/dist/js/common/scrolltop.js?t=201403281502"></script>
+
+<script type="text/javascript">
+    (function(){
+        var bp = document.createElement('script');
+        var curProtocol = window.location.protocol.split(':')[0];
+        if (curProtocol === 'https') {
+            bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';
+        }
+        else {
+            bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+        }
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(bp, s);
+    })();
+</script>
+<script type="text/javascript" src="//s.img16888.com/dist/js/??lib/seajs/sea.js,lib/seajs/seajs-combo.js,lib/seajs/seajs-style.js?t=2022006291007"></script>
+<script type="text/javascript" src="//s.img16888.com/dist/js/??common/hash.js,config.js?t=2022006291007"></script>
+<script type="text/javascript">
+    seajs.use(['common'], function(_c) {
+        _c.init();
+    });
+    </script>
+<script type="text/javascript">
+    var cnzz_protocol = (("https:" == document.location.protocol) ? " https://" : " http://");
+    document.write(unescape("%3Cspan style='display:none;' id='cnzz_stat_icon_2314159'%3E%3C/span%3E%3Cscript src='" + cnzz_protocol + "s95.cnzz.com/stat.php%3Fid%3D2314159' type='text/javascript'%3E%3C/script%3E"));
+</script>
+</body>
+</html>
