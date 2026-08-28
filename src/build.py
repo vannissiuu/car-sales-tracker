@@ -56,6 +56,14 @@ NEWS_PATH = os.environ.get("NEWS_JSON") or _first_existing(
     os.path.join(REPO_ROOT, "data", "news.json"),
     os.path.join(REPO_ROOT, "news.json"),
 )
+
+# 实时动态检索接口地址（可选）。留空 "" 时：看板不显示"查最新"按钮，
+# 只展示 news.json 预生成的快照，不发任何实时请求、不报错、不显示坏掉的按钮。
+# 部署好 /api/dynamics 后端后，把这里换成它的域名（不含末尾斜杠），重新构建即可生效。
+# ===== API_BASE_BEGIN =====
+DYNAMICS_API_BASE = "https://car-industry-monitor.vercel.app"
+# ===== API_BASE_END =====
+
 VENDOR_ECHARTS = os.path.join(REPO_ROOT, "vendor", "echarts.min.js")
 OUT_DIR = os.path.join(REPO_ROOT, "docs")
 OUT_PATH = os.path.join(OUT_DIR, "index.html")
@@ -340,6 +348,13 @@ def main():
     news_json = json.dumps(news, ensure_ascii=False, separators=(",", ":"))
     meta_json = json.dumps(meta, ensure_ascii=False, separators=(",", ":"))
 
+    dynamics_api_base = (DYNAMICS_API_BASE or "").strip()
+    dynamics_api_base_json = json.dumps(dynamics_api_base, ensure_ascii=False)
+    if dynamics_api_base:
+        print(f"实时动态接口: 已配置 {dynamics_api_base}（看板将显示“查最新”按钮）")
+    else:
+        print("实时动态接口: 未配置（DYNAMICS_API_BASE 为空，看板只显示快照，不显示“查最新”按钮）")
+
     data_kb = len(data_json.encode("utf-8")) / 1024
     print(f"  数据部分大小: {data_kb:.1f} KB")
 
@@ -356,6 +371,7 @@ def main():
     html = html.replace("@@DATA_JSON@@", data_json)
     html = html.replace("@@NEWS_JSON@@", news_json)
     html = html.replace("@@META_JSON@@", meta_json)
+    html = html.replace("@@DYNAMICS_API_BASE_JSON@@", dynamics_api_base_json)
     html = html.replace(
         "@@COVERAGE_TEXT@@",
         f"数据覆盖 {meta['coverageStartYear']}年{meta['coverageStartMonth']}月 "
@@ -677,11 +693,64 @@ table.scope-table thead th{position:sticky;top:0;background:var(--surface-1);col
 table.mtable{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px;}
 table.mtable th,table.mtable td{padding:4px 6px;text-align:right;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums;}
 table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
-.news-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;}
-.news-card a{color:var(--text-primary);text-decoration:none;font-size:13px;font-weight:600;line-height:1.4;}
-.news-card a:hover{text-decoration:underline;}
-.news-meta{font-size:11px;color:var(--text-muted);margin-top:5px;}
+.news-box{border-top:3px solid transparent;padding-top:12px;}
+.news-box.lvl-brand{border-top-color:var(--series-1);}
+.news-box.lvl-manu{border-top-color:var(--series-2);}
+.news-box.lvl-model{border-top-color:var(--series-3);}
+.news-period{font-size:11px;color:var(--text-muted);margin-bottom:10px;}
+.news-group{margin-bottom:14px;}
+.news-group:last-of-type{margin-bottom:0;}
+.news-dim-tag{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;
+  font-size:11.5px;font-weight:700;color:var(--text-secondary);background:var(--chip-bg);
+  border:1px solid var(--border);margin-bottom:8px;}
+.news-dim-tag .dot{width:7px;height:7px;border-radius:50%;flex:none;}
+.lvl-brand .news-dim-tag .dot{background:var(--series-1);}
+.lvl-manu .news-dim-tag .dot{background:var(--series-2);}
+.lvl-model .news-dim-tag .dot{background:var(--series-3);}
+.news-card{border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--surface-1);}
+.news-summary{font-size:13px;font-weight:600;line-height:1.5;color:var(--text-primary);}
+.news-detail{margin-top:6px;}
+.news-detail summary{font-size:11.5px;color:var(--text-muted);cursor:pointer;user-select:none;}
+.news-detail summary:hover{color:var(--text-secondary);}
+.news-detail[open] summary{color:var(--text-secondary);}
+.news-detail-body{font-size:12px;color:var(--text-secondary);line-height:1.65;margin-top:6px;}
+.news-meta{font-size:11px;color:var(--text-muted);margin-top:7px;}
+.news-source-link{color:var(--info-fg);text-decoration:none;font-weight:600;}
+.news-source-link:hover{text-decoration:underline;}
 .news-empty{font-size:12.5px;color:var(--text-muted);padding:14px 0;text-align:center;border:1px dashed var(--border);border-radius:10px;}
+.news-search-note{font-size:11.5px;color:var(--text-muted);margin-top:8px;padding:9px 11px;background:var(--chip-bg);border-radius:8px;line-height:1.65;}
+.news-disclaimer{font-size:10.5px;color:var(--text-muted);margin-top:14px;padding-top:10px;border-top:1px dashed var(--border);line-height:1.65;}
+.news-head{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.news-head h3{margin:0;}
+.dyn-btn{
+  border:1px solid var(--info-border);background:var(--info-bg);color:var(--info-fg);
+  border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;flex:none;
+  white-space:nowrap;transition:opacity .15s;
+}
+.dyn-btn:hover{opacity:.82;}
+.dyn-btn:disabled{cursor:default;opacity:.65;}
+.news-badge{font-size:11px;color:var(--text-muted);margin:8px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:14px;}
+.news-badge .tag-snap{color:var(--text-muted);}
+.news-badge .tag-live{color:var(--good);font-weight:700;}
+.news-badge .tag-cached{color:var(--info-fg);font-weight:700;}
+.news-badge .badge-link{color:var(--info-fg);cursor:pointer;text-decoration:underline;font-weight:600;background:none;border:none;padding:0;font-size:11px;}
+.news-badge .badge-link:hover{opacity:.8;}
+.dyn-loading{border:1px dashed var(--border);border-radius:10px;padding:22px 14px;text-align:center;}
+.dyn-loading .spinner{width:20px;height:20px;margin:0 auto 10px;border-radius:50%;
+  border:2.5px solid var(--border);border-top-color:var(--info-fg);animation:dyn-spin 0.8s linear infinite;}
+@keyframes dyn-spin{to{transform:rotate(360deg);}}
+.dyn-loading .phase{font-size:12.5px;color:var(--text-secondary);font-weight:600;}
+.dyn-cancel{margin-top:12px;border:1px solid var(--border);background:transparent;color:var(--text-secondary);
+  border-radius:7px;padding:4px 12px;font-size:11.5px;cursor:pointer;}
+.dyn-cancel:hover{color:var(--text-primary);border-color:var(--text-muted);}
+.dyn-error{border:1px solid var(--warning-border);background:var(--warning-bg);color:var(--warning-fg);
+  border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.6;margin-bottom:10px;}
+.news-card.impact-high{border-color:var(--critical);border-width:1.5px;background:var(--warning-bg);}
+.news-card .impact-tag{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--critical);
+  border-radius:5px;padding:1px 6px;margin-right:6px;vertical-align:1px;}
+.news-card .dim-inline{font-size:10.5px;color:var(--text-muted);font-weight:700;margin-bottom:4px;}
+.news-nosrc{color:var(--text-muted);}
+.dyn-unconfigured-note{font-size:10.5px;color:var(--text-muted);margin-top:8px;}
 
 @media (max-width: 880px){
   .main-grid{flex-direction:column;}
@@ -816,8 +885,12 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
       <h3 id="scopeTitle">统计范围</h3>
       <div id="scopeBody"></div>
     </div>
-    <div class="drawer-section">
-      <h3>相关动态</h3>
+    <div class="drawer-section news-box" id="newsBox">
+      <div class="news-head">
+        <h3 id="newsSectionTitle">相关动态</h3>
+        <button class="dyn-btn" id="dynQueryBtn" type="button" style="display:none;">查最新</button>
+      </div>
+      <div class="news-badge" id="newsBadge"></div>
       <div id="drawerNews"></div>
     </div>
   </div>
@@ -830,6 +903,7 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
 var RAW = @@DATA_JSON@@;
 var NEWS = @@NEWS_JSON@@;
 var META = @@META_JSON@@;
+var DYNAMICS_API_BASE = @@DYNAMICS_API_BASE_JSON@@;
 
 var PALETTE = {
   light: ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948'],
@@ -1555,16 +1629,19 @@ function openDrawer(key, name){
     var rd = rankDeltaText(prevRank, rank);
     statsEl.appendChild(statTile('当前排名', '第 '+rank+' 名', rd.text + '（同期对比）', rd.dir));
   }
+  var dynYoyRaw = null; // 同比的原始数值（供实时动态查询接口用，不做百分号/正负号格式化）
   if(prevCapped){
     var prevYtd = prevCapped.ytd;
     var curYtd = cur ? cur.ytd : 0;
     var yoyText, yoyDir;
     if(prevYtd > 0){
       var yoy = (curYtd - prevYtd) / prevYtd * 100;
+      dynYoyRaw = yoy;
       yoyText = (yoy>=0?'+':'') + yoy.toFixed(1) + '%';
       yoyDir = yoy>=0 ? 'up' : 'down';
     } else if(curYtd > 0){
       yoyText = '新增'; yoyDir = 'up'; // 去年同期为 0（新车型/新品牌），不是 +Infinity / NaN
+      // dynYoyRaw 保持 null：+Infinity% 对实时查询接口没有意义，不传给它
     } else {
       yoyText = '—'; yoyDir = null; // 两年同期都是 0，同比无意义
     }
@@ -1572,6 +1649,15 @@ function openDrawer(key, name){
   } else {
     statsEl.appendChild(statTile('同比（至'+lastM+'月）', '—', '无上年同期数据', null));
   }
+  // 供「查最新」实时查询接口使用的上下文——直接复用上面已经算好的 rank / dynYoyRaw，
+  // 不重算（这里是唯一权威口径）。yoy_pct 四舍五入到一位小数，与展示层的 toFixed(1) 对齐。
+  var dynLevel = GRAN_TO_NEWS_LEVEL[state.gran] || 'brand';
+  var dynContext = {
+    year: state.year,
+    ytd_months: lastM,
+    yoy_pct: (dynYoyRaw!=null && isFinite(dynYoyRaw)) ? Math.round(dynYoyRaw*10)/10 : null,
+    rank: (rank!=null) ? rank : null
+  };
 
   // 月度柱状图（当年 vs 去年同月，逐月对比本身就是同期对比，不受上面那个 bug 影响）
   var months = [];
@@ -1626,8 +1712,8 @@ function openDrawer(key, name){
   hideCompTooltip();
   renderScope(key, name);
 
-  // 新闻
-  renderNews(name);
+  // 动态：快照底版 + 用户触发实时查询
+  initNewsForEntity(key, name, dynLevel, dynContext);
 }
 function pct(v,total){ return total>0 ? (v/total*100).toFixed(1)+'%' : '—'; }
 function buildScopeTable(headers, rows){
@@ -1744,29 +1830,504 @@ function findEntity(key, year){
   for(var i=0;i<u.entities.length;i++){ if(u.entities[i].key===key) return u.entities[i]; }
   return null;
 }
-function renderNews(name){
+/* ---------------- 相关动态（分层快照 + 用户触发实时查询：品牌 / 厂商 / 车型三层维度各不相同） ----------------
+   快照数据来自 news.json（构建时 AI 联网检索生成，秒开，但时效性受限于构建时间）。
+   实时数据由用户点击"查最新"触发，调用 DYNAMICS_API_BASE + /api/dynamics 针对当前对象
+   即时联网检索，只挑最新、最有含金量、对当前销量现状影响最大的动态，不追求维度全面。
+   三层视角刻意做出区分：区块标题、维度分组、维度标签配色都随粒度变化，
+   避免品牌/厂商/车型三个入口在这一区块里长得一模一样。 */
+var GRAN_TO_NEWS_LEVEL = {manu:'manufacturer', brand:'brand', model:'model'};
+var NEWS_LEVEL_META = {
+  brand:        {section:'市场动态', cls:'lvl-brand',
+    order:['品牌战略','市场表现','渠道网络','重大舆情','技术路线','价格体系']},
+  manufacturer: {section:'经营动态', cls:'lvl-manu',
+    order:['财务业绩','供应链','产能工厂','海外布局','组织人事']},
+  model:        {section:'产品动态', cls:'lvl-model',
+    order:['改款年款','召回质量','价格调整']}
+};
+var _newsScopeCache = null;
+function newsScopeByLevel(){
+  if(_newsScopeCache) return _newsScopeCache;
+  var out = {brand:[], manufacturer:[], model:[]};
+  for(var k in NEWS){
+    if(!Object.prototype.hasOwnProperty.call(NEWS,k)) continue;
+    var lv = NEWS[k] && NEWS[k].level;
+    if(out[lv]) out[lv].push(k);
+  }
+  _newsScopeCache = out;
+  return out;
+}
+function newsScopeText(level){
+  var scope = newsScopeByLevel();
+  if(level==='brand') return 'Top 30 品牌';
+  var list = scope[level] || [];
+  var label = level==='manufacturer' ? '厂商' : '车型';
+  return list.length
+    ? list.join(' / ')+' 等 '+list.length+' 个'+label+'（分层设计样例）'
+    : '暂无样例覆盖的'+label;
+}
+function isDynConfigured(){
+  return !!(DYNAMICS_API_BASE && DYNAMICS_API_BASE.trim());
+}
+function newsDisclaimer(){
+  var d = document.createElement('div');
+  d.className = 'news-disclaimer';
+  d.textContent = '快照内容由 AI 于生成日期联网检索得出；实时查询为点击时即时检索。'
+    +'两者均附信源链接，请以信源原文为准。内容不含销量数字（销量以本看板数据为准）。'
+    +'快照当前覆盖范围：Top 30 品牌，另有少量厂商/车型作为分层设计样例；'
+    +'实时查询不受此范围限制，理论上可用于任意对象。';
+  return d;
+}
+function newsHeader(entry){
+  var d = document.createElement('div');
+  d.className = 'news-period';
+  var parts = [];
+  if(entry.period) parts.push('数据周期 '+entry.period);
+  if(entry.generated_at) parts.push('生成于 '+entry.generated_at);
+  d.textContent = parts.join(' · ');
+  return d;
+}
+function newsCard(it, opts){
+  opts = opts || {};
+  var card = document.createElement('div');
+  card.className = 'news-card' + (it.impact==='high' ? ' impact-high' : '');
+  if(opts.showDim && it.dimension){
+    var dimEl = document.createElement('div');
+    dimEl.className = 'dim-inline';
+    dimEl.textContent = it.dimension;
+    card.appendChild(dimEl);
+  }
+  var summary = document.createElement('div');
+  summary.className = 'news-summary';
+  if(it.impact==='high'){
+    var tag = document.createElement('span');
+    tag.className = 'impact-tag';
+    tag.textContent = '重要';
+    summary.appendChild(tag);
+  }
+  summary.appendChild(document.createTextNode(it.summary || ''));
+  card.appendChild(summary);
+  if(it.detail){
+    var det = document.createElement('details');
+    det.className = 'news-detail';
+    var sm = document.createElement('summary'); sm.textContent = '详情';
+    det.appendChild(sm);
+    var body = document.createElement('div');
+    body.className = 'news-detail-body';
+    body.textContent = it.detail;
+    det.appendChild(body);
+    card.appendChild(det);
+  }
+  var meta = document.createElement('div');
+  meta.className = 'news-meta';
+  if(it.date){ meta.appendChild(document.createTextNode(it.date)); }
+  if(it.source_url){
+    // 有信源链接：渲染成真正的链接
+    if(it.date) meta.appendChild(document.createTextNode(' · '));
+    var a = document.createElement('a');
+    a.className = 'news-source-link';
+    a.href = it.source_url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = it.source_name || '信源';
+    meta.appendChild(a);
+  } else if(it.source_name){
+    // source_url 为空但还有个名字（降级情况）：纯文本展示，绝不渲染成空链接
+    if(it.date) meta.appendChild(document.createTextNode(' · '));
+    var span1 = document.createElement('span'); span1.className = 'news-nosrc';
+    span1.textContent = it.source_name;
+    meta.appendChild(span1);
+  } else {
+    // 连名字都没有：明确标"无信源"，而不是留空让人以为漏了
+    if(it.date) meta.appendChild(document.createTextNode(' · '));
+    var span2 = document.createElement('span'); span2.className = 'news-nosrc';
+    span2.textContent = '无信源';
+    meta.appendChild(span2);
+  }
+  card.appendChild(meta);
+  return card;
+}
+
+/* ---- 动态区块的运行态：每次 openDrawer 都会重置，用 gen 防止"抽屉已经切换到
+   别的对象，但上一个对象的实时查询请求才姗姗来迟"这种情况把画面写串。 ---- */
+var dynState = {
+  gen: 0,
+  key: null, name: null, level: null, context: null,
+  entry: null,      // 该对象在 news.json 里的快照条目（可能没有）
+  mode: 'idle',      // idle(展示快照) / loading / live / cached
+  controller: null,  // 当前 in-flight 请求的 AbortController
+  phaseTimer: null,  // 加载态阶段性文案的定时器
+  timeoutTimer: null,// 60 秒前端超时定时器
+  timedOut: false    // 区分"前端超时自动 abort" vs "用户手动点取消"
+};
+
+var DYN_ERROR_MSG = {
+  origin_not_allowed: '当前页面来源未获授权',
+  rate_limited: '查询过于频繁，请稍后再试',
+  daily_quota_exceeded: '今日查询额度已用完，明天再试',
+  server_misconfigured: '查询服务未配置完成',
+  upstream_failed: '检索服务暂时不可用'
+};
+function dynFriendlyError(code, message){
+  if(code === 'bad_request') return message || '请求参数有误，请稍后再试';
+  if(code && DYN_ERROR_MSG[code]) return DYN_ERROR_MSG[code];
+  return message || '查询失败，请稍后再试';
+}
+
+var DYN_CACHE_PREFIX = 'dyn:';
+var DYN_CACHE_MAX_ENTRIES = 40; // 简单的容量保护：超过这个条数就清掉最旧的
+function dynTodayStr(){
+  var d = new Date();
+  var p = function(n){ return String(n).padStart(2,'0'); };
+  return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());
+}
+function dynCacheKey(level, entity){
+  return DYN_CACHE_PREFIX + level + ':' + entity + ':' + dynTodayStr();
+}
+// localStorage 在隐私模式等场景下会直接抛异常——这里的原则是：
+// 任何一步失败都静默降级为"不缓存"，绝不能让缓存逻辑影响主功能。
+function dynCacheGet(level, entity){
+  try{
+    var raw = window.localStorage.getItem(dynCacheKey(level, entity));
+    if(!raw) return null;
+    var obj = JSON.parse(raw);
+    return (obj && obj.result) ? obj.result : null;
+  }catch(e){ return null; }
+}
+function dynCacheSet(level, entity, result){
+  try{
+    window.localStorage.setItem(
+      dynCacheKey(level, entity),
+      JSON.stringify({_cachedAt: Date.now(), result: result})
+    );
+    dynCachePrune();
+  }catch(e){ /* 隐私模式 / 容量超限等——降级为不缓存，不影响本次结果的展示 */ }
+}
+function dynCachePrune(){
+  try{
+    var keys = [];
+    for(var i=0;i<window.localStorage.length;i++){
+      var k = window.localStorage.key(i);
+      if(k && k.indexOf(DYN_CACHE_PREFIX)===0) keys.push(k);
+    }
+    if(keys.length <= DYN_CACHE_MAX_ENTRIES) return;
+    var withTime = keys.map(function(k){
+      var t = 0;
+      try{ var o = JSON.parse(window.localStorage.getItem(k)); t = (o && o._cachedAt) || 0; }catch(e){}
+      return {k:k, t:t};
+    });
+    withTime.sort(function(a,b){ return a.t - b.t; });
+    var toRemove = withTime.length - DYN_CACHE_MAX_ENTRIES;
+    for(var j=0;j<toRemove;j++){ window.localStorage.removeItem(withTime[j].k); }
+  }catch(e){ /* 忽略：清理失败不影响主功能 */ }
+}
+
+function formatGenTime(iso){
+  if(!iso) return '刚刚';
+  try{
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return iso;
+    var p = function(n){ return String(n).padStart(2,'0'); };
+    return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+  }catch(e){ return iso; }
+}
+function setDynBadge(kind, opts){
+  opts = opts || {};
+  var b = document.getElementById('newsBadge');
+  if(!b) return;
+  b.innerHTML = '';
+  if(kind === 'snapshot'){
+    var span = document.createElement('span'); span.className = 'tag-snap';
+    span.textContent = dynState.entry && dynState.entry.generated_at
+      ? ('快照 · 生成于 ' + dynState.entry.generated_at)
+      : '快照 · 暂无预生成内容';
+    b.appendChild(span);
+  } else if(kind === 'loading'){
+    var s2 = document.createElement('span'); s2.className = 'tag-snap';
+    s2.textContent = '正在查询最新动态…';
+    b.appendChild(s2);
+  } else if(kind === 'live'){
+    var s3 = document.createElement('span'); s3.className = 'tag-live';
+    s3.textContent = '实时 · 刚刚查询 · ' + formatGenTime(opts.generatedAt);
+    b.appendChild(s3);
+  } else if(kind === 'cached'){
+    var s4 = document.createElement('span'); s4.className = 'tag-cached';
+    s4.textContent = '实时 · 今日已查询 · ' + formatGenTime(opts.generatedAt);
+    b.appendChild(s4);
+    var retryBtn = document.createElement('button');
+    retryBtn.type = 'button'; retryBtn.className = 'badge-link';
+    retryBtn.textContent = '重新查询';
+    retryBtn.addEventListener('click', function(){ handleDynClick(true); });
+    b.appendChild(retryBtn);
+  }
+}
+
+function renderSnapshotFooter(el){
+  el.appendChild(newsDisclaimer());
+  if(!isDynConfigured()){
+    var n = document.createElement('div');
+    n.className = 'dyn-unconfigured-note';
+    n.textContent = '实时查询未配置';
+    el.appendChild(n);
+  }
+}
+function renderSnapshotView(){
   var el = document.getElementById('drawerNews');
-  el.innerHTML='';
-  var items = NEWS && NEWS[name];
-  if(!items || !items.length){
-    var empty = document.createElement('div');
-    empty.className='news-empty';
-    empty.textContent='暂无动态';
-    el.appendChild(empty);
+  el.innerHTML = '';
+  var level = dynState.level;
+  var meta = NEWS_LEVEL_META[level];
+  var entry = dynState.entry;
+
+  if(!entry){
+    var notice = document.createElement('div');
+    notice.className = 'news-empty';
+    notice.textContent = '本对象未纳入快照监测范围（当前覆盖 ' + newsScopeText(level) + '）'
+      + (isDynConfigured() ? '，可点击"查最新"实时检索' : '');
+    el.appendChild(notice);
+    renderSnapshotFooter(el);
     return;
   }
+
+  el.appendChild(newsHeader(entry));
+
+  var items = entry.items || [];
+  if(!items.length){
+    var empty = document.createElement('div');
+    empty.className = 'news-empty';
+    empty.textContent = '暂无可靠动态';
+    el.appendChild(empty);
+    if(entry.search_note){
+      var note = document.createElement('div');
+      note.className = 'news-search-note';
+      note.textContent = entry.search_note;
+      el.appendChild(note);
+    }
+    renderSnapshotFooter(el);
+    return;
+  }
+
+  // 按 dimension 分组，组顺序遵循该层专属维度词表，组内按 date 倒序
+  var groups = {}, groupOrder = [];
   items.forEach(function(it){
-    var card = document.createElement('div');
-    card.className='news-card';
-    var a = document.createElement('a');
-    a.href = it.url || '#'; a.target='_blank'; a.rel='noopener noreferrer';
-    a.textContent = it.title || '(无标题)';
-    var meta = document.createElement('div');
-    meta.className='news-meta';
-    meta.textContent = [it.date, it.source].filter(Boolean).join(' · ');
-    card.appendChild(a); card.appendChild(meta);
-    el.appendChild(card);
+    var d = it.dimension || '其他';
+    if(!groups[d]){ groups[d] = []; groupOrder.push(d); }
+    groups[d].push(it);
   });
+  var order = meta.order || [];
+  groupOrder.sort(function(a,b){
+    var ia = order.indexOf(a); if(ia===-1) ia = 999;
+    var ib = order.indexOf(b); if(ib===-1) ib = 999;
+    if(ia!==ib) return ia-ib;
+    return a.localeCompare(b);
+  });
+  groupOrder.forEach(function(dim){
+    var group = groups[dim].slice().sort(function(a,b){
+      return (b.date||'').localeCompare(a.date||'');
+    });
+    var wrap = document.createElement('div');
+    wrap.className = 'news-group';
+    var tag = document.createElement('div');
+    tag.className = 'news-dim-tag';
+    var dot = document.createElement('span'); dot.className = 'dot';
+    tag.appendChild(dot);
+    tag.appendChild(document.createTextNode(dim));
+    wrap.appendChild(tag);
+    group.forEach(function(it){ wrap.appendChild(newsCard(it)); });
+    el.appendChild(wrap);
+  });
+
+  renderSnapshotFooter(el);
+}
+
+var DYN_PHASES = ['正在检索…','正在筛选…','正在核实信源…','整理结果…'];
+function startPhaseCycler(el){
+  var idx = 0;
+  el.textContent = DYN_PHASES[0];
+  return setInterval(function(){
+    idx = (idx+1) % DYN_PHASES.length;
+    el.textContent = DYN_PHASES[idx];
+  }, 3500); // 纯文案轮播，不假装真实进度，避免营造"知道剩多久"的错觉
+}
+function renderLoadingView(){
+  var el = document.getElementById('drawerNews');
+  el.innerHTML = '';
+  var box = document.createElement('div'); box.className = 'dyn-loading';
+  var spin = document.createElement('div'); spin.className = 'spinner';
+  var phase = document.createElement('div'); phase.className = 'phase';
+  box.appendChild(spin);
+  box.appendChild(phase);
+  var cancelBtn = document.createElement('button');
+  cancelBtn.type = 'button'; cancelBtn.className = 'dyn-cancel'; cancelBtn.textContent = '取消';
+  cancelBtn.addEventListener('click', function(){ dynCancelInFlight(true); });
+  box.appendChild(cancelBtn);
+  el.appendChild(box);
+  if(dynState.phaseTimer) clearInterval(dynState.phaseTimer);
+  dynState.phaseTimer = startPhaseCycler(phase);
+}
+
+function renderLiveResults(result, opts){
+  opts = opts || {};
+  var el = document.getElementById('drawerNews');
+  el.innerHTML = '';
+  var items = (result && result.items) ? result.items.slice() : [];
+  // 按 impact 排序（high 在前），同级按 date 倒序
+  items.sort(function(a,b){
+    var ia = a.impact==='high' ? 0 : 1;
+    var ib = b.impact==='high' ? 0 : 1;
+    if(ia !== ib) return ia - ib;
+    return (b.date||'').localeCompare(a.date||'');
+  });
+  if(!items.length){
+    var empty = document.createElement('div');
+    empty.className = 'news-empty';
+    empty.textContent = '暂无可靠动态';
+    el.appendChild(empty);
+  } else {
+    items.forEach(function(it){ el.appendChild(newsCard(it, {showDim:true})); });
+  }
+  if(result && result.note){
+    var note = document.createElement('div');
+    note.className = 'news-search-note';
+    note.textContent = result.note;
+    el.appendChild(note);
+  }
+  el.appendChild(newsDisclaimer());
+  setDynBadge(opts.cached ? 'cached' : 'live', {generatedAt: result && result.generated_at});
+}
+
+function renderErrorAndRevert(msg){
+  renderSnapshotView();
+  setDynBadge('snapshot');
+  var el = document.getElementById('drawerNews');
+  var banner = document.createElement('div');
+  banner.className = 'dyn-error';
+  banner.textContent = msg;
+  el.insertBefore(banner, el.firstChild);
+}
+
+function resetDynButton(){
+  var btn = document.getElementById('dynQueryBtn');
+  if(!btn) return;
+  btn.disabled = false;
+  btn.textContent = '查最新';
+}
+// userInitiated=true：用户主动点了"取消"，需要把界面立刻带回快照视图。
+// userInitiated 缺省：仅做清理（比如抽屉切到了别的对象），视图由调用方自己接管。
+function dynCancelInFlight(userInitiated){
+  if(dynState.phaseTimer){ clearInterval(dynState.phaseTimer); dynState.phaseTimer = null; }
+  if(dynState.timeoutTimer){ clearTimeout(dynState.timeoutTimer); dynState.timeoutTimer = null; }
+  if(dynState.controller){
+    var c = dynState.controller;
+    dynState.controller = null;
+    try{ c.abort(); }catch(e){}
+  }
+  if(userInitiated){
+    dynState.mode = 'idle';
+    resetDynButton();
+    renderSnapshotView();
+    setDynBadge('snapshot');
+  }
+}
+
+function handleDynClick(forceRefresh){
+  if(dynState.mode === 'loading') return; // 按钮本身会被禁用，这里是双保险，防止重复触发
+  var level = dynState.level, name = dynState.name, context = dynState.context;
+
+  if(!forceRefresh){
+    var cached = dynCacheGet(level, name);
+    if(cached){
+      dynState.mode = 'cached';
+      renderLiveResults(cached, {cached:true});
+      return;
+    }
+  }
+
+  dynState.mode = 'loading';
+  dynState.timedOut = false;
+  var gen = dynState.gen;
+  var btn = document.getElementById('dynQueryBtn');
+  if(btn){ btn.disabled = true; btn.textContent = '查询中…'; }
+  renderLoadingView();
+  setDynBadge('loading');
+
+  var controller = new AbortController();
+  dynState.controller = controller;
+  // 60 秒前端超时：真实检索要 10-30 秒，60 秒还没回来就明确告知用户，而不是让人以为卡死。
+  dynState.timeoutTimer = setTimeout(function(){
+    dynState.timedOut = true;
+    try{ controller.abort(); }catch(e){}
+  }, 60000);
+
+  var endpoint = DYNAMICS_API_BASE.replace(/\/+$/,'') + '/api/dynamics';
+  fetch(endpoint, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({entity: name, level: level, context: context}),
+    signal: controller.signal
+  }).then(function(resp){
+    return resp.json().catch(function(){ return null; }).then(function(body){
+      return {status: resp.status, ok: resp.ok, body: body};
+    });
+  }).then(function(res){
+    if(gen !== dynState.gen) return; // 抽屉已经切到别的对象，这次响应作废，不写串画面
+    if(dynState.timeoutTimer){ clearTimeout(dynState.timeoutTimer); dynState.timeoutTimer = null; }
+    if(dynState.phaseTimer){ clearInterval(dynState.phaseTimer); dynState.phaseTimer = null; }
+    dynState.controller = null;
+    resetDynButton();
+    if(res.ok && res.body){
+      dynState.mode = 'live';
+      dynCacheSet(level, name, res.body);
+      renderLiveResults(res.body, {cached:false});
+    } else {
+      dynState.mode = 'idle';
+      var code = res.body && res.body.error;
+      var message = res.body && res.body.message;
+      renderErrorAndRevert(dynFriendlyError(code, message));
+    }
+  }).catch(function(err){
+    if(gen !== dynState.gen) return;
+    if(dynState.timeoutTimer){ clearTimeout(dynState.timeoutTimer); dynState.timeoutTimer = null; }
+    if(dynState.phaseTimer){ clearInterval(dynState.phaseTimer); dynState.phaseTimer = null; }
+    dynState.controller = null;
+    resetDynButton();
+    dynState.mode = 'idle';
+    if(err && err.name === 'AbortError'){
+      if(dynState.timedOut){
+        renderErrorAndRevert('查询超时（超过 60 秒），请稍后再试');
+      }
+      // 用户主动点"取消"的情况：dynCancelInFlight(true) 已经同步把界面带回快照视图了，这里不用再处理
+      return;
+    }
+    renderErrorAndRevert('网络请求失败，请检查网络连接后重试');
+  });
+}
+
+function initNewsForEntity(key, name, level, context){
+  dynCancelInFlight(); // 打断上一个对象可能还在飞的请求/定时器，不做视图重置（下面马上会重置）
+  dynState.gen += 1;
+  dynState.key = key; dynState.name = name; dynState.level = level; dynState.context = context;
+  dynState.entry = (NEWS && NEWS[name]) || null;
+  dynState.mode = 'idle';
+
+  var meta = NEWS_LEVEL_META[level];
+  var box = document.getElementById('newsBox');
+  box.className = 'drawer-section news-box ' + meta.cls;
+  document.getElementById('newsSectionTitle').textContent = meta.section;
+
+  var btn = document.getElementById('dynQueryBtn');
+  if(btn){
+    if(isDynConfigured()){
+      btn.style.display = '';
+      btn.disabled = false;
+      btn.textContent = '查最新';
+      btn.onclick = function(){ handleDynClick(false); };
+    } else {
+      // 未配置：不显示按钮，不发任何请求，只展示快照——不能报错，不能显示坏掉的按钮
+      btn.style.display = 'none';
+      btn.onclick = null;
+    }
+  }
+
+  renderSnapshotView();
+  setDynBadge('snapshot');
 }
 document.getElementById('drawerClose').addEventListener('click', closeDrawer);
 document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
