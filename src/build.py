@@ -409,105 +409,111 @@ HTML_TEMPLATE = r"""<!doctype html>
 <style>
 :root{
   color-scheme: light;
-  --surface-1:#fcfcfb;
-  --page-plane:#f9f9f7;
-  --text-primary:#0b0b0b;
-  --text-secondary:#52514e;
-  --text-muted:#898781;
+  /* Sardine 品牌层（浅色）：Cream 底 + 纯白卡片 + Ink 文字，Mustard 为主强调 */
+  --surface-1:#ffffff;
+  --page-plane:#fcf4e4;
+  --text-primary:#151515;
+  --text-secondary:#4a4842;
+  --text-muted:#75705f;
   --grid:#e1e0d9;
   --baseline:#c3c2b7;
-  --border:rgba(11,11,11,0.10);
+  --border:rgba(21,21,21,0.10);
   --good:#0ca30c;
   --critical:#d03b3b;
+  --critical-solid:#d03b3b;
   --warning-bg:rgba(250,178,25,0.16);
   --warning-fg:#7a5100;
   --warning-border:rgba(250,178,25,0.55);
-  --info-bg:rgba(42,120,214,0.10);
-  --info-fg:#184f95;
-  --info-border:rgba(42,120,214,0.35);
-  --series-1:#2a78d6;
+  --info-bg:rgba(0,134,193,0.10);
+  --info-fg:#00486a;
+  --info-border:rgba(0,134,193,0.35);
+  /* 图表分类色板（第二层，独立推导，锚点 = Mist Blue / Mustard，已跑 dataviz 验证器） */
+  --series-1:#0086c1;
   --series-2:#eb6834;
   --series-3:#1baf7a;
-  --series-4:#eda100;
+  --series-4:#b78600;
   --series-5:#e87ba4;
   --series-6:#008300;
   --series-7:#4a3aa7;
   --series-8:#e34948;
   --muted-line:#a6a49a;
   --other-line:#89877e;
-  --chip-bg:#f0efec;
-  --chip-bg-active:#0b0b0b;
-  --chip-fg-active:#ffffff;
-  --overlay:rgba(11,11,11,0.35);
-  --shadow: 0 8px 30px rgba(11,11,11,0.16);
+  --chip-bg:#f3ead4;
+  --chip-bg-active:#f5bb40;
+  --chip-fg-active:#151515;
+  --overlay:rgba(21,21,21,0.35);
+  --shadow: 0 8px 30px rgba(21,21,21,0.16);
 }
 @media (prefers-color-scheme: dark){
   :root:where(:not([data-theme="light"])){
     color-scheme: dark;
-    --surface-1:#1a1a19;
-    --page-plane:#0d0d0d;
-    --text-primary:#ffffff;
-    --text-secondary:#c3c2b7;
-    --text-muted:#898781;
+    /* Sardine 品牌层（深色）：Ink 底 + 暖灰卡片 + Cream 文字，Mustard 依旧是主强调 */
+    --surface-1:#1e1c18;
+    --page-plane:#151515;
+    --text-primary:#fcf4e4;
+    --text-secondary:#c9c3b4;
+    --text-muted:#9a9484;
     --grid:#2c2c2a;
     --baseline:#383835;
-    --border:rgba(255,255,255,0.10);
+    --border:rgba(252,244,228,0.10);
     --good:#0ca30c;
     --critical:#e66767;
+    --critical-solid:#d03b3b;
     --warning-bg:rgba(250,178,25,0.14);
     --warning-fg:#fab219;
     --warning-border:rgba(250,178,25,0.45);
-    --info-bg:rgba(57,135,229,0.14);
-    --info-fg:#86b6ef;
-    --info-border:rgba(57,135,229,0.4);
-    --series-1:#3987e5;
+    --info-bg:rgba(0,150,215,0.14);
+    --info-fg:#82ceff;
+    --info-border:rgba(0,150,215,0.4);
+    --series-1:#0096d7;
     --series-2:#d95926;
     --series-3:#199e70;
-    --series-4:#c98500;
+    --series-4:#bb8800;
     --series-5:#d55181;
     --series-6:#008300;
     --series-7:#9085e9;
     --series-8:#e66767;
     --muted-line:#6b6a63;
     --other-line:#6b6a63;
-    --chip-bg:#262624;
-    --chip-bg-active:#ffffff;
-    --chip-fg-active:#0b0b0b;
+    --chip-bg:#2a2721;
+    --chip-bg-active:#f5bb40;
+    --chip-fg-active:#151515;
     --overlay:rgba(0,0,0,0.55);
     --shadow: 0 8px 30px rgba(0,0,0,0.5);
   }
 }
 :root[data-theme="dark"]{
   color-scheme: dark;
-  --surface-1:#1a1a19;
-  --page-plane:#0d0d0d;
-  --text-primary:#ffffff;
-  --text-secondary:#c3c2b7;
-  --text-muted:#898781;
+  --surface-1:#1e1c18;
+  --page-plane:#151515;
+  --text-primary:#fcf4e4;
+  --text-secondary:#c9c3b4;
+  --text-muted:#9a9484;
   --grid:#2c2c2a;
   --baseline:#383835;
-  --border:rgba(255,255,255,0.10);
+  --border:rgba(252,244,228,0.10);
   --good:#0ca30c;
   --critical:#e66767;
+  --critical-solid:#d03b3b;
   --warning-bg:rgba(250,178,25,0.14);
   --warning-fg:#fab219;
   --warning-border:rgba(250,178,25,0.45);
-  --info-bg:rgba(57,135,229,0.14);
-  --info-fg:#86b6ef;
-  --info-border:rgba(57,135,229,0.4);
-  --series-1:#3987e5;
+  --info-bg:rgba(0,150,215,0.14);
+  --info-fg:#82ceff;
+  --info-border:rgba(0,150,215,0.4);
+  --series-1:#0096d7;
   --series-2:#d95926;
   --series-3:#199e70;
-  --series-4:#c98500;
+  --series-4:#bb8800;
   --series-5:#d55181;
   --series-6:#008300;
   --series-7:#9085e9;
   --series-8:#e66767;
   --muted-line:#6b6a63;
   --other-line:#6b6a63;
-  --chip-bg:#262624;
-  --chip-bg-active:#ffffff;
-  --chip-fg-active:#0b0b0b;
+  --chip-bg:#2a2721;
+  --chip-bg-active:#f5bb40;
+  --chip-fg-active:#151515;
   --overlay:rgba(0,0,0,0.55);
   --shadow: 0 8px 30px rgba(0,0,0,0.5);
 }
@@ -578,9 +584,9 @@ select.bodytype-select{
 .small-btn:hover{color:var(--text-primary);border-color:var(--text-muted);}
 .btn-pair{display:flex;gap:8px;}
 .small-btn.primary{
-  background:var(--series-1);color:#fff;border-color:var(--series-1);font-weight:600;
+  background:var(--chip-bg-active);color:var(--chip-fg-active);border-color:var(--chip-bg-active);font-weight:700;
 }
-.small-btn.primary:hover{color:#fff;filter:brightness(1.08);border-color:var(--series-1);}
+.small-btn.primary:hover{color:var(--chip-fg-active);filter:brightness(1.06);border-color:var(--chip-bg-active);}
 .chart-stage{position:relative;}
 #chart{width:100%;height:520px;}
 .chart-empty-hint{
@@ -761,7 +767,7 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
 .dyn-error{border:1px solid var(--warning-border);background:var(--warning-bg);color:var(--warning-fg);
   border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.6;margin-bottom:10px;}
 .news-card.impact-high{border-color:var(--critical);border-width:1.5px;background:var(--warning-bg);}
-.news-card .impact-tag{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--critical);
+.news-card .impact-tag{display:inline-block;font-size:10px;font-weight:800;color:#fff;background:var(--critical-solid);
   border-radius:5px;padding:1px 6px;margin-right:6px;vertical-align:1px;}
 .news-card .dim-inline{font-size:10.5px;color:var(--text-muted);font-weight:700;margin-bottom:4px;}
 .news-nosrc{color:var(--text-muted);}
@@ -928,8 +934,8 @@ var META = @@META_JSON@@;
 var DYNAMICS_API_BASE = @@DYNAMICS_API_BASE_JSON@@;
 
 var PALETTE = {
-  light: ['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#008300','#4a3aa7','#e34948'],
-  dark:  ['#3987e5','#d95926','#199e70','#c98500','#d55181','#008300','#9085e9','#e66767']
+  light: ['#0086c1','#eb6834','#1baf7a','#b78600','#e87ba4','#008300','#4a3aa7','#e34948'],
+  dark:  ['#0096d7','#d95926','#199e70','#bb8800','#d55181','#008300','#9085e9','#e66767']
 };
 
 /* ---------------- 主题 ---------------- */
