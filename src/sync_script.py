@@ -896,6 +896,106 @@ def normalize_legacy_body_types(rows):
     return normalized, changed
 
 
+def normalize_body_type_by_model(rows):
+    """
+    车体类型应当是「车型级」属性，不是「逐月」属性。
+
+    根因：body_type 原本是逐月判定的——每月单独看该车型在不在当月的 body-N 榜单里，
+    某个月的分类榜单一旦有遗漏，那个月这个车型就会落进「其他」，同一个车型因此在
+    不同月份出现不一致的取值（比如某车型 14 个月是「其他」、17 个月是「SUV」）。
+    「其他」不是一个真实分类，它是「在所有 body 榜单里都没找到」——是证据缺失，
+    不该和真实分类（SUV/轿车/MPV/运动汽车）并列竞争。
+
+    做法：对每个车型，跨全部月份统计：
+      1. 收集该车型出现过的真实分类（排除「其他」），按「出现过的月份数」计数
+         （同一个车型同一个月出现多行时只算一次，避免行级重复灌票影响计数）。
+      2. 若存在至少一个真实分类 -> 取出现月份数最多的那个；平票按 CATEGORY_PRIORITY
+         (SUV > MPV > 轿车 > 运动汽车) 裁决。
+      3. 若该车型从未出现过真实分类（只出现过「其他」）-> 保持「其他」，不处理。
+      4. 把选定值统一回填到该车型的所有行（包括原本已经是这个值的行，也包括本次
+         新抓取月份的行——同一个函数，保证新旧数据口径一致）。
+
+    幂等：第二次跑的时候，每个车型的 body_type 已经全部统一，len(bt_months) <= 1，
+    不会再产生任何改动，changes 返回空列表。纯函数，不发请求，不修改传入的 dict，
+    方便离线单测；也没有任何全局/跨车型状态，调用顺序不影响结果。
+
+    返回 (normalized_rows, changes)：
+      changes: list[dict]，每个元素描述一次车型级统一，按车型名排序：
+        {
+          "model": 车型名,
+          "before": {body_type: 出现月份数, ...},   # 归一前的分布
+          "after": 统一后的 body_type,
+          "basis": "多数票" / "优先级裁决",
+          "real_category_conflict": bool,  # True = 涉及 >=2 个「真实分类」互相冲突
+                                            # （不含「其他」），多数票只是权宜之计，
+                                            # 需要人工确认。
+          "rows_changed": int,  # 本次实际被改写 body_type 的行数
+        }
+    """
+    # model -> body_type -> set of (year, month) 该车型在这个 body_type 取值下出现过的月份
+    months_seen = {}
+    for r in rows:
+        model = r.get("model")
+        bt = r.get("body_type")
+        ym = (r.get("year"), r.get("month"))
+        months_seen.setdefault(model, {}).setdefault(bt, set()).add(ym)
+
+    final_by_model = {}
+    changes = []
+    for model, bt_months in months_seen.items():
+        if len(bt_months) <= 1:
+            continue  # 该车型 body_type 在所有月份上已经一致，跳过
+
+        real_categories = {bt: months for bt, months in bt_months.items() if bt != "其他"}
+        if not real_categories:
+            # 理论上不会走到这里：len(bt_months) > 1 意味着至少 2 个不同取值，
+            # 若其中没有任何真实分类，说明「其他」本身以外还有别的取值——不应该发生，
+            # 保守起见跳过，不瞎猜，留给下面的车体类型对账/覆盖率章节去发现异常。
+            continue
+
+        max_months = max(len(m) for m in real_categories.values())
+        tied = sorted(bt for bt, m in real_categories.items() if len(m) == max_months)
+        if len(tied) == 1:
+            final_category = tied[0]
+            basis = "多数票"
+        else:
+            final_category = resolve_category_priority(set(tied))
+            basis = "优先级裁决"
+
+        before = {bt: len(m) for bt, m in bt_months.items()}
+        final_by_model[model] = final_category
+        changes.append({
+            "model": model,
+            "before": before,
+            "after": final_category,
+            "basis": basis,
+            "real_category_conflict": len(real_categories) >= 2,
+            "rows_changed": 0,  # 下面统计实际改写行数后回填
+        })
+
+    if not final_by_model:
+        return list(rows), []
+
+    normalized = []
+    rows_changed_by_model = {}
+    for r in rows:
+        model = r.get("model")
+        target = final_by_model.get(model)
+        if target is not None and r.get("body_type") != target:
+            new_r = dict(r)
+            new_r["body_type"] = target
+            normalized.append(new_r)
+            rows_changed_by_model[model] = rows_changed_by_model.get(model, 0) + 1
+        else:
+            normalized.append(r)
+
+    for c in changes:
+        c["rows_changed"] = rows_changed_by_model.get(c["model"], 0)
+    changes.sort(key=lambda c: c["model"])
+
+    return normalized, changes
+
+
 def normalize_legacy_brand_column(rows, mapping):
     """
     对存量行做原地规范化：老版本 sales.csv 根本没有 brand 这一列，csv.DictReader 读出来的
@@ -1070,11 +1170,38 @@ def load_existing_sales():
     return rows, months_done
 
 
-def months_from_2024_01_to_now():
-    now = datetime.now(timezone.utc)
+def months_from_2024_01_to_last_complete_month(now=None):
+    """
+    生成从 2024-01 到"上一个完整月份"为止的候选月份列表（含端点），按时间正序。
+
+    16888 只会在一个月结束后才放出该月的销量数据，所以"当月"（还没结束）永远不该
+    出现在候选列表里——不管 MAX_MONTHS 这次设成多少、也不管这次运行是"一次性追完
+    了好几个月欠账、追到当月"还是"同一天被手动重复触发"，都不该把当月当成待抓取
+    目标去请求 16888（大概率是空/不完整数据，或者直接 404）。
+
+    这是"只抓完整月份"的唯一收口点：之前的写法（旧函数名 months_from_2024_01_to_now）
+    会把当月也纳入候选列表，只是恰好因为 MAX_MONTHS 默认值是 1、且候选列表按时间
+    正序排列、当月通常不是列表里最早的缺失月份，才没在默认场景下触发问题——这个
+    "安全"完全依赖"每次运行最多追一个月"这个隐含假设，一旦假设被打破（比如手动
+    workflow_dispatch 传 MAX_MONTHS=0 一次追完全部欠账，或者同一天重复触发导致
+    追上了当月），当月就会被当成目标去抓，抓到的很可能是空数据或者直接出错。
+    改成显式只生成"到上个月为止"的列表，从源头上排除这个可能性，不依赖任何
+    调用方的行为假设。
+
+    now: 可选，注入当前时间（datetime，建议带 tzinfo）——用于离线单测，不联网也能
+    验证"9月25日该抓8月"这类场景；不传时用真实的 UTC 当前时间。
+    纯函数（不传 now 时依赖系统时钟，其余不发请求）。
+    """
+    if now is None:
+        now = datetime.now(timezone.utc)
+    last_complete_y, last_complete_m = now.year, now.month - 1
+    if last_complete_m == 0:
+        last_complete_m = 12
+        last_complete_y -= 1
+
     months = []
     y, m = 2024, 1
-    while (y, m) <= (now.year, now.month):
+    while (y, m) <= (last_complete_y, last_complete_m):
         months.append((y, m))
         m += 1
         if m > 12:
@@ -1192,6 +1319,49 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
             lines.append(f"| {i} | {brand} | {sales} |")
     else:
         lines.append("(无数据)")
+    lines.append("")
+
+    lines.append("## 车体类型归一\n")
+    lines.append("车体类型是车型级属性，不是逐月属性——理论上，能被归到某个真实分类"
+                  "（SUV/轿车/MPV/运动汽车），就不应该被归到「其他」。「其他」不是一个真实"
+                  "分类，是「在所有 body 榜单里都没找到」，即证据缺失，本节把每个车型跨全部"
+                  "月份统一裁决成唯一的 body_type，见 `normalize_body_type_by_model`。")
+    lines.append("")
+    body_type_unified_changes = report.get("body_type_unified_changes", [])
+    unified_model_count = report.get("body_type_unified_model_count", len(body_type_unified_changes))
+    unified_row_count = report.get(
+        "body_type_unified_row_count",
+        sum(c["rows_changed"] for c in body_type_unified_changes),
+    )
+    if body_type_unified_changes:
+        lines.append(f"本次统一了 **{unified_model_count}** 个车型的 body_type，改写了 **{unified_row_count}** 行。")
+        lines.append("")
+        lines.append("| 车型 | 修改前的分布（body_type:月份数） | 统一后 | 依据 | 备注 |")
+        lines.append("|---|---|---|---|---|")
+        for c in body_type_unified_changes:
+            before_str = ", ".join(
+                f"{bt}:{n}" for bt, n in sorted(c["before"].items(), key=lambda kv: kv[1])
+            )
+            note = "⚠️ 真实分类冲突，需人工确认" if c["real_category_conflict"] else ""
+            lines.append(f"| {c['model']} | {before_str} | {c['after']} | {c['basis']} | {note} |")
+        lines.append("")
+
+        conflict_changes = [c for c in body_type_unified_changes if c["real_category_conflict"]]
+        if conflict_changes:
+            lines.append(
+                f"⚠️ **以下 {len(conflict_changes)} 个车型是「真实分类 vs 真实分类」的冲突**"
+                "（不是「其他」vs 真实分类那种证据缺失，而是不同月份被打上了两个不同的真实分类）："
+                "多数票只是权宜之计，建议人工核实到底是哪个分类："
+            )
+            lines.append("")
+            for c in conflict_changes:
+                before_str = ", ".join(
+                    f"{bt}:{n}" for bt, n in sorted(c["before"].items(), key=lambda kv: -kv[1])
+                )
+                lines.append(f"- **{c['model']}**: {before_str} -> 本次按{c['basis']}定为「{c['after']}」")
+            lines.append("")
+    else:
+        lines.append("(本次运行没有发现需要归一的车型——所有车型的 body_type 在全部月份上已经一致)")
     lines.append("")
 
     lines.append("## 车体类型覆盖率\n")
@@ -1460,6 +1630,9 @@ def main():
         "cross_category_models": {},
         "legacy_normalized_count": 0,
         "legacy_brand_backfilled_count": 0,
+        "body_type_unified_changes": [],
+        "body_type_unified_model_count": 0,
+        "body_type_unified_row_count": 0,
         # GitHub Actions 会把 github.event_name (schedule / workflow_dispatch / push) 通过
         # TRIGGER_EVENT 环境变量传进来；本地/离线运行时这个变量不存在，报告里如实标"未知"，
         # 不瞎猜。
@@ -1499,7 +1672,9 @@ def main():
         log(f"存量数据补列: 为 {legacy_brand_backfilled_count} 行补上了 brand 列")
 
     effective_months_done = compute_effective_months_done(months_done, force_refresh)
-    all_targets = [ym for ym in months_from_2024_01_to_now() if ym not in effective_months_done]
+    all_targets = [
+        ym for ym in months_from_2024_01_to_last_complete_month() if ym not in effective_months_done
+    ]
     if max_months > 0:
         targets = all_targets[:max_months]
     else:
@@ -1541,6 +1716,21 @@ def main():
     report["overwritten_months"] = sorted(synced_this_run & months_done)
 
     combined = merge_existing_and_new(existing_rows, all_new_rows, synced_this_run)
+
+    # 车体类型归一：车体类型是车型级属性，不是逐月属性。跨全部月份（存量 + 本次新抓）
+    # 统一裁决每个车型的 body_type，回填到该车型的所有行。在 merge 之后、写盘之前跑，
+    # 这样既覆盖了纯存量数据（本次没抓到任何新月份的情况），也覆盖了新抓取的月份——
+    # 同一个函数、同一份口径，不需要用户 force_refresh 重抓。幂等，见函数注释。
+    combined, body_type_unified_changes = normalize_body_type_by_model(combined)
+    report["body_type_unified_changes"] = body_type_unified_changes
+    report["body_type_unified_model_count"] = len(body_type_unified_changes)
+    report["body_type_unified_row_count"] = sum(c["rows_changed"] for c in body_type_unified_changes)
+    if body_type_unified_changes:
+        log(
+            f"车体类型归一: 统一了 {len(body_type_unified_changes)} 个车型的 body_type，"
+            f"改写 {report['body_type_unified_row_count']} 行"
+        )
+
     write_outputs(combined, report, mapping)
 
     # 把本次运行"有没有值得关注的事情发生"暴露成 GitHub Actions 的 step output，
