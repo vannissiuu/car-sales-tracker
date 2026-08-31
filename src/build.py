@@ -812,6 +812,10 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
       <div class="ctrl-label">车体类型</div>
       <select class="bodytype-select" id="bodyTypeSelect"></select>
     </div>
+    <div class="ctrl-group" id="ownerGroup" style="display:none;">
+      <div class="ctrl-label">归属</div>
+      <select class="bodytype-select" id="ownerSelect"></select>
+    </div>
     <div class="ctrl-group">
       <div class="ctrl-label">能源类型</div>
       <div class="chip-row" id="energyChips">
@@ -858,7 +862,7 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
       <input class="legend-search" id="legendSearch" type="text" placeholder="搜索品牌 / 厂商 / 车型，勾选后加入图表">
       <label class="other-toggle-row" for="otherToggle">
         <input type="checkbox" id="otherToggle">
-        <span>显示「其他」聚合线（未展示对象之和；独立折线默认关，堆积面积默认开）</span>
+        <span id="otherToggleLabel">显示「其他」聚合线（未展示对象之和；独立折线默认关，堆积面积默认开）</span>
       </label>
       <div class="legend-meta"><span id="legendCount"></span><span id="legendShownCount"></span></div>
       <div class="legend-list" id="legendList"></div>
@@ -976,7 +980,8 @@ var YEARS = META.years.slice().sort();
 var state = {
   year: YEARS[YEARS.length-1],
   gran: 'manu',           // manu | brand | model
-  bodyType: 0,             // index into RAW.bodyTypes, used when gran==='model'
+  bodyType: -1,            // index into RAW.bodyTypes, or -1 = 全部车体类型 (used when gran==='model')
+  owner: 'all',            // 'all' | 'manu:<厂商名>' | 'brand:<品牌名>'，仅 gran==='model' 时生效，用于按归属筛选车型池
   energy: 'all',           // all | fuel | ev
   stacked: false,
   shown: new Set(),        // 当前勾选(展示)的实体 key 集合
@@ -985,7 +990,9 @@ var state = {
   tableView: false,
   otherVisible: false,    // 独立折线模式默认不显示「其他」聚合线
   otherManual: false,     // 用户是否手动改过「其他」显示开关（true 时不再随模式切换自动覆盖）
-  userClearedAll: false   // 用户是否点了「清除勾选」；为 true 时不触发下方 renderAll 里的自动补 Top20
+  userClearedAll: false,  // 用户是否点了「清除勾选」；为 true 时不触发下方 renderAll 里的自动补 Top20
+  shownIsFallback: false  // 当前 lastShownKeys 是否是 computeShownKeys() 临时回落出的 Top20（未写入 state.shown）；
+                           // 用户一旦做出会改变选择的操作，必须先 materializeShown() 把它固化进 state.shown
 };
 
 /* ---------------- 数据访问辅助 ---------------- */
@@ -998,26 +1005,29 @@ function lastMonthOfYear(year){
 function currentDim(){
   if(state.gran === 'manu') return RAW.manu;
   if(state.gran === 'brand') return RAW.brand;
-  // model: 按当前车体类型过滤
+  // model: 按当前车体类型 + 归属（厂商/品牌）过滤；state.bodyType===-1 表示不按车体类型过滤
   var m = RAW.model;
   var names=[], fuel=[], ev=[];
+  var ownerManuIdx = -1, ownerBrandIdx = -1;
+  if(state.owner && state.owner.indexOf('manu:')===0){
+    ownerManuIdx = RAW.manu.n.indexOf(state.owner.slice(5));
+  } else if(state.owner && state.owner.indexOf('brand:')===0){
+    ownerBrandIdx = RAW.brand.n.indexOf(state.owner.slice(6));
+  }
   for(var i=0;i<m.n.length;i++){
-    if(RAW.modelBody[i] === state.bodyType){
-      names.push(m.n[i]); fuel.push(m.f[i]); ev.push(m.e[i]);
-    }
+    if(state.bodyType !== -1 && RAW.modelBody[i] !== state.bodyType) continue;
+    if(ownerManuIdx >= 0 && RAW.modelManu[i] !== ownerManuIdx) continue;
+    if(ownerBrandIdx >= 0 && RAW.modelBrand[i] !== ownerBrandIdx) continue;
+    names.push(m.n[i]); fuel.push(m.f[i]); ev.push(m.e[i]);
   }
   return {n:names, f:fuel, e:ev};
 }
-function entityKey(gran, bodyType, name){
-  return gran + '|' + (gran==='model' ? bodyType+'|' : '') + name;
+function entityKey(gran, name){
+  // 车型名全局唯一（已核验：895 个车型名零冲突），key 不再需要编码车体类型
+  return gran + '|' + name;
 }
 function parseEntityKey(key){
   var gran = key.split('|',1)[0];
-  if(gran==='model'){
-    var rest = key.slice(gran.length+1);
-    var pipeIdx = rest.indexOf('|');
-    return {gran:gran, bodyType:parseInt(rest.slice(0,pipeIdx),10), name:rest.slice(pipeIdx+1)};
-  }
   return {gran:gran, name:key.slice(gran.length+1)};
 }
 function monthlyValue(fuelArr, evArr, year, month){
@@ -1032,9 +1042,9 @@ function monthlyValue(fuelArr, evArr, year, month){
 /* ---------------- 统计范围 / 构成审计（厂商·品牌 -> 车型） ----------------
    modelManu[i] / modelBrand[i] 是车型 i 对应的厂商 / 品牌在 RAW.manu.n / RAW.brand.n
    里的下标，构建时已从原始数据里逐行核验过一一对应关系。这里只做聚合，不猜测。 */
-function findModelIndex(bodyType, name){
+function findModelIndex(name){
   for(var i=0;i<RAW.model.n.length;i++){
-    if(RAW.modelBody[i]===bodyType && RAW.model.n[i]===name) return i;
+    if(RAW.model.n[i]===name) return i;
   }
   return -1;
 }
@@ -1091,8 +1101,8 @@ function groupByManu(models){
   return out;
 }
 // 车型粒度：给定 (bodyType, modelName)，返回其所属厂商/品牌名，用于抽屉里的"所属厂商/所属品牌"提示
-function modelOwnership(bodyType, name){
-  var i = findModelIndex(bodyType, name);
+function modelOwnership(name){
+  var i = findModelIndex(name);
   if(i<0) return null;
   return {manuName: RAW.manu.n[RAW.modelManu[i]], brandName: RAW.brand.n[RAW.modelBrand[i]]};
 }
@@ -1118,12 +1128,15 @@ function computeUniverse(){
     }
     entities.push({
       name: dim.n[i],
-      key: entityKey(state.gran, state.bodyType, dim.n[i]),
+      key: entityKey(state.gran, dim.n[i]),
       monthly: monthly,
       cum: cumArr,
       ytd: cum
     });
   }
+  // 修正1：剔除本年累计销量<=0的对象，再排序/编排名——保证"池子大小"和"名次"
+  // 只统计有销量的对象，跟抽屉「统计范围」表（entityModels 已按 ytd>0 过滤）口径一致。
+  entities = entities.filter(function(e){ return e.ytd > 0; });
   entities.sort(function(a,b){ return b.ytd - a.ytd; });
   entities.forEach(function(e,idx){ e.rank = idx+1; });
   return {entities:entities, lastMonth:lastM};
@@ -1144,26 +1157,54 @@ function computeUniverseAt(year, capMonth){
     }
     entities.push({
       name: dim.n[i],
-      key: entityKey(state.gran, state.bodyType, dim.n[i]),
+      key: entityKey(state.gran, dim.n[i]),
       ytd: cum
     });
   }
+  // 修正1：与 computeUniverse 保持同一口径——剔除该年（截至 capMonth）累计销量<=0 的对象。
+  entities = entities.filter(function(e){ return e.ytd > 0; });
   entities.sort(function(a,b){ return b.ytd - a.ytd; });
   entities.forEach(function(e,idx){ e.rank = idx+1; });
   return entities;
 }
 
-function ensureDefaultShown(universe){
-  // 粒度/车体类型变化后重置为 Top20；否则保留用户勾选（按 key 过滤已不存在的）
+// 修正2：state.shown 是跨筛选条件持续累积的"用户意图"全集，不因筛选变化而删除任何 key
+// （旧的 ensureDefaultShown 会把不在当前池子里的 key 直接删掉，导致切换车体类型/归属后
+// 用户手动勾选的对象再也回不来——已废弃，改用下面这个非破坏性的交集计算）。
+// 当前实际展示的集合 = state.shown ∩ 当前池子合法key；仅当这个交集为空且用户没有主动清空时，
+// 才把 Top20 的 key 补进 state.shown（同时持久化，不是只在这次渲染里临时借用）。
+// 所有需要"当前展示了哪些对象"的地方（折线 series、图例勾选态、已选计数、"其他"聚合线的补集
+// 计算、表格视图、CSV 导出）都必须调用这个函数取得同一份交集，不能各算各的。
+function computeShownKeys(universe){
   var valid = new Set(universe.entities.map(function(e){return e.key;}));
-  var keep = new Set();
-  state.shown.forEach(function(k){ if(valid.has(k)) keep.add(k); });
-  state.shown = keep;
+  var inter = new Set();
+  state.shown.forEach(function(k){ if(valid.has(k)) inter.add(k); });
+  if(inter.size===0 && !state.userClearedAll){
+    // 回落：只是这一次渲染"借用"当前池子的 Top20 来展示，不代表用户选了它们——
+    // 不写回 state.shown，避免污染其它筛选口径下同名 key 的交集判定（年份/能源切换尤其如此）。
+    // state.shown 保持不变，只标记这次展示的是"借来的"，供 materializeShown() 在用户动手时固化。
+    universe.entities.slice(0,20).forEach(function(e){ inter.add(e.key); });
+    state.shownIsFallback = true;
+  } else {
+    state.shownIsFallback = false;
+  }
+  return inter;
+}
+// 任何会修改 state.shown 的用户交互，在改动之前都必须先调用这个函数：
+// 如果当前展示的是 computeShownKeys() 临时借出的回落集合（未写入 state.shown），
+// 就把它固化成 state.shown 的实际内容，这样后续的增/删操作才是在真实的用户意图集合上做修改，
+// 而不是对着一个"根本不在 state.shown 里"的 key 取消勾选、看起来毫无反应。
+function materializeShown(){
+  if(state.shownIsFallback){
+    state.shown = new Set(lastShownKeys);
+    state.shownIsFallback = false;
+  }
 }
 function resetToTop20(){
   var u = computeUniverse();
   state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;}));
   state.userClearedAll = false;
+  state.shownIsFallback = false;
 }
 
 /* ---------------- 顶部控件渲染 ---------------- */
@@ -1176,7 +1217,10 @@ function renderYearChips(){
     c.setAttribute('data-year', y);
     c.textContent = y + '年';
     c.addEventListener('click', function(){
-      state.year = y; resetToTop20(); renderAll();
+      // 修正5：切换年份不再 resetToTop20()——同一组对象换一年看走势是最常见的操作，
+      // 用户手动勾选的对象应当跨年份保留；若该年这些对象都没有销量（交集为空），
+      // renderAll() 里的回退逻辑会自动补上该年的 Top20。
+      state.year = y; renderAll();
     });
     el.appendChild(c);
   });
@@ -1185,18 +1229,26 @@ document.querySelectorAll('#granChips .chip').forEach(function(c){
   c.addEventListener('click', function(){
     state.gran = c.getAttribute('data-gran');
     document.getElementById('bodyTypeGroup').style.display = state.gran==='model' ? '' : 'none';
-    resetToTop20();
+    document.getElementById('ownerGroup').style.display = state.gran==='model' ? '' : 'none';
+    // 修正2：不再无条件 resetToTop20()——切粒度后 state.shown 里没有该粒度前缀的 key，
+    // renderAll() 里的交集会自然为空，自动落到 Top20；同时保留其它粒度下用户的勾选不被清空。
     renderAll();
   });
 });
 document.querySelectorAll('#energyChips .chip').forEach(function(c){
   c.addEventListener('click', function(){
     state.energy = c.getAttribute('data-energy');
-    resetToTop20();
+    // 修正5：切换能源类型同样不再 resetToTop20()，与年份/车体类型/归属保持一致的语义——
+    // 已勾选且在新口径下仍有销量的对象保留，全部落空时才回落到 Top20。
     renderAll();
   });
 });
 var bodySelect = document.getElementById('bodyTypeSelect');
+(function(){
+  var optAll = document.createElement('option');
+  optAll.value = -1; optAll.textContent = '全部车体类型';
+  bodySelect.appendChild(optAll);
+})();
 RAW.bodyTypes.forEach(function(bt,i){
   var opt = document.createElement('option');
   opt.value = i; opt.textContent = bt;
@@ -1204,7 +1256,35 @@ RAW.bodyTypes.forEach(function(bt,i){
 });
 bodySelect.addEventListener('change', function(){
   state.bodyType = parseInt(bodySelect.value,10);
-  resetToTop20();
+  // 修正2：不再 resetToTop20()——让 renderAll() 里的"交集为空才补 Top20"逻辑决定，
+  // 这样车体类型来回切换时，用户已勾选且仍在池子里的对象不会被清空重置。
+  renderAll();
+});
+var ownerSelect = document.getElementById('ownerSelect');
+(function(){
+  var optAll = document.createElement('option');
+  optAll.value = 'all'; optAll.textContent = '全部';
+  ownerSelect.appendChild(optAll);
+
+  var manuNames = RAW.manu.n.slice().sort(function(a,b){ return a.localeCompare(b,'zh'); });
+  var ogManu = document.createElement('optgroup'); ogManu.label = '按厂商';
+  manuNames.forEach(function(n){
+    var opt = document.createElement('option'); opt.value = 'manu:'+n; opt.textContent = n;
+    ogManu.appendChild(opt);
+  });
+  ownerSelect.appendChild(ogManu);
+
+  var brandNames = RAW.brand.n.slice().sort(function(a,b){ return a.localeCompare(b,'zh'); });
+  var ogBrand = document.createElement('optgroup'); ogBrand.label = '按品牌';
+  brandNames.forEach(function(n){
+    var opt = document.createElement('option'); opt.value = 'brand:'+n; opt.textContent = n;
+    ogBrand.appendChild(opt);
+  });
+  ownerSelect.appendChild(ogBrand);
+})();
+ownerSelect.addEventListener('change', function(){
+  state.owner = ownerSelect.value;
+  // 修正2：同上，不再 resetToTop20()，交由 renderAll() 里的回退逻辑处理。
   renderAll();
 });
 document.getElementById('modeSwitch').addEventListener('click', function(){
@@ -1226,6 +1306,7 @@ document.getElementById('resetBtn').addEventListener('click', function(){
 document.getElementById('clearBtn').addEventListener('click', function(){
   state.shown = new Set();
   state.userClearedAll = true;
+  state.shownIsFallback = false;
   renderAll();
 });
 document.getElementById('legendSearch').addEventListener('input', function(e){
@@ -1257,22 +1338,71 @@ function syncControlStates(){
   });
   document.getElementById('modeSwitch').classList.toggle('on', state.stacked);
   document.getElementById('otherToggle').checked = state.otherVisible;
+  document.getElementById('otherToggleLabel').textContent = otherToggleHintText();
   bodySelect.value = state.bodyType;
+  ownerSelect.value = state.owner;
   document.getElementById('bodyTypeGroup').style.display = state.gran==='model' ? '' : 'none';
+  document.getElementById('ownerGroup').style.display = state.gran==='model' ? '' : 'none';
 }
 
 /* ---------------- 主图表 ---------------- */
 var chart = echarts.init(document.getElementById('chart'));
 window.addEventListener('resize', function(){ chart.resize(); });
 var lastUniverse = null;
+// 修正2：与 lastUniverse 同步维护——当前实际展示的 key 集合（state.shown ∩ 当前池子合法key，
+// 必要时已补 Top20）。renderAll() 之外的直接调用（搜索框 input、下载CSV、切换表格视图）都读它，
+// 保证"当前展示了哪些对象"全站只有一份口径。
+var lastShownKeys = new Set();
 
 function granLabel(){
   if(state.gran==='manu') return '厂商';
   if(state.gran==='brand') return '品牌';
-  return '车型（' + RAW.bodyTypes[state.bodyType] + '）';
+  var bt = state.bodyType===-1 ? '全部车体类型' : RAW.bodyTypes[state.bodyType];
+  return '车型（' + bt + '）';
 }
 function energyLabel(){
   return state.energy==='all' ? '全部能源' : (state.energy==='fuel' ? '燃油' : '新能源');
+}
+// ---- 归属筛选相关的口径标注辅助（改动5：加了车体类型/归属筛选后，"排名"“其他”等含义会变，必须标注清楚比较池，
+//      否则"第1名"可能被误读成全国第1，而不是筛选范围内第1——这是数据事故级别的问题，不能省） ----
+function ownerRawName(){
+  if(state.owner==='all' || !state.owner) return null;
+  if(state.owner.indexOf('manu:')===0) return {name: state.owner.slice(5), isBrand:false};
+  if(state.owner.indexOf('brand:')===0) return {name: state.owner.slice(6), isBrand:true};
+  return null;
+}
+function ownerLabel(){
+  // 用于标题：' · 归属：一汽红旗' 或 ' · 归属：红旗（品牌）'；非车型粒度或未筛选归属时为空串
+  if(state.gran!=='model') return '';
+  var o = ownerRawName();
+  if(!o) return '';
+  return ' · 归属：' + o.name + (o.isBrand ? '（品牌）' : '');
+}
+function filterScopeLabelParts(){
+  // 车型粒度下当前生效的筛选条件（车体类型 + 归属），用于给"排名"/"其他"等口径打标注
+  var parts = [];
+  if(state.gran==='model'){
+    if(state.bodyType!==-1) parts.push(RAW.bodyTypes[state.bodyType]);
+    var o = ownerRawName();
+    if(o) parts.push(o.name + (o.isBrand ? '（品牌）' : ''));
+  }
+  return parts;
+}
+function rankScopeLabel(){
+  var parts = filterScopeLabelParts();
+  if(parts.length===0) return '当前排名';
+  return '当前排名（' + parts.join('、') + ' 内）';
+}
+function otherLineName(){
+  var parts = filterScopeLabelParts();
+  if(parts.length===0) return {series:'其他', table:'其他（未展示对象合计）'};
+  var txt = '其他（' + parts.join('、') + ' 内未展示车型合计）';
+  return {series:txt, table:txt};
+}
+function otherToggleHintText(){
+  var parts = filterScopeLabelParts();
+  if(parts.length===0) return '显示「其他」聚合线（未展示对象之和；独立折线默认关，堆积面积默认开）';
+  return '显示「其他」聚合线（' + parts.join('、') + ' 内未展示车型之和；独立折线默认关，堆积面积默认开）';
 }
 
 // 计算「其他」= 全部实体 - 已展示实体，按月合计后再累计为 YTD；供图表与表格/导出共用同一份口径
@@ -1301,7 +1431,7 @@ function computeOther(universe, shownList){
 }
 
 function buildSeries(universe){
-  var shownList = universe.entities.filter(function(e){ return state.shown.has(e.key); });
+  var shownList = universe.entities.filter(function(e){ return lastShownKeys.has(e.key); });
   // 颜色分配：仅按“默认Top20排名”的前8名给主色，其余（含手动增补）一律淡灰
   var top20Keys = universe.entities.slice(0,20).map(function(e){return e.key;});
   var top8Keys = universe.entities.slice(0,8).map(function(e){return e.key;});
@@ -1335,7 +1465,7 @@ function buildSeries(universe){
   var otherInfo = computeOther(universe, shownList);
   if(otherInfo.hasOther && state.otherVisible){
     series.push({
-      id:'__other__', name:'其他', type:'line', data:otherInfo.cum,
+      id:'__other__', name: otherLineName().series, type:'line', data:otherInfo.cum,
       showSymbol:false, connectNulls:false,
       lineStyle:{width:1.5,type:'dashed',color:otherColor},
       itemStyle:{color:otherColor},
@@ -1351,7 +1481,7 @@ function buildSeries(universe){
 function updateEmptyHint(){
   var hint = document.getElementById('chartEmptyHint');
   if(!hint) return;
-  hint.style.display = (!state.tableView && state.shown.size===0) ? 'flex' : 'none';
+  hint.style.display = (!state.tableView && lastShownKeys.size===0) ? 'flex' : 'none';
 }
 function renderChart(universe){
   var built = buildSeries(universe);
@@ -1500,7 +1630,7 @@ function renderLegend(universe){
   var palette = PALETTE[currentTheme()];
   var mutedColor = cssVar('--muted-line');
 
-  var shownCount = state.shown.size;
+  var shownCount = lastShownKeys.size;
   var filtered = universe.entities.filter(function(e){
     if(!term) return true;
     return e.name.toLowerCase().indexOf(term) >= 0;
@@ -1515,8 +1645,12 @@ function renderLegend(universe){
 
     var cb = document.createElement('input');
     cb.type='checkbox';
-    cb.checked = state.shown.has(e.key);
+    cb.checked = lastShownKeys.has(e.key);
     cb.addEventListener('change', function(){
+      // 用户在图例上勾/取消勾选，是明确的选择意图——先把当前实际展示的集合（哪怕是回落出的
+      // Top20）固化进 state.shown，再在它上面做增/删，否则对一个不在 state.shown 里的
+      // 回落 key 取消勾选会没有效果。
+      materializeShown();
       if(cb.checked) state.shown.add(e.key); else state.shown.delete(e.key);
       state.userClearedAll = false;
       renderAll();
@@ -1530,8 +1664,8 @@ function renderLegend(universe){
     var dot = document.createElement('span');
     dot.className='dot';
     var top8idx = top8Keys.indexOf(e.key);
-    dot.style.background = state.shown.has(e.key) ? (top8idx>=0?palette[top8idx]:mutedColor) : 'transparent';
-    dot.style.border = state.shown.has(e.key) ? 'none' : '1px solid ' + mutedColor;
+    dot.style.background = lastShownKeys.has(e.key) ? (top8idx>=0?palette[top8idx]:mutedColor) : 'transparent';
+    dot.style.border = lastShownKeys.has(e.key) ? 'none' : '1px solid ' + mutedColor;
     row.appendChild(dot);
 
     var nameEl = document.createElement('span');
@@ -1558,7 +1692,11 @@ function renderLegend(universe){
     listEl.appendChild(row);
   });
 
-  document.getElementById('legendCount').textContent = filtered.length + ' 个对象';
+  // 修正1配套：这里统计的是"当前年份有销量的对象数"（computeUniverse 已经把 ytd<=0 的对象剔除），
+  // 跟 header 的"累计收录"不是同一件事，措辞里必须点明年份 + "有销量"，否则两个数对不上会显得像 bug。
+  // 数字放在最前面（而不是"2026年有销量：N 个对象"这种年份先出现的写法），避免下游按"文本里第一个
+  // 数字"解析数量的场景（无论是自动化测试还是人工一眼扫读）把年份误读成对象数。
+  document.getElementById('legendCount').textContent = filtered.length + ' 个对象（' + state.year + '年有销量）';
   document.getElementById('legendShownCount').textContent = '已选 ' + shownCount;
   renderLegendDim();
 }
@@ -1573,14 +1711,14 @@ function renderLegendDim(){
 /* ---------------- 表格视图 ---------------- */
 // 表格视图与 CSV 导出共用同一份行数据，保证两者口径一致
 function buildTableRows(universe){
-  var shownList = universe.entities.filter(function(e){return state.shown.has(e.key);});
+  var shownList = universe.entities.filter(function(e){return lastShownKeys.has(e.key);});
   shownList.sort(function(a,b){return a.rank-b.rank;});
   var rows = shownList.map(function(e){
     return {rank:'#'+e.rank, name:e.name, cum:e.cum};
   });
   var otherInfo = computeOther(universe, shownList);
   if(otherInfo.hasOther && state.otherVisible){
-    rows.push({rank:'', name:'其他（未展示对象合计）', cum:otherInfo.cum});
+    rows.push({rank:'', name: otherLineName().table, cum:otherInfo.cum});
   }
   return rows;
 }
@@ -1610,6 +1748,8 @@ function downloadCsv(universe){
   var rows = buildTableRows(universe);
   var header = ['排名','名称'];
   for(var m=1;m<=12;m++) header.push(m+'月累计销量（YTD）');
+  // 修正4：去掉首行的 "# 口径：..." 注释——表头必须是第1行，否则 Excel 筛选/数据透视表会坏掉。
+  // 口径上下文已经在文件名里写清楚了（下面 fname 的拼装），不需要再占用数据首行。
   var lines = [header.map(csvEscape).join(',')];
   rows.forEach(function(r){
     var line = [r.rank, r.name].concat(r.cum.map(function(v){ return v==null ? '' : Math.round(v); }));
@@ -1619,7 +1759,10 @@ function downloadCsv(universe){
   var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
-  var fname = '汽车销量_' + state.year + '_' + granLabel().replace(/\s/g,'') + '_' + energyLabel() + '.csv';
+  var scopeParts = [granLabel().replace(/[\s（）()]/g,'')];
+  var ownerName = ownerRawName();
+  if(state.gran==='model' && ownerName) scopeParts.push('归属' + ownerName.name.replace(/[\s（）()]/g,''));
+  var fname = '汽车销量_' + state.year + '_' + scopeParts.join('_') + '_' + energyLabel() + '.csv';
   a.href = url; a.download = fname;
   document.body.appendChild(a);
   a.click();
@@ -1634,7 +1777,7 @@ function openDrawer(key, name){
   var drawer = document.getElementById('drawer');
   backdrop.classList.add('open'); drawer.classList.add('open');
   document.getElementById('drawerTitle').textContent = name;
-  document.getElementById('drawerSub').textContent = granLabel() + ' · ' + state.year + '年 · ' + energyLabel();
+  document.getElementById('drawerSub').textContent = granLabel() + ownerLabel() + ' · ' + state.year + '年 · ' + energyLabel();
 
   var cur = findEntity(key, state.year);
   var prevYear = state.year - 1;
@@ -1661,16 +1804,17 @@ function openDrawer(key, name){
   var prevRank = prevCapped ? prevCapped.rank : null; // 同期排名（截至第 lastM 月），不是上年全年排名
 
   var prevYtdForDisplay = prevCapped ? prevCapped.ytd : null;
+  var rankLbl = rankScopeLabel(); // 加了车体类型/归属筛选后，"排名"是筛选后的比较池内排名，标签要点明比较池，避免误读成全国排名
   statsEl.appendChild(statTile('年初至今累计（YTD）', formatNum(ytd), null, null));
   if(rank==null){
-    statsEl.appendChild(statTile('当前排名', '--', null, null));
+    statsEl.appendChild(statTile(rankLbl, '--', null, null));
   } else if(prevRank==null){
-    statsEl.appendChild(statTile('当前排名', '第 '+rank+' 名', '上年同期无对应数据', null));
+    statsEl.appendChild(statTile(rankLbl, '第 '+rank+' 名', '上年同期无对应数据', null));
   } else if(prevYtdForDisplay===0 && ytd>0){
-    statsEl.appendChild(statTile('当前排名', '第 '+rank+' 名', '上年同期无销量（新增对象）', 'up'));
+    statsEl.appendChild(statTile(rankLbl, '第 '+rank+' 名', '上年同期无销量（新增对象）', 'up'));
   } else {
     var rd = rankDeltaText(prevRank, rank);
-    statsEl.appendChild(statTile('当前排名', '第 '+rank+' 名', rd.text + '（同期对比）', rd.dir));
+    statsEl.appendChild(statTile(rankLbl, '第 '+rank+' 名', rd.text + '（同期对比）', rd.dir));
   }
   var dynYoyRaw = null; // 同比的原始数值（供实时动态查询接口用，不做百分号/正负号格式化）
   if(prevCapped){
@@ -1775,6 +1919,29 @@ function buildScopeTable(headers, rows){
   wrap.appendChild(table);
   return wrap;
 }
+function buildDrillDownBtn(gran, name){
+  // 改动4：厂商/品牌抽屉 -> 一键下钻到"这些车型"的车型粒度折线图，归属筛选自动带上当前厂商/品牌
+  var btn = document.createElement('button');
+  btn.type = 'button';
+  btn.id = 'drillDownBtn';
+  btn.className = 'small-btn primary drill-btn';
+  btn.textContent = '查看这些车型的走势 →';
+  btn.addEventListener('click', function(){
+    closeDrawer();
+    state.gran = 'model';
+    state.bodyType = -1;
+    state.owner = (gran==='manu' ? 'manu:' : 'brand:') + name;
+    resetToTop20();
+    // 修正3：下钻前如果图例搜索框里有残留内容，下钻后这个过滤条件还在生效，
+    // 会让图例看起来"0 个对象"（其实图表是对的），必须在这里一并清空。
+    state.searchTerm = '';
+    var searchInput = document.getElementById('legendSearch');
+    if(searchInput) searchInput.value = '';
+    syncControlStates();
+    renderAll();
+  });
+  return btn;
+}
 function renderScope(key, name){
   var el = document.getElementById('scopeBody');
   var titleEl = document.getElementById('scopeTitle');
@@ -1784,7 +1951,7 @@ function renderScope(key, name){
 
   if(parsed.gran==='model'){
     titleEl.textContent = '统计范围';
-    var own = modelOwnership(parsed.bodyType, name);
+    var own = modelOwnership(name);
     var line = document.createElement('div');
     line.className='scope-model-line';
     if(own){
@@ -1804,6 +1971,7 @@ function renderScope(key, name){
   }
 
   titleEl.textContent = '统计范围（' + filterLabel + '）';
+  el.appendChild(buildDrillDownBtn(parsed.gran, name));
   var models = entityModels(parsed.gran, name, state.year);
   var totalYtd = models.reduce(function(s,m){return s+m.ytd;},0);
 
@@ -2400,14 +2568,18 @@ function escapeHtml(s){
 function renderAll(){
   syncControlStates();
   var u = computeUniverse();
-  if(state.shown.size===0 && !state.userClearedAll){ state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;})); }
   lastUniverse = u;
+  // 修正2：交给 computeShownKeys 统一算"当前展示集合"（交集为空且未主动清空时才补 Top20，
+  // 并把补的 Top20 持久化进 state.shown），不再用 state.shown.size===0 直接整体替换。
+  lastShownKeys = computeShownKeys(u);
   document.getElementById('chartTitle').textContent =
-    state.year + '年 · ' + granLabel() + ' · ' + energyLabel() + ' · 年初至今累计销量（辆）';
+    state.year + '年 · ' + granLabel() + ownerLabel() + ' · ' + energyLabel() + ' · 年初至今累计销量（辆）';
   renderChart(u);
   renderLegend(u);
   if(state.tableView) renderTable(u);
-  var counts = META.manufacturers+' 厂商 · '+META.brands+' 品牌 · '+META.models+' 车型 · '+META.rows+' 条记录';
+  // 修正1配套：header 这行统计的是全库累计收录（跨全部年份），跟下面图例的"当前年份有销量"
+  // 口径不是一回事，措辞要点明"累计收录"，避免和过滤后的池子大小对不上时让人误以为是 bug。
+  var counts = '累计收录 ' + META.manufacturers+' 厂商 · '+META.brands+' 品牌 · '+META.models+' 车型 · '+META.rows+' 条记录';
   document.getElementById('metaCounts').textContent = counts;
 }
 
