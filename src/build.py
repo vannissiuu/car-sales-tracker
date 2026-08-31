@@ -576,7 +576,22 @@ select.bodytype-select{
   border-radius:7px;padding:5px 10px;font-size:12.5px;cursor:pointer;
 }
 .small-btn:hover{color:var(--text-primary);border-color:var(--text-muted);}
+.btn-pair{display:flex;gap:8px;}
+.small-btn.primary{
+  background:var(--series-1);color:#fff;border-color:var(--series-1);font-weight:600;
+}
+.small-btn.primary:hover{color:#fff;filter:brightness(1.08);border-color:var(--series-1);}
+.chart-stage{position:relative;}
 #chart{width:100%;height:520px;}
+.chart-empty-hint{
+  position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+  padding:24px;pointer-events:none;
+}
+.chart-empty-hint-card{
+  max-width:340px;text-align:center;font-size:13px;line-height:1.7;
+  background:var(--info-bg);color:var(--info-fg);border:1px solid var(--info-border);
+  border-radius:12px;padding:16px 22px;
+}
 #tableview{display:none;max-height:520px;overflow:auto;padding:0 8px 8px;}
 table.datatable{width:100%;border-collapse:collapse;font-size:12.5px;}
 table.datatable th,table.datatable td{
@@ -769,7 +784,6 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
         <span id="coverageText">@@COVERAGE_TEXT@@</span>
         <span id="updateText">@@UPDATE_TEXT@@</span>
         <span id="metaCounts"></span>
-        <span class="caliber-badge" title="@@CALIBER_LONG@@">ℹ @@CALIBER_SHORT@@</span>
       </div>
     </div>
     <button class="theme-btn" id="themeBtn" type="button">🌓 切换主题</button>
@@ -810,7 +824,10 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
     </div>
     <div class="ctrl-group">
       <div class="ctrl-label">&nbsp;</div>
-      <button class="small-btn" id="resetBtn" type="button">重置为 Top 20</button>
+      <div class="btn-pair">
+        <button class="small-btn primary" id="resetBtn" type="button">重置为 Top 20</button>
+        <button class="small-btn" id="clearBtn" type="button">清除勾选</button>
+      </div>
     </div>
   </div>
 
@@ -823,7 +840,12 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
           <button class="small-btn" id="tableToggleBtn" type="button">切换为表格视图</button>
         </div>
       </div>
-      <div id="chart"></div>
+      <div class="chart-stage">
+        <div id="chart"></div>
+        <div class="chart-empty-hint" id="chartEmptyHint" style="display:none;">
+          <div class="chart-empty-hint-card">已清除全部勾选，请从右侧列表勾选要对比的对象</div>
+        </div>
+      </div>
       <div id="tableview"></div>
     </div>
     <div class="legend-panel">
@@ -956,7 +978,8 @@ var state = {
   hoverKey: null,
   tableView: false,
   otherVisible: false,    // 独立折线模式默认不显示「其他」聚合线
-  otherManual: false      // 用户是否手动改过「其他」显示开关（true 时不再随模式切换自动覆盖）
+  otherManual: false,     // 用户是否手动改过「其他」显示开关（true 时不再随模式切换自动覆盖）
+  userClearedAll: false   // 用户是否点了「清除勾选」；为 true 时不触发下方 renderAll 里的自动补 Top20
 };
 
 /* ---------------- 数据访问辅助 ---------------- */
@@ -1134,6 +1157,7 @@ function ensureDefaultShown(universe){
 function resetToTop20(){
   var u = computeUniverse();
   state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;}));
+  state.userClearedAll = false;
 }
 
 /* ---------------- 顶部控件渲染 ---------------- */
@@ -1193,6 +1217,11 @@ document.getElementById('otherToggle').addEventListener('change', function(e){
 document.getElementById('resetBtn').addEventListener('click', function(){
   resetToTop20(); renderAll();
 });
+document.getElementById('clearBtn').addEventListener('click', function(){
+  state.shown = new Set();
+  state.userClearedAll = true;
+  renderAll();
+});
 document.getElementById('legendSearch').addEventListener('input', function(e){
   state.searchTerm = e.target.value.trim();
   renderLegend(lastUniverse);
@@ -1204,6 +1233,7 @@ document.getElementById('tableToggleBtn').addEventListener('click', function(){
   document.getElementById('downloadCsvBtn').style.display = state.tableView ? '' : 'none';
   document.getElementById('tableToggleBtn').textContent = state.tableView ? '切换为图表视图' : '切换为表格视图';
   if(state.tableView) renderTable(lastUniverse);
+  updateEmptyHint();
 });
 document.getElementById('downloadCsvBtn').addEventListener('click', function(){
   downloadCsv(lastUniverse);
@@ -1312,8 +1342,14 @@ function buildSeries(universe){
   return {months:months, series:series, otherInfo:otherInfo};
 }
 
+function updateEmptyHint(){
+  var hint = document.getElementById('chartEmptyHint');
+  if(!hint) return;
+  hint.style.display = (!state.tableView && state.shown.size===0) ? 'flex' : 'none';
+}
 function renderChart(universe){
   var built = buildSeries(universe);
+  updateEmptyHint();
   var isDark = currentTheme()==='dark';
   var textColor = cssVar('--text-secondary');
   var mutedColor = cssVar('--text-muted');
@@ -1476,6 +1512,7 @@ function renderLegend(universe){
     cb.checked = state.shown.has(e.key);
     cb.addEventListener('change', function(){
       if(cb.checked) state.shown.add(e.key); else state.shown.delete(e.key);
+      state.userClearedAll = false;
       renderAll();
     });
     row.appendChild(cb);
@@ -2357,7 +2394,7 @@ function escapeHtml(s){
 function renderAll(){
   syncControlStates();
   var u = computeUniverse();
-  if(state.shown.size===0){ state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;})); }
+  if(state.shown.size===0 && !state.userClearedAll){ state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;})); }
   lastUniverse = u;
   document.getElementById('chartTitle').textContent =
     state.year + '年 · ' + granLabel() + ' · ' + energyLabel() + ' · 年初至今累计销量（辆）';
