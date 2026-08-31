@@ -1,11 +1,11 @@
 # 同步报告
 
-- 运行时间 (UTC): 2026-08-31T02:07:43.537347+00:00 ~ 2026-08-31T02:07:43.595112+00:00
-- 触发方式: push
-- GITHUB_RUN_ID: 33349670319
+- 运行时间 (UTC): 2026-08-31T02:08:10.967638+00:00 ~ 2026-08-31T02:08:11.026594+00:00
+- 触发方式: workflow_dispatch
+- GITHUB_RUN_ID: 33349695766
 - 耗时: 0 秒
-- max_months 本次生效值: 未设置/空 (push 触发或未传参) -> 保守默认只跑 1 个月
-- force_refresh 本次生效值: False (未设置/空 (push 触发或未传参) -> 默认不重抓)
+- max_months 本次生效值: MAX_MONTHS=1 -> 本次最多跑 1 个月
+- force_refresh 本次生效值: False (FORCE_REFRESH='false' 不在 true/1/yes 之列 -> 保守按 False（不重抓）处理)
 - 是否被拦截: 否
 - 累计总行数 (sales.csv): 18814
 - 累计厂商数 (manufacturers.txt): 117
