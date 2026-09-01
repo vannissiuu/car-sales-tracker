@@ -1,5 +1,6 @@
 # Large generated/runtime artifacts: keep them out of default agent context.
-docs/
+docs/*
+!docs/source-of-truth.md
 data/sales.csv
 probe_output/
 probe_v3_output/
