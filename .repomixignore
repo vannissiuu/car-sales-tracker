@@ -1,0 +1,10 @@
+# Large generated/runtime artifacts: keep them out of default agent context.
+docs/*
+!docs/source-of-truth.md
+data/sales.csv
+probe_output/
+probe_v3_output/
+probe_news_output/
+
+# Do not ignore .github/workflows/ or src/: the current production source boundary
+# must remain visible for source-to-snapshot checks.

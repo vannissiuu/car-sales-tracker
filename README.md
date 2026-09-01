@@ -93,7 +93,7 @@ src/                 从 workflow 中落地的源码（供阅读和 diff，运�
 └── notify_feishu.py 飞书卡片推送
 
 tests/               回归测试（本地运行，非 CI 强制）
-tools/               workflow 生成器 —— 改完 src/ 后用它重新生成 workflow
+tools/               workflow 检查/生成辅助（部分旧生成器依赖外部临时输入，见 docs/source-of-truth.md）
 docs/index.html      构建产物，GitHub Pages 发布目录
 docs-project/        项目文档（实施计划、口径判定、品牌映射审阅、配置指南）
 
@@ -179,20 +179,17 @@ Settings → Secrets and variables → Actions → New repository secret，
 
 ## 七、修改代码的正确姿势
 
-源码在 workflow YAML 里是以 heredoc **内嵌**的（为了让非技术用户只粘贴一个文件就能部署）。
-`src/` 下是运行时落地的副本，供阅读和 diff。
+当前生产运行的有效源码是 `.github/workflows/` 中对应的 heredoc；`src/` 是工作流运行时落地的可读快照，下一次运行会覆盖它。两者的边界和校验方式见 `docs/source-of-truth.md`。
 
-**改动流程**：
+**安全改动流程**：
 
-1. 改 `src/` 下的源码
-2. 用 `tools/` 下对应的生成器重新生成 workflow YAML
-3. 生成器会自动校验：YAML 可解析、内嵌 Python 可编译、提取回来与源文件逐字节一致
-4. 跑 `tests/` 下的回归测试
-5. 提交
+1. 从 `main` 创建隔离分支，先保存 workflow 与 `src/` 的当前 hash。
+2. 明确改动对象：生产行为改 workflow heredoc；仅改文档或快照时才改 `src/`。
+3. 如果使用 `tools/` 生成器，必须先确认它的输入路径在当前设备可复现；旧生成器依赖 `/tmp/p1-sync`、`/tmp/p2-chart` 时，不得把临时目录当正式源。
+4. 抽取 heredoc 与 `src/` 做逐字节比对，运行本地回归测试，检查 workflow diff。
+5. 通过独立 review 后再提交 PR；未经确认不要手动运行会写回 `data/`、`docs/` 或 `src/` 的 Actions。
 
-**不要**直接手改 workflow 里的 heredoc —— 缩进极易出错，且会与 `src/` 脱节。
-
----
+**不要**直接修改 `src/` 并期待生产行为变化，也不要在没有可复现输入和比对结果时批量重生成 workflow。
 
 ## 八、已知局限
 
