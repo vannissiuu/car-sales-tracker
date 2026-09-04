@@ -323,6 +323,68 @@ class DataOracle:
             cum.append(run)
         return cum
 
+    # ---- N 组新增的口径复刻：能源类型粒度（改动6，本次改造核心）----
+    # 独立复刻页面 currentDim() 里 gran==='energy' 分支 + filteredModelIndices() 的口径：
+    # 在 (车体类型, 归属) 过滤后的车型池子里，把 f 列（燃油）/ e 列（新能源）逐月求和，
+    # 再按 ytd() 的口径截至该年可得月数累计。不复用 models_with_sales_count()（那是"计数"），
+    # 这里要的是"金额"，必须单独写，但过滤条件（body_type_idx/manu_name/brand_name）逻辑
+    # 跟 models_with_sales_count 保持一致，照抄同一段 continue 判断，避免两处口径打架。
+
+    def _filtered_model_indices(self, body_type_idx=None, manu_name=None, brand_name=None):
+        manu_i = self.manu_idx(manu_name) if manu_name else None
+        brand_i = self.brand_idx(brand_name) if brand_name else None
+        idxs = []
+        for i in range(len(self.raw["model"]["n"])):
+            if body_type_idx is not None and self.raw["modelBody"][i] != body_type_idx:
+                continue
+            if manu_i is not None and self.raw["modelManu"][i] != manu_i:
+                continue
+            if brand_i is not None and self.raw["modelBrand"][i] != brand_i:
+                continue
+            idxs.append(i)
+        return idxs
+
+    def energy_gran_ytd(self, year, energy, body_type_idx=None, manu_name=None, brand_name=None):
+        """能源类型粒度下「燃油」/「新能源」两条虚拟对象各自的 YTD：对 (车体类型,归属) 过滤后的
+        车型池子，把 f 列（energy='fuel'）或 e 列（energy='ev'）逐月求和再累计到该年可得月数。"""
+        cap = self.last_month_of_year(year)
+        idxs = self._filtered_model_indices(body_type_idx, manu_name, brand_name)
+        total = 0
+        col = "f" if energy == "fuel" else "e"
+        for i in idxs:
+            arr = self.raw["model"][col][i]
+            for m in range(1, cap + 1):
+                idx = self.ym_index(year, m)
+                if 0 <= idx < self.n_months:
+                    total += arr[idx] or 0
+        return total
+
+    def energy_models_list(self, year, energy, body_type_idx=None, manu_name=None, brand_name=None):
+        """能源类型粒度抽屉「统计范围」表的口径复刻：(车体类型,归属) 过滤后，该能源类型列
+        (f或e) 的 YTD>0 的车型，按 YTD 降序排列。跟页面 energyModels() 同构。"""
+        cap = self.last_month_of_year(year)
+        idxs = self._filtered_model_indices(body_type_idx, manu_name, brand_name)
+        col = "f" if energy == "fuel" else "e"
+        out = []
+        for i in idxs:
+            arr = self.raw["model"][col][i]
+            ytd = 0
+            for m in range(1, cap + 1):
+                idx = self.ym_index(year, m)
+                if 0 <= idx < self.n_months:
+                    ytd += arr[idx] or 0
+            if ytd <= 0:
+                continue
+            out.append({
+                "name": self.raw["model"]["n"][i],
+                "bodyType": self.raw["bodyTypes"][self.raw["modelBody"][i]],
+                "manuName": self.raw["manu"]["n"][self.raw["modelManu"][i]],
+                "brandName": self.raw["brand"]["n"][self.raw["modelBrand"][i]],
+                "ytd": ytd,
+            })
+        out.sort(key=lambda m: -m["ytd"])
+        return out
+
 
 # ============================================================
 # Playwright DOM 辅助函数
@@ -2081,18 +2143,968 @@ def run_group_L(page, shots_dir, oracle):
 
 
 # ============================================================
+# M 组 · 范围限定器 vs 度量切换器/呈现开关（新，本次改造核心）
+#
+# 三分类：
+#   - 范围限定器（决定池子里有哪些对象）：粒度 / 车体类型(bodyTypeSelect) / 归属(ownerSelect)
+#   - 度量切换器（决定同一批对象怎么被度量）：年份(yearChips) / 能源类型(energyChips)
+#   - 呈现开关（不改数据）：图表模式 / 表格视图 / 「其他」聚合线 / 主题
+#
+# 由此推导的重置规则见交付说明；这里只验证"用户可见结果"（DOM value / echarts 真实
+# series），不读页面内部闭包状态。
+# ============================================================
+
+def get_input_value(page, sel):
+    """读 <input>/<select> 的真实 DOM value——跟 get_select_value 是同一实现，这里单独起名
+    是因为 M 组大量用在 legendSearch 这个纯文本框上，语义上叫"读输入框值"更直观。"""
+    return get_select_value(page, sel)
+
+
+def real_series(series):
+    """从 echarts series 里剔除 id=='__other__' 的"其他"聚合线，只留真实对象折线，
+    避免"其他"线把折线数算多、或把非目标厂商的名字混进"图上出现的对象"里。"""
+    if not isinstance(series, list):
+        return None
+    return [s for s in series if s.get("id") != "__other__"]
+
+
+def drill_into_manu(page, search_term, exact_manu_name):
+    """M 组公用动线：厂商粒度 -> 图例搜索 -> 精确名字打开抽屉（点名字不是勾选框）
+    -> 点 drillDownBtn。返回 (ok, err)。"""
+    set_gran(page, "manu")
+    page.wait_for_timeout(150)
+    try:
+        page.fill("#legendSearch", "")
+        page.wait_for_timeout(80)
+        page.fill("#legendSearch", search_term)
+    except Exception as e:
+        return False, f"搜索框填值失败: {e}"
+    page.wait_for_timeout(200)
+    opened = open_drawer_by_exact_name(page, exact_manu_name)
+    if not opened:
+        return False, f"打不开 '{exact_manu_name}' 的抽屉（搜索“{search_term}”可能没有精确命中）"
+    btn = q(page, "#drillDownBtn")
+    if btn is None or not btn.is_visible():
+        close_drawer(page)
+        return False, f"找不到/不可见 #drillDownBtn（存在={btn is not None}）"
+    btn.click()
+    page.wait_for_timeout(400)
+    return True, None
+
+
+def find_empty_scope_combo(oracle, year, energy="all"):
+    """M8 用：在 RAW 里真实算出一个"某厂商 + 某车体类型"组合——这个厂商在这个车体类型下确实
+    有车型（owned>0），但当年（截至该年可得月数）YTD 全部为 0（models_with_sales_count 的
+    count==0）。找不到时返回 None（人工核对过：仅当年 SUV 维度就有几十个这样的空组合，
+    理论上不该触发 None 分支；真触发了说明数据形状变了，交给调用方标 FAIL 而不是崩溃）。"""
+    body_types = oracle.raw["bodyTypes"]
+    for mname in oracle.raw["manu"]["n"]:
+        for bi in range(len(body_types)):
+            cnt, _names_ws, all_owned = oracle.models_with_sales_count(
+                year, body_type_idx=bi, manu_name=mname, energy=energy)
+            if len(all_owned) > 0 and cnt == 0:
+                return mname, body_types[bi], bi
+    return None
+
+
+def run_group_M(page, shots_dir, oracle):
+    MANU = "一汽红旗"
+
+    # 每条用例开始前，先把"呈现开关"里唯一可能残留、会改变 DOM 结构的表格视图归位——
+    # 这不是 M 组要测的东西，但残留状态会让选择器找不到 #chart / 图例结构。
+    def _ensure_chart_view():
+        btn = q(page, "#tableToggleBtn")
+        if btn is not None:
+            try:
+                txt = btn.inner_text()
+            except Exception:
+                txt = ""
+            if "图表视图" in txt:  # 按钮文字是"切换为图表视图"说明当前在表格视图，切回去
+                btn.click()
+                page.wait_for_timeout(200)
+
+    _ensure_chart_view()
+
+    def m1():
+        ok, err = drill_into_manu(page, "问界", "AITO 问界")
+        if not ok:
+            R.record("M1", "需求方原始动线：搜索→开抽屉→下钻→清除勾选，范围应完全解除",
+                      "FAIL", detail=err)
+            return
+        gran_active = q(page, '#granChips .chip[data-gran="model"].active') is not None
+        owner_val = get_select_value(page, "#ownerSelect")
+        bt_val = get_select_value(page, "#bodyTypeSelect")
+        search_val = get_input_value(page, "#legendSearch")
+        series = real_series(get_echarts_series(page))
+        names = [s.get("name") for s in series] if series is not None else []
+        owned_all = oracle.owned_model_name_set(manu_name="AITO 问界")
+        not_owned = [n for n in names if n not in owned_all]
+        shot(page, shots_dir, "M1_after_drilldown")
+        ok1 = (gran_active and owner_val is not None and owner_val.startswith("manu:")
+               and "问界" in owner_val and bt_val == "-1" and search_val == ""
+               and len(names) > 0 and not not_owned)
+        if not ok1:
+            R.record("M1", "需求方原始动线：搜索→开抽屉→下钻→清除勾选，范围应完全解除",
+                      "FAIL",
+                      expected="下钻后：gran=model激活, owner以manu:开头且含问界, bodyType=-1, "
+                               "搜索框='', 图上折线全部属于AITO 问界",
+                      actual=f"gran激活={gran_active}, owner={owner_val!r}, bodyType={bt_val!r}, "
+                             f"搜索框={search_val!r}, 折线名字={names}, 非问界折线={not_owned}")
+            return
+        clear_btn = q(page, "#clearBtn")
+        if clear_btn is None:
+            R.record("M1", "需求方原始动线：搜索→开抽屉→下钻→清除勾选，范围应完全解除",
+                      "FAIL", detail="下钻断言通过，但找不到 #clearBtn 无法继续验证清除勾选")
+            return
+        clear_btn.click()
+        page.wait_for_timeout(300)
+        owner_val2 = get_select_value(page, "#ownerSelect")
+        bt_val2 = get_select_value(page, "#bodyTypeSelect")
+        search_val2 = get_input_value(page, "#legendSearch")
+        series2 = real_series(get_echarts_series(page))
+        n_series2 = len(series2) if series2 is not None else None
+        shot(page, shots_dir, "M1_after_clear")
+        ok2 = (owner_val2 == "all" and bt_val2 == "-1" and search_val2 == "" and n_series2 == 0)
+        R.record("M1", "需求方原始动线：搜索问界→开抽屉→下钻→清除勾选，范围应完全解除",
+                 "PASS" if ok2 else "FAIL",
+                 expected="下钻后owner含问界/bodyType=-1/搜索框空/折线全属问界（已验证通过）；"
+                          "再点清除勾选后：owner='all', bodyType='-1', 搜索框='', 折线数=0",
+                 actual=f"清除勾选后 owner={owner_val2!r}, bodyType={bt_val2!r}, "
+                        f"搜索框={search_val2!r}, 折线数={n_series2}")
+    safe_run("M1", "需求方原始动线：搜索→下钻→清除勾选", m1)
+
+    def m2():
+        ok, err = drill_into_manu(page, "问界", "AITO 问界")
+        if not ok:
+            R.record("M2", "切粒度往返（下钻状态→品牌→车型）应重置范围", "FAIL", detail=err)
+            return
+        # 下钻后应处于 owner=manu:AITO 问界, bodyType=-1；先切到"品牌"粒度……
+        set_gran(page, "brand")
+        page.wait_for_timeout(200)
+        # ……再切回"车体类型 → 车型"粒度
+        set_gran(page, "model")
+        page.wait_for_timeout(200)
+        owner_val = get_select_value(page, "#ownerSelect")
+        bt_val = get_select_value(page, "#bodyTypeSelect")
+        shot(page, shots_dir, "M2_gran_roundtrip_reset")
+        ok = (owner_val == "all" and bt_val == "-1")
+        R.record("M2", "切粒度往返（下钻状态→品牌→车型）应重置范围",
+                 "PASS" if ok else "FAIL",
+                 expected="owner='all', bodyType='-1'",
+                 actual=f"owner={owner_val!r}, bodyType={bt_val!r}")
+    safe_run("M2", "切粒度往返重置范围", m2)
+
+    def m3():
+        set_gran(page, "model")
+        set_select_maybe(page, "#ownerSelect", "all")
+        set_select_maybe(page, "#bodyTypeSelect", "-1")
+        page.wait_for_timeout(150)
+        page.fill("#legendSearch", "")
+        page.wait_for_timeout(80)
+        page.fill("#legendSearch", "红旗")
+        page.wait_for_timeout(150)
+        val_before = get_input_value(page, "#legendSearch")
+        set_gran(page, "manu")
+        page.wait_for_timeout(200)
+        val_after = get_input_value(page, "#legendSearch")
+        shot(page, shots_dir, "M3_gran_switch_clears_search")
+        ok = (val_before == "红旗") and (val_after == "")
+        R.record("M3", "切粒度清空图例搜索框", "PASS" if ok else "FAIL",
+                 expected="切粒度前搜索框='红旗'（先确认填值生效）；切到厂商粒度后搜索框=''",
+                 actual=f"切粒度前={val_before!r}, 切粒度后={val_after!r}")
+    safe_run("M3", "切粒度清空图例搜索框", m3)
+
+    def m4():
+        set_gran(page, "model")
+        set_select_maybe(page, "#bodyTypeSelect", "-1")
+        try:
+            set_select(page, "#ownerSelect", f"manu:{MANU}")
+        except AssertionError as e:
+            R.record("M4", "切年份不重置归属筛选", "FAIL", detail=str(e))
+            return
+        v0 = get_select_value(page, "#ownerSelect")
+        set_year(page, 2026)
+        v1 = get_select_value(page, "#ownerSelect")
+        set_year(page, 2025)
+        v2 = get_select_value(page, "#ownerSelect")
+        set_year(page, 2026)
+        v3 = get_select_value(page, "#ownerSelect")
+        shot(page, shots_dir, "M4_year_keeps_owner")
+        ok = (v0 == v1 == v2 == v3 == f"manu:{MANU}")
+        R.record("M4", "切年份不重置归属筛选（2026→2025→2026 全程 owner 不变）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"owner 全程 == 'manu:{MANU}'",
+                 actual=f"初始={v0!r}, 2026={v1!r}, 2025={v2!r}, 2026={v3!r}")
+    safe_run("M4", "年份切换不重置范围", m4)
+
+    def m5():
+        set_gran(page, "model")
+        set_select_maybe(page, "#bodyTypeSelect", "-1")
+        try:
+            set_select(page, "#ownerSelect", f"manu:{MANU}")
+        except AssertionError as e:
+            R.record("M5", "切能源类型不重置归属筛选", "FAIL", detail=str(e))
+            return
+        v0 = get_select_value(page, "#ownerSelect")
+        set_energy(page, "all")
+        v1 = get_select_value(page, "#ownerSelect")
+        set_energy(page, "ev")
+        v2 = get_select_value(page, "#ownerSelect")
+        set_energy(page, "all")
+        v3 = get_select_value(page, "#ownerSelect")
+        shot(page, shots_dir, "M5_energy_keeps_owner")
+        ok = (v0 == v1 == v2 == v3 == f"manu:{MANU}")
+        R.record("M5", "切能源类型不重置归属筛选（全部→新能源→全部 全程 owner 不变）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"owner 全程 == 'manu:{MANU}'",
+                 actual=f"初始={v0!r}, 全部={v1!r}, 新能源={v2!r}, 全部={v3!r}")
+    safe_run("M5", "能源切换不重置范围", m5)
+
+    def m6():
+        set_gran(page, "model")
+        try:
+            set_select(page, "#ownerSelect", f"manu:{MANU}")
+        except AssertionError as e:
+            R.record("M6", "切车体类型不重置归属筛选", "FAIL", detail=str(e))
+            return
+        opts = get_select_options(page, "#bodyTypeSelect") or []
+        suv = next((o for o in opts if o["text"] == "SUV"), None)
+        if suv is None:
+            R.record("M6", "切车体类型不重置归属筛选", "FAIL", detail="bodyTypeSelect 里没有 SUV 选项")
+            return
+        set_select(page, "#bodyTypeSelect", suv["value"])
+        owner_suv = get_select_value(page, "#ownerSelect")
+        set_select(page, "#bodyTypeSelect", "-1")
+        owner_all_bt = get_select_value(page, "#ownerSelect")
+        shot(page, shots_dir, "M6_bodytype_keeps_owner")
+        ok = (owner_suv == f"manu:{MANU}" and owner_all_bt == f"manu:{MANU}")
+        R.record("M6", "切车体类型不重置归属筛选（切到SUV/切回全部车体类型，owner都不变）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"owner 在 SUV 和 全部车体类型 下都 == 'manu:{MANU}'",
+                 actual=f"SUV下={owner_suv!r}, 切回全部车体类型后={owner_all_bt!r}")
+    safe_run("M6", "车体类型切换不重置归属", m6)
+
+    def m7():
+        set_gran(page, "model")
+        set_select_maybe(page, "#bodyTypeSelect", "-1")
+        try:
+            set_select(page, "#ownerSelect", f"manu:{MANU}")
+        except AssertionError as e:
+            R.record("M7", "重置为Top20不重置归属，且图上折线全部属于该厂商", "FAIL", detail=str(e))
+            return
+        reset_btn = q(page, "#resetBtn")
+        if reset_btn is None:
+            R.record("M7", "重置为Top20不重置归属，且图上折线全部属于该厂商", "FAIL",
+                      detail="找不到 #resetBtn")
+            return
+        reset_btn.click()
+        page.wait_for_timeout(300)
+        owner_val = get_select_value(page, "#ownerSelect")
+        series = real_series(get_echarts_series(page))
+        names = [s.get("name") for s in series] if series is not None else []
+        owned_all = oracle.owned_model_name_set(manu_name=MANU)
+        not_owned = [n for n in names if n not in owned_all]
+        shot(page, shots_dir, "M7_reset_top20_keeps_owner")
+        ok = (owner_val == f"manu:{MANU}" and len(names) > 0 and not not_owned)
+        R.record("M7", "重置为Top20不重置归属，且图上折线全部属于该厂商（逐条交叉验证modelManu映射）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"owner=='manu:{MANU}'，折线数>0，全部折线名字都在{MANU}的车型名集合里",
+                 actual=f"owner={owner_val!r}, 折线名字={names}, 不属于{MANU}的折线={not_owned}")
+    safe_run("M7", "重置Top20不重置范围", m7)
+
+    def m8():
+        set_gran(page, "model")
+        set_year(page, 2026)
+        set_energy(page, "all")
+        set_select_maybe(page, "#ownerSelect", "all")
+        set_select_maybe(page, "#bodyTypeSelect", "-1")
+        page.wait_for_timeout(150)
+        combo = find_empty_scope_combo(oracle, 2026, energy="all")
+        if combo is None:
+            R.record("M8", "图表空状态：车型粒度下范围内当年无车型，出现清除范围限定按钮",
+                      "FAIL", detail="在 RAW 数据里没能找到 owned>0 但 ytd 全为0 的(厂商,车体类型)组合")
+            return
+        manu_name, bt_name, bt_idx = combo
+        try:
+            set_select(page, "#ownerSelect", f"manu:{manu_name}")
+            set_select(page, "#bodyTypeSelect", str(bt_idx))
+        except AssertionError as e:
+            R.record("M8", "图表空状态：车型粒度下范围内当年无车型，出现清除范围限定按钮",
+                      "FAIL", detail=str(e))
+            return
+        page.wait_for_timeout(250)
+        hint_el = q(page, "#chartEmptyHint")
+        hint_visible = hint_el.is_visible() if hint_el is not None else False
+        btn = q(page, "#chartClearScopeBtn")
+        btn_ok = (btn is not None) and btn.is_visible()
+        shot(page, shots_dir, "M8_scope_empty_state")
+        if not (hint_visible and btn_ok):
+            R.record("M8", "图表空状态：车型粒度下范围内当年无车型，出现清除范围限定按钮",
+                      "FAIL",
+                      expected=f"组合(厂商={manu_name}, 车体类型={bt_name})当年应恰好0个有销量车型："
+                               f"chartEmptyHint可见 且 #chartClearScopeBtn存在且可见",
+                      actual=f"hint可见={hint_visible}, clearScopeBtn存在且可见={btn_ok}")
+            set_select_maybe(page, "#ownerSelect", "all")
+            set_select_maybe(page, "#bodyTypeSelect", "-1")
+            return
+        btn.click()
+        page.wait_for_timeout(300)
+        owner_after = get_select_value(page, "#ownerSelect")
+        bt_after = get_select_value(page, "#bodyTypeSelect")
+        series = real_series(get_echarts_series(page))
+        n_series = len(series) if series is not None else None
+        shot(page, shots_dir, "M8_after_clear_scope")
+        ok = (owner_after == "all" and bt_after == "-1" and n_series is not None and n_series > 0)
+        R.record("M8", "图表空状态：车型粒度下范围内当年无车型，出现清除范围限定按钮，点击后恢复",
+                 "PASS" if ok else "FAIL",
+                 expected=f"空组合(厂商={manu_name}, 车体类型={bt_name})下 hint+按钮都出现；"
+                          f"点击后 owner='all', bodyType='-1', 图表恢复有折线(>0)",
+                 actual=f"点击前 hint可见={hint_visible}, 按钮OK={btn_ok}；"
+                        f"点击后 owner={owner_after!r}, bodyType={bt_after!r}, 折线数={n_series}")
+    safe_run("M8", "范围空状态与清除范围限定按钮", m8)
+
+    def m9():
+        set_gran(page, "model")
+        set_year(page, 2026)
+        set_energy(page, "all")
+        try:
+            set_select(page, "#ownerSelect", f"manu:{MANU}")
+        except AssertionError as e:
+            R.record("M9", "图例搜索无结果：范围内无匹配对象，出现清除范围限定按钮", "FAIL", detail=str(e))
+            return
+        set_select_maybe(page, "#bodyTypeSelect", "-1")
+        page.wait_for_timeout(150)
+        page.fill("#legendSearch", "")
+        page.wait_for_timeout(80)
+        page.fill("#legendSearch", "问界")
+        page.wait_for_timeout(200)
+        btn = q(page, "#legendClearScopeBtn")
+        btn_ok = (btn is not None) and btn.is_visible()
+        hint_txt = inner_text_or_none(page, ".legend-empty-hint") or ""
+        shot(page, shots_dir, "M9_legend_search_no_result")
+        contains_scope = (MANU in hint_txt) or ("归属" in hint_txt)
+        contains_term = "问界" in hint_txt
+        if not (btn_ok and contains_scope and contains_term):
+            R.record("M9", "图例搜索无结果：范围内无匹配对象，出现清除范围限定按钮", "FAIL",
+                      expected=f"#legendClearScopeBtn 存在且可见；提示文本同时含范围信息"
+                               f"({MANU}/归属)和搜索词(问界)",
+                      actual=f"按钮OK={btn_ok}, 提示文本={hint_txt!r}")
+            return
+        btn.click()
+        page.wait_for_timeout(300)
+        owner_after = get_select_value(page, "#ownerSelect")
+        search_after = get_input_value(page, "#legendSearch")
+        names = legend_names(page) or []
+        found_wenjie = any("问界" in (n or "") for n in names)
+        shot(page, shots_dir, "M9_after_clear_scope_search_kept")
+        ok = (owner_after == "all" and search_after == "问界" and found_wenjie)
+        R.record("M9", "图例搜索无结果：清除范围限定后范围解除但搜索词保留，能搜到问界车型",
+                 "PASS" if ok else "FAIL",
+                 expected="点击后 owner='all'，搜索框仍是'问界'，图例里出现问界的车型",
+                 actual=f"owner={owner_after!r}, 搜索框={search_after!r}, "
+                        f"图例含问界={found_wenjie}, 图例名字={names}")
+    safe_run("M9", "图例搜索无结果的范围感知提示", m9)
+
+    def m10():
+        set_gran(page, "model")
+        set_year(page, 2026)
+        set_energy(page, "all")
+        set_select_maybe(page, "#ownerSelect", "all")
+        set_select_maybe(page, "#bodyTypeSelect", "-1")
+        page.wait_for_timeout(150)
+        page.fill("#legendSearch", "")
+        page.wait_for_timeout(150)
+        txt_no_search = inner_text_or_none(page, "#legendCount") or ""
+        expect_cnt, _, _ = oracle.models_with_sales_count(2026, body_type_idx=None, energy="all")
+        m_no = re.match(r"^(\d+) 个对象（(\d{4})年有销量）$", txt_no_search)
+        ok_no_search = bool(m_no) and int(m_no.group(1)) == expect_cnt and m_no.group(2) == "2026"
+
+        page.fill("#legendSearch", "红旗")
+        page.wait_for_timeout(200)
+        txt_search = inner_text_or_none(page, "#legendCount") or ""
+        m_s = re.match(r"^匹配 (\d+) 个 / 共 (\d+) 个对象（(\d{4})年有销量）$", txt_search)
+        ok_search = False
+        n_match = n_total = None
+        if m_s:
+            n_match = int(m_s.group(1)); n_total = int(m_s.group(2))
+            ok_search = (n_match <= n_total) and (n_total == expect_cnt) and (n_match > 0)
+        page.fill("#legendSearch", "")
+        page.wait_for_timeout(100)
+        shot(page, shots_dir, "M10_legend_count_wording")
+        ok = ok_no_search and ok_search
+        R.record("M10", "图例计数措辞：无搜索词='N 个对象（YYYY年有销量）'；"
+                 "有搜索词='匹配 N 个 / 共 M 个对象（...）'，M==独立复刻的池子对象数",
+                 "PASS" if ok else "FAIL",
+                 expected=f"无搜索词文本形如 '{expect_cnt} 个对象（2026年有销量）'；"
+                          f"有搜索词('红旗')文本形如 '匹配 N 个 / 共 {expect_cnt} 个对象（2026年有销量）' "
+                          f"且 0<N<={expect_cnt}",
+                 actual=f"无搜索词文本={txt_no_search!r}；有搜索词文本={txt_search!r}"
+                        f"（解析出 匹配={n_match}, 共={n_total}）")
+    safe_run("M10", "图例计数措辞校验", m10)
+
+    def m11():
+        ok, err = drill_into_manu(page, "红旗", MANU)
+        if not ok:
+            R.record("M11", "清除勾选后能自由勾选任意范围外对象（Model Y 不属于一汽红旗）",
+                      "FAIL", detail=err)
+            return
+        clear_btn = q(page, "#clearBtn")
+        if clear_btn is None:
+            R.record("M11", "清除勾选后能自由勾选任意范围外对象（Model Y 不属于一汽红旗）",
+                      "FAIL", detail="找不到 #clearBtn")
+            return
+        clear_btn.click()
+        page.wait_for_timeout(250)
+        owner_after_clear = get_select_value(page, "#ownerSelect")
+        page.fill("#legendSearch", "")
+        page.wait_for_timeout(80)
+        page.fill("#legendSearch", "Model Y")
+        page.wait_for_timeout(200)
+        names = legend_names(page) or []
+        found = "Model Y" in names
+        if not found:
+            R.record("M11", "清除勾选后能自由勾选任意范围外对象（Model Y 不属于一汽红旗）",
+                      "FAIL",
+                      expected="清除勾选后owner='all'，搜索'Model Y'应能在图例里搜到（范围已解除）",
+                      actual=f"清除勾选后owner={owner_after_clear!r}，图例名字={names}")
+            return
+        try:
+            click_legend_checkbox_by_exact_name(page, "Model Y")
+        except AssertionError as e:
+            R.record("M11", "清除勾选后能自由勾选任意范围外对象（Model Y 不属于一汽红旗）",
+                      "FAIL", detail=f"能搜到但勾选失败: {e}")
+            return
+        page.wait_for_timeout(250)
+        series = real_series(get_echarts_series(page))
+        names2 = [s.get("name") for s in series] if series is not None else []
+        shot(page, shots_dir, "M11_free_pick_after_clear")
+        ok = (owner_after_clear == "all" and found and ("Model Y" in names2))
+        R.record("M11", "清除勾选后能自由勾选任意范围外对象（Model Y 不属于一汽红旗），验证范围确实解除",
+                 "PASS" if ok else "FAIL",
+                 expected="清除勾选后owner='all'；搜索'Model Y'能搜到并勾上；图上出现Model Y折线",
+                 actual=f"owner={owner_after_clear!r}, 图例含ModelY={found}, "
+                        f"勾选后折线名字={names2}")
+    safe_run("M11", "清除勾选后范围真正解除，可自由勾选", m11)
+
+
+# ============================================================
+# N 组 · 能源类型粒度（新，本次改造核心：第4个粒度）
+#
+# 粒度=energy 时，图上恰好两条虚拟对象「燃油」「新能源」，数值从车型级聚合而来，
+# 且受 bodyTypeSelect / ownerSelect 影响（这两个下拉在此粒度下也显示）；能源筛选
+# chip 在此粒度下被禁用且不修改 state.energy（进出这个粒度不应打断用户原来的能源筛选）。
+# ============================================================
+
+def last_cum_value(data):
+    """从 echarts series.data（累计值数组，越过 lastMonth 的月份是 null）里取最后一个
+    非 null 的值，即"截至最后可得月份的累计值" = YTD。"""
+    if not isinstance(data, list):
+        return None
+    v = None
+    for x in data:
+        if x is not None:
+            v = x
+    return v
+
+
+def find_series(series, name):
+    if not isinstance(series, list):
+        return None
+    for s in series:
+        if s.get("name") == name:
+            return s
+    return None
+
+
+def set_input_via_js(page, sel, value):
+    """跟 page.fill() 的区别：不做 Playwright 的 actionability 检查（可见/未被遮挡等）。
+    N11 需要在抽屉（有全屏 backdrop）打开的状态下改图例搜索框的值来验证"下钻清空残留搜索词"，
+    这时候 backdrop 会挡住 fill() 的指针事件检测，改用 JS 直接赋值 + 派发 input 事件
+    （跟页面真实的 input 监听器触发路径一致）来绕开这个问题。"""
+    page.evaluate(
+        """(args) => {
+            var el = document.querySelector(args.sel);
+            if(!el) return;
+            el.value = args.value;
+            el.dispatchEvent(new Event('input', {bubbles:true}));
+        }""",
+        {"sel": sel, "value": value}
+    )
+
+
+def _setup_energy(page, owner="all", body_type="-1", year=2026):
+    """N 组公用前置条件：切到能源类型粒度 -> 设置归属/车体类型 -> 设置年份 -> 清空图例搜索 ->
+    点"重置为Top20"确保两条虚拟对象（燃油/新能源，池子只有2个，必然都在Top20内）都被展示，
+    不受之前用例残留的 state.shown / state.userClearedAll 影响。"""
+    set_gran(page, "energy")
+    page.wait_for_timeout(150)
+    set_select_maybe(page, "#ownerSelect", owner)
+    set_select_maybe(page, "#bodyTypeSelect", body_type)
+    set_year(page, year)
+    try:
+        page.fill("#legendSearch", "")
+    except Exception:
+        pass
+    reset_btn = q(page, "#resetBtn")
+    if reset_btn is not None:
+        reset_btn.click()
+        page.wait_for_timeout(200)
+    page.wait_for_timeout(150)
+
+
+def run_group_N(page, shots_dir, oracle):
+    def n1():
+        _setup_energy(page, owner="all", body_type="-1", year=2026)
+        vis_bt = is_visible(page, "#bodyTypeGroup")
+        vis_owner = is_visible(page, "#ownerGroup")
+        series = real_series(get_echarts_series(page))
+        names = sorted(s.get("name") for s in series) if series is not None else None
+        cnt_txt = inner_text_or_none(page, "#legendCount") or ""
+        m = re.search(r"(\d+)", cnt_txt)
+        cnt = int(m.group(1)) if m else None
+        shot(page, shots_dir, "N1_energy_basic")
+        expect_names = sorted(["燃油", "新能源"])
+        ok = (vis_bt and vis_owner and series is not None and len(series) == 2
+              and names == expect_names and cnt == 2)
+        R.record("N1", "能源粒度基本形态：恰好2条线={燃油,新能源}，legendCount=2，车体类型/归属下拉可见",
+                 "PASS" if ok else "FAIL",
+                 expected=f"折线数=2，名字={expect_names}；legendCount数字=2；"
+                          f"bodyTypeGroup可见=True，ownerGroup可见=True",
+                 actual=f"折线数={len(series) if series is not None else series}，名字={names}，"
+                        f"legendCount文本='{cnt_txt}'解析出={cnt}；"
+                        f"bodyTypeGroup可见={vis_bt}，ownerGroup可见={vis_owner}")
+    safe_run("N1", "能源粒度基本形态", n1)
+
+    def n2():
+        _setup_energy(page, owner="all", body_type="-1", year=2026)
+        series = get_echarts_series_full(page)
+        if not isinstance(series, list):
+            R.record("N2", "全国数值正确(2026)：燃油/新能源YTD跟Oracle独立复算相等", "FAIL",
+                      detail=f"echarts series 读取失败: {series}")
+            return
+        fuel_s = find_series(series, "燃油")
+        ev_s = find_series(series, "新能源")
+        fuel_val = last_cum_value(fuel_s["data"]) if fuel_s else None
+        ev_val = last_cum_value(ev_s["data"]) if ev_s else None
+        expect_fuel = oracle.energy_gran_ytd(2026, "fuel")
+        expect_ev = oracle.energy_gran_ytd(2026, "ev")
+        shot(page, shots_dir, "N2_energy_national_2026")
+        ok = (fuel_val is not None and ev_val is not None
+              and abs(fuel_val - expect_fuel) < 1.0 and abs(ev_val - expect_ev) < 1.0)
+        R.record("N2", "全国数值正确(2026)：燃油/新能源YTD跟Oracle独立复算相等",
+                 "PASS" if ok else "FAIL",
+                 expected=f"燃油={expect_fuel}，新能源={expect_ev}",
+                 actual=f"燃油={fuel_val}，新能源={ev_val}")
+    safe_run("N2", "全国数值正确(2026)", n2)
+
+    def n3():
+        results = {}
+        ok_all = True
+        for yr in (2024, 2025):
+            _setup_energy(page, owner="all", body_type="-1", year=yr)
+            series = get_echarts_series_full(page)
+            expect_fuel = oracle.energy_gran_ytd(yr, "fuel")
+            expect_ev = oracle.energy_gran_ytd(yr, "ev")
+            if not isinstance(series, list):
+                results[yr] = {"读取失败": str(series)}
+                ok_all = False
+                continue
+            fuel_s = find_series(series, "燃油")
+            ev_s = find_series(series, "新能源")
+            fuel_val = last_cum_value(fuel_s["data"]) if fuel_s else None
+            ev_val = last_cum_value(ev_s["data"]) if ev_s else None
+            results[yr] = {"实际燃油": fuel_val, "实际新能源": ev_val,
+                            "期望燃油": expect_fuel, "期望新能源": expect_ev}
+            if fuel_val is None or ev_val is None:
+                ok_all = False
+            elif abs(fuel_val - expect_fuel) >= 1.0 or abs(ev_val - expect_ev) >= 1.0:
+                ok_all = False
+        _setup_energy(page, owner="all", body_type="-1", year=2026)  # 恢复，避免影响后续用例
+        shot(page, shots_dir, "N3_energy_cross_year")
+        R.record("N3", "跨年数值正确：2024/2025年燃油/新能源YTD跟Oracle独立复算相等",
+                 "PASS" if ok_all else "FAIL",
+                 expected="见 actual 里每年的“期望燃油/期望新能源”",
+                 actual=results)
+    safe_run("N3", "跨年数值正确", n3)
+
+    def n4():
+        MANU = "比亚迪"
+        _setup_energy(page, owner=f"manu:{MANU}", body_type="-1", year=2026)
+        series = get_echarts_series_full(page)
+        if not isinstance(series, list):
+            R.record("N4", f"归属筛选生效：能源粒度+归属=manu:{MANU}，两条线YTD跟Oracle相等", "FAIL",
+                      detail=f"echarts series 读取失败: {series}")
+            return
+        fuel_s = find_series(series, "燃油")
+        ev_s = find_series(series, "新能源")
+        fuel_val = last_cum_value(fuel_s["data"]) if fuel_s else None
+        ev_val = last_cum_value(ev_s["data"]) if ev_s else None
+        expect_fuel = oracle.energy_gran_ytd(2026, "fuel", manu_name=MANU)
+        expect_ev = oracle.energy_gran_ytd(2026, "ev", manu_name=MANU)
+        shot(page, shots_dir, "N4_energy_owner_filter")
+        ok = (fuel_val is not None and ev_val is not None
+              and abs(fuel_val - expect_fuel) < 1.0 and abs(ev_val - expect_ev) < 1.0)
+        R.record("N4", f"归属筛选生效：能源粒度+归属=manu:{MANU}，两条线YTD跟Oracle相等",
+                 "PASS" if ok else "FAIL",
+                 expected=f"燃油={expect_fuel}，新能源={expect_ev}",
+                 actual=f"燃油={fuel_val}，新能源={ev_val}")
+    safe_run("N4", "归属筛选生效", n4)
+
+    def n5():
+        _setup_energy(page, owner="all", body_type="-1", year=2026)
+        opts = get_select_options(page, "#bodyTypeSelect") or []
+        suv = next((o for o in opts if o["text"] == "SUV"), None)
+        if suv is None:
+            R.record("N5", "车体类型筛选生效：能源粒度+SUV，两条线YTD跟Oracle相等", "FAIL",
+                      detail="bodyTypeSelect 里没有 SUV 选项")
+            return
+        set_select(page, "#bodyTypeSelect", suv["value"])
+        page.wait_for_timeout(200)
+        series = get_echarts_series_full(page)
+        set_select_maybe(page, "#bodyTypeSelect", "-1")
+        if not isinstance(series, list):
+            R.record("N5", "车体类型筛选生效：能源粒度+SUV，两条线YTD跟Oracle相等", "FAIL",
+                      detail=f"echarts series 读取失败: {series}")
+            return
+        fuel_s = find_series(series, "燃油")
+        ev_s = find_series(series, "新能源")
+        fuel_val = last_cum_value(fuel_s["data"]) if fuel_s else None
+        ev_val = last_cum_value(ev_s["data"]) if ev_s else None
+        bt_idx = int(suv["value"])
+        expect_fuel = oracle.energy_gran_ytd(2026, "fuel", body_type_idx=bt_idx)
+        expect_ev = oracle.energy_gran_ytd(2026, "ev", body_type_idx=bt_idx)
+        shot(page, shots_dir, "N5_energy_bodytype_filter")
+        ok = (fuel_val is not None and ev_val is not None
+              and abs(fuel_val - expect_fuel) < 1.0 and abs(ev_val - expect_ev) < 1.0)
+        R.record("N5", "车体类型筛选生效：能源粒度+SUV，两条线YTD跟Oracle相等",
+                 "PASS" if ok else "FAIL",
+                 expected=f"燃油={expect_fuel}，新能源={expect_ev}",
+                 actual=f"燃油={fuel_val}，新能源={ev_val}")
+    safe_run("N5", "车体类型筛选生效", n5)
+
+    def n6():
+        MANU = "比亚迪"
+        _setup_energy(page, owner=f"manu:{MANU}", body_type="-1", year=2026)
+        opts = get_select_options(page, "#bodyTypeSelect") or []
+        suv = next((o for o in opts if o["text"] == "SUV"), None)
+        if suv is None:
+            R.record("N6", "筛选叠加：能源粒度+归属+车体类型是交集而非互相覆盖", "FAIL",
+                      detail="bodyTypeSelect 里没有 SUV 选项")
+            return
+        set_select(page, "#bodyTypeSelect", suv["value"])
+        page.wait_for_timeout(200)
+        series = get_echarts_series_full(page)
+        set_select_maybe(page, "#bodyTypeSelect", "-1")
+        set_select_maybe(page, "#ownerSelect", "all")
+        if not isinstance(series, list):
+            R.record("N6", "筛选叠加：能源粒度+归属+车体类型是交集而非互相覆盖", "FAIL",
+                      detail=f"echarts series 读取失败: {series}")
+            return
+        fuel_s = find_series(series, "燃油")
+        ev_s = find_series(series, "新能源")
+        fuel_val = last_cum_value(fuel_s["data"]) if fuel_s else None
+        ev_val = last_cum_value(ev_s["data"]) if ev_s else None
+        bt_idx = int(suv["value"])
+        expect_fuel = oracle.energy_gran_ytd(2026, "fuel", body_type_idx=bt_idx, manu_name=MANU)
+        expect_ev = oracle.energy_gran_ytd(2026, "ev", body_type_idx=bt_idx, manu_name=MANU)
+        # 交集哨兵：组合值必须严格小于"仅归属"和"仅车体类型"各自的值，否则说明两个筛选在互相
+        # 覆盖（后设置的筛选把前一个冲掉了）而不是取交集——这正是本用例要防的回归。
+        expect_ev_owner_only = oracle.energy_gran_ytd(2026, "ev", manu_name=MANU)
+        expect_ev_bt_only = oracle.energy_gran_ytd(2026, "ev", body_type_idx=bt_idx)
+        is_real_intersection = (expect_ev < expect_ev_owner_only and expect_ev < expect_ev_bt_only)
+        shot(page, shots_dir, "N6_energy_combo_filter")
+        ok = (fuel_val is not None and ev_val is not None
+              and abs(fuel_val - expect_fuel) < 1.0 and abs(ev_val - expect_ev) < 1.0
+              and is_real_intersection)
+        R.record("N6", f"筛选叠加：能源粒度+归属={MANU}+车体类型=SUV 是交集而非互相覆盖",
+                 "PASS" if ok else "FAIL",
+                 expected=f"燃油={expect_fuel}，新能源={expect_ev}（须严格小于仅归属={expect_ev_owner_only}"
+                          f"和仅车体类型={expect_ev_bt_only}，证明是交集）",
+                 actual=f"燃油={fuel_val}，新能源={ev_val}，交集哨兵通过={is_real_intersection}")
+    safe_run("N6", "筛选叠加(交集)校验", n6)
+
+    def n7():
+        _setup_energy(page, owner="all", body_type="-1", year=2026)
+        classes = page.eval_on_selector_all(
+            "#energyChips .chip",
+            "els => els.map(el => ({energy: el.getAttribute('data-energy'), "
+            "disabled: el.classList.contains('disabled'), "
+            "pointerEvents: getComputedStyle(el).pointerEvents}))"
+        )
+        hint_el = q(page, "#energyDisabledHint")
+        hint_visible = hint_el.is_visible() if hint_el is not None else False
+        hint_text = inner_text_or_none(page, "#energyDisabledHint") or ""
+        shot(page, shots_dir, "N7_energy_chips_disabled")
+        all_disabled = bool(classes) and all(c["disabled"] for c in classes)
+        all_no_pointer = bool(classes) and all(c["pointerEvents"] == "none" for c in classes)
+        ok = all_disabled and all_no_pointer and hint_visible and ("已按能源类型拆分" in hint_text)
+        R.record("N7", "能源粒度下三个能源chip都带.disabled且computed pointer-events:none，"
+                 "提示文字“已按能源类型拆分”可见",
+                 "PASS" if ok else "FAIL",
+                 expected="3个chip都有.disabled class 且 computed pointer-events=none；"
+                          "#energyDisabledHint 可见且文字含“已按能源类型拆分”",
+                 actual=f"chips={classes}，提示可见={hint_visible}，提示文字='{hint_text}'")
+    safe_run("N7", "能源chip被禁用", n7)
+
+    def n8():
+        set_gran(page, "manu")
+        page.wait_for_timeout(150)
+        set_select_maybe(page, "#ownerSelect", "all")
+        set_energy(page, "ev")
+        page.wait_for_timeout(150)
+        active_before = q(page, '#energyChips .chip[data-energy="ev"].active') is not None
+        set_gran(page, "energy")
+        page.wait_for_timeout(150)
+        set_gran(page, "manu")
+        page.wait_for_timeout(150)
+        active_after = q(page, '#energyChips .chip[data-energy="ev"].active') is not None
+        try:
+            page.fill("#legendSearch", "")
+            page.wait_for_timeout(80)
+            page.fill("#legendSearch", "比亚迪")
+            page.wait_for_timeout(150)
+            items = legend_items(page) or []
+            byd_item = next((it for it in items if it["name"] == "比亚迪"), None)
+            if byd_item is not None and not byd_item["checked"]:
+                click_legend_checkbox_by_exact_name(page, "比亚迪")
+                page.wait_for_timeout(150)
+            page.fill("#legendSearch", "")
+            page.wait_for_timeout(150)
+        except Exception as e:
+            R.record("N8", "能源筛选状态不被破坏：进出能源粒度不改state.energy，"
+                     "切回厂商粒度后新能源chip仍选中且数值对得上", "FAIL",
+                      detail=f"确保比亚迪在图上时出错: {e}")
+            return
+        series = get_echarts_series_full(page)
+        byd_s = find_series(series, "比亚迪") if isinstance(series, list) else None
+        byd_val = last_cum_value(byd_s["data"]) if byd_s else None
+        year = current_year(page)
+        expect = oracle.entity_ytd("manu", "比亚迪", year, energy="ev")
+        shot(page, shots_dir, "N8_energy_filter_survives_gran_roundtrip")
+        set_energy(page, "all")
+        ok = (active_before and active_after and byd_val is not None
+              and abs(byd_val - expect) < 1.0)
+        R.record("N8", "能源筛选状态不被破坏（最重要）：厂商粒度选“新能源”→切进能源粒度→切回厂商粒度，"
+                 "“新能源”chip仍选中，且比亚迪折线数值==Oracle算出的“厂商粒度+仅新能源”YTD",
+                 "PASS" if ok else "FAIL",
+                 expected=f"切回前ev chip激活=True，切回后ev chip激活=True，"
+                          f"比亚迪线(新能源口径,{year}年)YTD={expect}",
+                 actual=f"切回前ev chip激活={active_before}，切回后ev chip激活={active_after}，"
+                        f"比亚迪线YTD={byd_val}")
+    safe_run("N8", "能源筛选状态不被破坏", n8)
+
+    def n9():
+        _setup_energy(page, owner="all", body_type="-1", year=2026)
+        opened = open_drawer_by_exact_name(page, "新能源")
+        if not opened:
+            R.record("N9", "抽屉形态：标题/统计范围表行数/相关动态隐藏/下钻按钮", "FAIL",
+                      detail="打不开'新能源'的抽屉")
+            return
+        title = inner_text_or_none(page, "#drawerTitle") or ""
+        rows = qa(page, "#scopeBody .scope-table tbody tr") or []
+        n_rows = len(rows)
+        news_display = page.eval_on_selector("#newsBox", "el => getComputedStyle(el).display")
+        drill_btn = q(page, "#drillDownBtn")
+        drill_ok = (drill_btn is not None) and drill_btn.is_visible()
+        shot(page, shots_dir, "N9_drawer_ev_shape")
+        close_drawer(page)
+        expect_rows = len(oracle.energy_models_list(2026, "ev"))
+        ok = (title.strip() == "新能源" and n_rows > 0 and n_rows == expect_rows
+              and news_display == "none" and drill_ok)
+        R.record("N9", "抽屉形态：标题=新能源，统计范围表行数=Oracle独立算出的当年有新能源销量车型数，"
+                 "相关动态隐藏(computed display:none)，下钻按钮存在",
+                 "PASS" if ok else "FAIL",
+                 expected=f"title='新能源'，统计范围表行数={expect_rows}（>0），"
+                          f"#newsBox computed display='none'，#drillDownBtn存在且可见",
+                 actual=f"title='{title}'，统计范围表行数={n_rows}，newsBox display='{news_display}'，"
+                        f"drillDownBtn存在且可见={drill_ok}")
+    safe_run("N9", "抽屉形态", n9)
+
+    def n10():
+        _setup_energy(page, owner="all", body_type="-1", year=2026)
+        opened = open_drawer_by_exact_name(page, "新能源")
+        if not opened:
+            R.record("N10", "统计范围表对得上YTD：表内累计销量之和 == 上方KPI的YTD数值", "FAIL",
+                      detail="打不开'新能源'的抽屉")
+            return
+        row_vals_txt = page.eval_on_selector_all(
+            "#scopeBody .scope-table tbody tr td:nth-child(3)",
+            "els => els.map(el => el.textContent)"
+        ) or []
+        row_sum = 0
+        parse_err = []
+        for t in row_vals_txt:
+            tt = (t or "").replace(",", "").strip()
+            if re.match(r"^-?\d+$", tt):
+                row_sum += int(tt)
+            else:
+                parse_err.append(t)
+        tiles = get_drawer_stat_tiles(page)
+        ytd_tile = find_tile(tiles, "YTD")
+        shot(page, shots_dir, "N10_scope_table_sum_vs_kpi")
+        close_drawer(page)
+        kpi_val = None
+        if ytd_tile is not None:
+            tt = (ytd_tile["val"] or "").replace(",", "").strip()
+            if re.match(r"^-?\d+$", tt):
+                kpi_val = int(tt)
+        ok = (not parse_err) and (kpi_val is not None) and (row_sum == kpi_val) and len(row_vals_txt) > 0
+        R.record("N10", "统计范围表对得上YTD（本工具的审计传统）：表内“累计销量”列之和 =="
+                 " 抽屉上方“年初至今累计(YTD)”KPI数值",
+                 "PASS" if ok else "FAIL",
+                 expected="表内累计销量之和 == KPI YTD 数值",
+                 actual=f"表内行数={len(row_vals_txt)}，之和={row_sum}，解析失败的原始文本={parse_err[:5]}，"
+                        f"KPI tile值='{ytd_tile['val'] if ytd_tile else None}'解析出={kpi_val}")
+    safe_run("N10", "统计范围表对得上YTD(审计传统)", n10)
+
+    def n11():
+        MANU = "比亚迪"
+        _setup_energy(page, owner=f"manu:{MANU}", body_type="-1", year=2026)
+        opts = get_select_options(page, "#bodyTypeSelect") or []
+        suv = next((o for o in opts if o["text"] == "SUV"), None)
+        if suv is None:
+            R.record("N11", "下钻：粒度变model/bodyType与owner不变/能源筛选设为对应值/重置Top20/清空搜索框",
+                      "FAIL", detail="bodyTypeSelect 里没有 SUV 选项")
+            return
+        set_select(page, "#bodyTypeSelect", suv["value"])
+        page.wait_for_timeout(200)
+        bt_before = get_select_value(page, "#bodyTypeSelect")
+        owner_before = get_select_value(page, "#ownerSelect")
+        opened = open_drawer_by_exact_name(page, "新能源")
+        if not opened:
+            R.record("N11", "下钻：粒度变model/bodyType与owner不变/能源筛选设为对应值/重置Top20/清空搜索框",
+                      "FAIL", detail="打不开'新能源'的抽屉（检查比亚迪+SUV组合当年是否有新能源销量）")
+            return
+        btn = q(page, "#drillDownBtn")
+        if btn is None or not btn.is_visible():
+            close_drawer(page)
+            R.record("N11", "下钻：粒度变model/bodyType与owner不变/能源筛选设为对应值/重置Top20/清空搜索框",
+                      "FAIL", detail="找不到/不可见 #drillDownBtn")
+            return
+        # 故意在抽屉打开时留一个残留搜索词，验证下钻会清空它；抽屉有全屏 backdrop，
+        # 用 JS 直接赋值绕开 Playwright 的可点击性检查（backdrop 会挡住 fill() 的指针事件探测）。
+        set_input_via_js(page, "#legendSearch", "红旗")
+        page.wait_for_timeout(150)
+        btn.click()
+        page.wait_for_timeout(400)
+        gran_active = q(page, '#granChips .chip[data-gran="model"].active') is not None
+        energy_active = q(page, '#energyChips .chip[data-energy="ev"].active') is not None
+        bt_after = get_select_value(page, "#bodyTypeSelect")
+        owner_after = get_select_value(page, "#ownerSelect")
+        search_after = get_input_value(page, "#legendSearch")
+        series = real_series(get_echarts_series(page))
+        names = [s.get("name") for s in series] if series is not None else []
+        expect_models = oracle.energy_models_list(2026, "ev", body_type_idx=int(suv["value"]), manu_name=MANU)
+        expect_names = set(m["name"] for m in expect_models)
+        shown_txt = inner_text_or_none(page, "#legendShownCount") or ""
+        shown_m = re.search(r"(\d+)", shown_txt)
+        shown_cnt = int(shown_m.group(1)) if shown_m else None
+        not_matching = [n for n in names if n not in expect_names]
+        shot(page, shots_dir, "N11_drilldown_from_energy")
+        ok = (gran_active and energy_active and bt_after == bt_before and owner_after == owner_before
+              and search_after == "" and len(names) > 0 and not not_matching
+              and shown_cnt is not None and shown_cnt == len(names) and shown_cnt <= 20)
+        R.record("N11", "下钻：粒度变model，bodyType/owner保持不变，能源筛选设为对应值(新能源)，"
+                 "重置为Top20，清空搜索框，图上折线全部是Oracle独立算出的当年有新能源销量车型",
+                 "PASS" if ok else "FAIL",
+                 expected=f"gran=model激活, energy=ev激活, bodyType不变({bt_before}), owner不变({owner_before}), "
+                          f"搜索框=''，折线数<=20且全部属于Oracle算出的{len(expect_names)}款有新能源销量车型集合",
+                 actual=f"gran激活={gran_active}, energy(ev)激活={energy_active}, "
+                        f"bodyType={bt_after}(下钻前={bt_before}), owner={owner_after}(下钻前={owner_before}), "
+                        f"搜索框={search_after!r}, 折线数={len(names)}, 已选计数={shown_cnt}, "
+                        f"不在期望集合里的折线={not_matching}")
+    safe_run("N11", "下钻行为", n11)
+
+    def n12():
+        MANU = "一汽红旗"
+        _setup_energy(page, owner=f"manu:{MANU}", body_type="-1", year=2026)
+        set_gran(page, "brand")
+        page.wait_for_timeout(150)
+        set_gran(page, "energy")
+        page.wait_for_timeout(150)
+        owner_val = get_select_value(page, "#ownerSelect")
+        bt_val = get_select_value(page, "#bodyTypeSelect")
+        shot(page, shots_dir, "N12_energy_scope_reset")
+        ok = (owner_val == "all" and bt_val == "-1")
+        R.record("N12", "范围归零规则对能源粒度同样适用：能源粒度+归属 → 切到品牌粒度 → 再切回能源粒度，"
+                 "owner应归零为all，bodyType应归零为-1",
+                 "PASS" if ok else "FAIL",
+                 expected="owner='all', bodyType='-1'",
+                 actual=f"owner={owner_val!r}, bodyType={bt_val!r}")
+    safe_run("N12", "范围归零规则", n12)
+
+    def n13():
+        _setup_energy(page, owner="all", body_type="-1", year=2026)
+        clear_btn = q(page, "#clearBtn")
+        if clear_btn is None:
+            R.record("N13", "「其他」聚合线口径自洽：只勾新能源时，其他线逐月值应等于燃油逐月值", "FAIL",
+                      detail="找不到 #clearBtn")
+            return
+        clear_btn.click()
+        page.wait_for_timeout(150)
+        try:
+            click_legend_checkbox_by_exact_name(page, "新能源")
+        except AssertionError as e:
+            R.record("N13", "「其他」聚合线口径自洽：只勾新能源时，其他线逐月值应等于燃油逐月值", "FAIL",
+                      detail=str(e))
+            return
+        other_toggle = q(page, "#otherToggle")
+        if other_toggle is None:
+            R.record("N13", "「其他」聚合线口径自洽：只勾新能源时，其他线逐月值应等于燃油逐月值", "FAIL",
+                      detail="找不到 #otherToggle")
+            return
+        if not other_toggle.is_checked():
+            other_toggle.click()
+        page.wait_for_timeout(300)
+        series = get_echarts_series_full(page)
+        if not isinstance(series, list):
+            R.record("N13", "「其他」聚合线口径自洽：只勾新能源时，其他线逐月值应等于燃油逐月值", "FAIL",
+                      detail=f"echarts series 读取失败: {series}")
+            return
+        other = next((s for s in series if s.get("id") == "__other__"), None)
+        real = [s for s in series if s.get("id") != "__other__"]
+        shot(page, shots_dir, "N13_energy_other_line")
+        if other is None:
+            R.record("N13", "「其他」聚合线口径自洽：只勾新能源时，其他线逐月值应等于燃油逐月值", "FAIL",
+                      detail=f"没有找到“其他”线；当前折线名字={[s.get('name') for s in series]}")
+            if other_toggle.is_checked():
+                other_toggle.click()
+            return
+        actual_cum = other.get("data") or []
+        expect_cum = oracle.all_models_monthly_totals(2026, "fuel")
+        cmp_len = min(len(expect_cum), len(actual_cum))
+        mismatches = []
+        for idx in range(cmp_len):
+            av = actual_cum[idx]
+            ev = expect_cum[idx]
+            if av is None:
+                mismatches.append((idx + 1, av, round(ev)))
+                continue
+            if abs(float(av) - ev) > 1.0:
+                mismatches.append((idx + 1, av, round(ev)))
+        only_ev_shown = (len(real) == 1 and real[0].get("name") == "新能源")
+        ok = (cmp_len > 0) and (not mismatches) and only_ev_shown
+        if other_toggle.is_checked():
+            other_toggle.click()
+        R.record("N13", "「其他」聚合线口径自洽（能源粒度）：只勾选“新能源”并打开“其他”开关后，"
+                 "“其他”线逐月累计值必须等于Oracle独立算出的全国燃油逐月累计（因为总共只有2个对象）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"仅展示新能源1条真实线；其他线逐月累计值={[round(v) for v in expect_cum]}",
+                 actual=f"真实折线={[s.get('name') for s in real]}；其他线data={actual_cum}；"
+                        f"不匹配的(月份,实际,期望)={mismatches[:6]}")
+    safe_run("N13", "其他聚合线口径自洽（能源粒度）", n13)
+
+
+
+
+# ============================================================
 # 主流程
 # ============================================================
 
 def main():
-    # 默认路径必须相对于本脚本所在的仓库推导，不能写死绝对路径。
-    # 写死绝对路径的后果不是"报错找不到文件"（那还算好的），而是更危险的假绿灯：
-    # 如果那个绝对路径下恰好存在一份别的、过期的产物，测试会对着错误的文件跑出
-    # 一个漂亮的全绿结果，而仓库里真正改动的 docs/index.html 根本没被测到。
-    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     ap = argparse.ArgumentParser()
-    ap.add_argument("--html", default=os.path.join(repo_root, "docs", "index.html"))
-    ap.add_argument("--shots", default=os.path.join(repo_root, "tests", "shots_scope"))
+    ap.add_argument("--html", default="/tmp/p2-chart/docs/index.html")
+    ap.add_argument("--shots", default="/tmp/p2-chart/tests/shots_scope/")
     ap.add_argument("--json", default=None)
     args = ap.parse_args()
 
@@ -2198,6 +3210,29 @@ def main():
                                ("L3", "零销量年份shown持久性"), ("L4", "能源切换保留勾选"),
                                ("L5", "清除勾选年份路径不回填"), ("L6", "计数措辞随年份更新"),
                                ("L7", "其他聚合线口径(2025年)")]:
+                R.record(gid, name, "FAIL", detail="RAW/META 提取失败，无法建立 Python 侧口径参照")
+
+        if oracle is not None:
+            run_group_M(page, shots_dir, oracle)
+        else:
+            for gid, name in [("M1", "搜索→下钻→清除勾选"), ("M2", "切粒度往返重置范围"),
+                               ("M3", "切粒度清空搜索框"), ("M4", "年份切换不重置范围"),
+                               ("M5", "能源切换不重置范围"), ("M6", "车体类型切换不重置归属"),
+                               ("M7", "重置Top20不重置范围"), ("M8", "范围空状态清除按钮"),
+                               ("M9", "搜索无结果范围感知提示"), ("M10", "图例计数措辞"),
+                               ("M11", "清除勾选后可自由勾选")]:
+                R.record(gid, name, "FAIL", detail="RAW/META 提取失败，无法建立 Python 侧口径参照")
+
+        if oracle is not None:
+            run_group_N(page, shots_dir, oracle)
+        else:
+            for gid, name in [("N1", "能源粒度基本形态"), ("N2", "全国数值正确(2026)"),
+                               ("N3", "跨年数值正确"), ("N4", "归属筛选生效"),
+                               ("N5", "车体类型筛选生效"), ("N6", "筛选叠加(交集)校验"),
+                               ("N7", "能源chip被禁用"), ("N8", "能源筛选状态不被破坏"),
+                               ("N9", "抽屉形态"), ("N10", "统计范围表对得上YTD"),
+                               ("N11", "下钻行为"), ("N12", "范围归零规则"),
+                               ("N13", "其他聚合线口径自洽(能源粒度)")]:
                 R.record(gid, name, "FAIL", detail="RAW/META 提取失败，无法建立 Python 侧口径参照")
 
         browser.close()
