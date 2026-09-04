@@ -1742,12 +1742,31 @@ jobs:
                 order:'valueDesc',
                 formatter: function(params){
                   if(!params || !params.length) return '';
-                  var lines = [params[0].axisValueLabel + '（' + state.year + '年 累计）'];
+                  var isEnergy = state.gran === 'energy';
+                  // 占比分母＝当前范围内（车体类型/归属筛选后）燃油+新能源两个实体在该月的累计值之和，
+                  // 必须取自 lastUniverse.entities（完整池子），不能只累加 tooltip 里出现的几条线——
+                  // 否则用户取消勾选某条线时分母会跟着变，占比就错了（见需求文档）。
+                  var denom = null;
+                  if(isEnergy && lastUniverse && lastUniverse.entities && lastUniverse.entities.length){
+                    var di = params[0].dataIndex;
+                    denom = 0;
+                    lastUniverse.entities.forEach(function(e){
+                      if(e.cum && e.cum[di]!=null) denom += e.cum[di];
+                    });
+                  }
+                  var header = params[0].axisValueLabel + '（' + state.year + '年 累计' +
+                    (isEnergy ? ' · 占比＝占范围内燃油+新能源合计' : '') + '）';
+                  var lines = [header];
                   params.forEach(function(p){
                     if(p.value==null) return;
+                    var pctHtml = '';
+                    if(isEnergy && denom){
+                      var pct = p.value / denom * 100;
+                      pctHtml = '<span style="margin-left:10px;font-weight:400;color:'+mutedColor+';">' + pct.toFixed(1) + '%</span>';
+                    }
                     lines.push(
                       '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:'+p.color+';margin-right:6px;"></span>'+
-                      escapeHtml(p.seriesName) + '：<b style="float:right;margin-left:14px;">' + formatNum(p.value) + '</b>'
+                      escapeHtml(p.seriesName) + '：<b style="float:right;margin-left:14px;">' + formatNum(p.value) + pctHtml + '</b>'
                     );
                   });
                   return lines.join('<br/>');
