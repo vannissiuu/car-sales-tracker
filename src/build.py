@@ -597,6 +597,13 @@ select.bodytype-select{
   max-width:340px;text-align:center;font-size:13px;line-height:1.7;
   background:var(--info-bg);color:var(--info-fg);border:1px solid var(--info-border);
   border-radius:12px;padding:16px 22px;
+  pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:10px;
+}
+.legend-empty-hint{
+  text-align:center;font-size:12.5px;line-height:1.7;
+  background:var(--info-bg);color:var(--info-fg);border:1px solid var(--info-border);
+  border-radius:10px;padding:14px 12px;margin-top:4px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
 }
 #tableview{display:none;max-height:520px;overflow:auto;padding:0 8px 8px;}
 table.datatable{width:100%;border-collapse:collapse;font-size:12.5px;}
@@ -853,7 +860,7 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
       <div class="chart-stage">
         <div id="chart"></div>
         <div class="chart-empty-hint" id="chartEmptyHint" style="display:none;">
-          <div class="chart-empty-hint-card">已清除全部勾选，请从右侧列表勾选要对比的对象</div>
+          <div class="chart-empty-hint-card" id="chartEmptyHintCard">已清除全部勾选，请从右侧列表勾选要对比的对象</div>
         </div>
       </div>
       <div id="tableview"></div>
@@ -1232,6 +1239,15 @@ document.querySelectorAll('#granChips .chip').forEach(function(c){
     document.getElementById('ownerGroup').style.display = state.gran==='model' ? '' : 'none';
     // 修正2：不再无条件 resetToTop20()——切粒度后 state.shown 里没有该粒度前缀的 key，
     // renderAll() 里的交集会自然为空，自动落到 Top20；同时保留其它粒度下用户的勾选不被清空。
+    // 改动1（范围限定器 vs 度量切换器/呈现开关）：粒度本身是范围限定器，切粒度代表用户明确
+    // 表达"不看这个范围了"，因此把车体类型/归属/图例搜索这些同属范围限定器的控件一并归零；
+    // 注意这里不调用 resetToTop20()——上面这条"交集为空才回落 Top20"的语义必须保留。
+    state.bodyType = -1;
+    state.owner = 'all';
+    state.searchTerm = '';
+    var si = document.getElementById('legendSearch');
+    if(si) si.value = '';
+    syncControlStates();
     renderAll();
   });
 });
@@ -1307,6 +1323,14 @@ document.getElementById('clearBtn').addEventListener('click', function(){
   state.shown = new Set();
   state.userClearedAll = true;
   state.shownIsFallback = false;
+  // 改动2：清除勾选同样是用户明确表达"不看这个范围了"，范围限定器（车体类型/归属/图例搜索）
+  // 一并归零；度量切换器（年份/能源）与呈现开关不受影响。
+  state.bodyType = -1;
+  state.owner = 'all';
+  state.searchTerm = '';
+  var si = document.getElementById('legendSearch');
+  if(si) si.value = '';
+  syncControlStates();
   renderAll();
 });
 document.getElementById('legendSearch').addEventListener('input', function(e){
@@ -1404,6 +1428,29 @@ function otherToggleHintText(){
   if(parts.length===0) return '显示「其他」聚合线（未展示对象之和；独立折线默认关，堆积面积默认开）';
   return '显示「其他」聚合线（' + parts.join('、') + ' 内未展示车型之和；独立折线默认关，堆积面积默认开）';
 }
+// 改动4：范围限定器（车体类型 / 归属）当前生效值的用户可读描述，供空状态提示使用；
+// 没有任何范围限定时返回 null。只在车型粒度下可能非 null——车体类型/归属仅在 gran==='model' 时生效。
+function scopeLabel(){
+  if(state.gran!=='model') return null;
+  var parts = [];
+  if(state.owner!=='all' && state.owner){
+    var idx = state.owner.indexOf(':');
+    var name = idx>=0 ? state.owner.slice(idx+1) : state.owner;
+    parts.push('归属：' + name);
+  }
+  if(state.bodyType!==-1){
+    parts.push(RAW.bodyTypes[state.bodyType]);
+  }
+  if(parts.length===0) return null;
+  return parts.join(' · ');
+}
+// 解除范围限定（车体类型 + 归属），仅此一件事——不清空图例搜索词，也不改动已勾选对象。
+function clearScopeFilters(){
+  state.bodyType = -1;
+  state.owner = 'all';
+  syncControlStates();
+  renderAll();
+}
 
 // 计算「其他」= 全部实体 - 已展示实体，按月合计后再累计为 YTD；供图表与表格/导出共用同一份口径
 function computeOther(universe, shownList){
@@ -1481,7 +1528,37 @@ function buildSeries(universe){
 function updateEmptyHint(){
   var hint = document.getElementById('chartEmptyHint');
   if(!hint) return;
-  hint.style.display = (!state.tableView && lastShownKeys.size===0) ? 'flex' : 'none';
+  var show = !state.tableView && lastShownKeys.size===0;
+  hint.style.display = show ? 'flex' : 'none';
+  if(!show) return;
+  var card = document.getElementById('chartEmptyHintCard');
+  if(!card) return;
+  // 改动4(a)：车型粒度下，如果当前范围限定（车体类型/归属）+ 当年 + 能源口径下池子里
+  // 一个对象都没有（不是"用户清空了勾选"，是压根没有可选对象），换一句范围感知的提示，
+  // 并给出"清除范围限定"按钮；否则保留原来的"已清除全部勾选"提示。
+  var u = lastUniverse;
+  // 修正7：加 scopeLabel() 判断——没有任何范围限定时池子却为空（理论边界情况），
+  // 给一个点了什么都不会发生的"清除范围限定"按钮反而更让人困惑。
+  if(state.gran==='model' && u && u.entities.length===0 && scopeLabel()!==null){
+    var ownerName = null;
+    if(state.owner!=='all' && state.owner){
+      var idx = state.owner.indexOf(':');
+      ownerName = idx>=0 ? state.owner.slice(idx+1) : state.owner;
+    }
+    // 文案自适应：只有归属限定时不硬凑车体类型，反之亦然；能源不是范围限定器，但一并
+    // 说明当前能源口径，帮助用户理解为什么是空的。
+    var bracketParts = [];
+    if(state.bodyType!==-1) bracketParts.push(RAW.bodyTypes[state.bodyType]);
+    bracketParts.push(energyLabel());
+    var msg = (ownerName ? '「' + escapeHtml(ownerName) + '」在' : '') +
+      '「' + escapeHtml(bracketParts.join('·')) + '」范围内当年没有车型';
+    card.innerHTML = '<div>' + msg + '</div>' +
+      '<button class="small-btn" id="chartClearScopeBtn" type="button">清除范围限定</button>';
+    var btn = document.getElementById('chartClearScopeBtn');
+    if(btn) btn.addEventListener('click', clearScopeFilters);
+  } else {
+    card.textContent = '已清除全部勾选，请从右侧列表勾选要对比的对象';
+  }
 }
 function renderChart(universe){
   var built = buildSeries(universe);
@@ -1692,11 +1769,38 @@ function renderLegend(universe){
     listEl.appendChild(row);
   });
 
+  // 改动4(b)：图例搜索无结果，且当前有生效的范围限定（scopeLabel() 非 null）时，提示用户
+  // 搜索词是相对"当前范围"而言没有匹配，而不是全库没有——并给出"清除范围限定"按钮扩大池子。
+  // 没有任何范围限定时（scopeLabel() 为 null）保持原有表现，不加这个按钮——没有范围可清。
+  if(filtered.length===0 && state.searchTerm){
+    var sl = scopeLabel();
+    if(sl){
+      var emptyWrap = document.createElement('div');
+      emptyWrap.className = 'legend-empty-hint';
+      var emptyMsg = document.createElement('div');
+      emptyMsg.textContent = '当前范围（' + sl + '）内没有匹配「' + state.searchTerm + '」的对象';
+      emptyWrap.appendChild(emptyMsg);
+      var scopeBtn = document.createElement('button');
+      scopeBtn.className = 'small-btn';
+      scopeBtn.id = 'legendClearScopeBtn';
+      scopeBtn.type = 'button';
+      scopeBtn.textContent = '清除范围限定';
+      scopeBtn.addEventListener('click', clearScopeFilters);
+      emptyWrap.appendChild(scopeBtn);
+      listEl.appendChild(emptyWrap);
+    }
+  }
+
   // 修正1配套：这里统计的是"当前年份有销量的对象数"（computeUniverse 已经把 ytd<=0 的对象剔除），
   // 跟 header 的"累计收录"不是同一件事，措辞里必须点明年份 + "有销量"，否则两个数对不上会显得像 bug。
   // 数字放在最前面（而不是"2026年有销量：N 个对象"这种年份先出现的写法），避免下游按"文本里第一个
   // 数字"解析数量的场景（无论是自动化测试还是人工一眼扫读）把年份误读成对象数。
-  document.getElementById('legendCount').textContent = filtered.length + ' 个对象（' + state.year + '年有销量）';
+  // 修正6：搜索框有内容时，只显示过滤后的条数会误导——"0 个对象（2026年有销量）"看起来
+  // 像"这个池子当年没有任何对象"，而实际上池子里有 20 个、只是没有一个匹配搜索词。
+  // 有搜索词时同时给出"匹配数 / 池子总数"，让这一行永远只描述它真正在描述的东西。
+  document.getElementById('legendCount').textContent = state.searchTerm
+    ? ('匹配 ' + filtered.length + ' 个 / 共 ' + universe.entities.length + ' 个对象（' + state.year + '年有销量）')
+    : (filtered.length + ' 个对象（' + state.year + '年有销量）');
   document.getElementById('legendShownCount').textContent = '已选 ' + shownCount;
   renderLegendDim();
 }
