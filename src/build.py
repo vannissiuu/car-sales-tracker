@@ -556,6 +556,8 @@ header.app-header{
 }
 .chip:hover{border-color:var(--text-muted);}
 .chip.active{background:var(--chip-bg-active);color:var(--chip-fg-active);border-color:var(--chip-bg-active);}
+.chip.disabled{cursor:not-allowed;opacity:.45;pointer-events:none;}
+.chip-disabled-hint{font-size:10.5px;color:var(--text-muted);}
 select.bodytype-select{
   border:1px solid var(--border);background:var(--chip-bg);color:var(--text-primary);
   border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;
@@ -813,6 +815,7 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
         <div class="chip" data-gran="manu">厂商</div>
         <div class="chip" data-gran="brand">品牌</div>
         <div class="chip" data-gran="model">车体类型 → 车型</div>
+        <div class="chip" data-gran="energy">能源类型</div>
       </div>
     </div>
     <div class="ctrl-group" id="bodyTypeGroup" style="display:none;">
@@ -830,6 +833,7 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
         <div class="chip" data-energy="fuel">燃油</div>
         <div class="chip" data-energy="ev">新能源</div>
       </div>
+      <div class="chip-disabled-hint" id="energyDisabledHint" style="display:none;">已按能源类型拆分</div>
     </div>
     <div class="ctrl-group">
       <div class="ctrl-label">图表模式</div>
@@ -986,7 +990,7 @@ function cssVar(name){
 var YEARS = META.years.slice().sort();
 var state = {
   year: YEARS[YEARS.length-1],
-  gran: 'manu',           // manu | brand | model
+  gran: 'manu',           // manu | brand | model | energy
   bodyType: -1,            // index into RAW.bodyTypes, or -1 = 全部车体类型 (used when gran==='model')
   owner: 'all',            // 'all' | 'manu:<厂商名>' | 'brand:<品牌名>'，仅 gran==='model' 时生效，用于按归属筛选车型池
   energy: 'all',           // all | fuel | ev
@@ -1009,12 +1013,12 @@ function lastMonthOfYear(year){
   return Math.max(0, idx);
 }
 
-function currentDim(){
-  if(state.gran === 'manu') return RAW.manu;
-  if(state.gran === 'brand') return RAW.brand;
-  // model: 按当前车体类型 + 归属（厂商/品牌）过滤；state.bodyType===-1 表示不按车体类型过滤
+// 车型粒度（及能源类型粒度，二者共用同一套范围过滤）当前生效的车体类型 + 归属过滤，
+// 返回符合条件的车型下标数组。model 粒度和 energy 粒度都必须走这同一份判断逻辑，
+// 不能各写一份——否则两个粒度下"车体类型/归属"筛选的口径迟早会跑偏。
+function filteredModelIndices(){
   var m = RAW.model;
-  var names=[], fuel=[], ev=[];
+  var idxs = [];
   var ownerManuIdx = -1, ownerBrandIdx = -1;
   if(state.owner && state.owner.indexOf('manu:')===0){
     ownerManuIdx = RAW.manu.n.indexOf(state.owner.slice(5));
@@ -1025,8 +1029,36 @@ function currentDim(){
     if(state.bodyType !== -1 && RAW.modelBody[i] !== state.bodyType) continue;
     if(ownerManuIdx >= 0 && RAW.modelManu[i] !== ownerManuIdx) continue;
     if(ownerBrandIdx >= 0 && RAW.modelBrand[i] !== ownerBrandIdx) continue;
-    names.push(m.n[i]); fuel.push(m.f[i]); ev.push(m.e[i]);
+    idxs.push(i);
   }
+  return idxs;
+}
+function currentDim(){
+  if(state.gran === 'manu') return RAW.manu;
+  if(state.gran === 'brand') return RAW.brand;
+  if(state.gran === 'energy'){
+    // 能源类型粒度：恰好两个虚拟对象「燃油」「新能源」，月度值从车型级聚合而来，
+    // 且应用当前的车体类型/归属筛选（复用 filteredModelIndices，不另写一份）。
+    // 「燃油」对象：f=范围内全部车型的燃油月度之和，e=全0；「新能源」对象反之。
+    // 这样 monthlyValue() 在 state.gran==='energy' 时忽略 state.energy、直接返回 f+e，
+    // 正好就是各自的正确值。
+    var fuelSum=[], evSum=[], zeroArr=[];
+    for(var t=0;t<RAW.nMonths;t++){ fuelSum.push(0); evSum.push(0); zeroArr.push(0); }
+    filteredModelIndices().forEach(function(i){
+      var f = RAW.model.f[i], e = RAW.model.e[i];
+      for(var t2=0;t2<RAW.nMonths;t2++){
+        fuelSum[t2] += (f[t2]||0);
+        evSum[t2] += (e[t2]||0);
+      }
+    });
+    return {n:['燃油','新能源'], f:[fuelSum, zeroArr.slice()], e:[zeroArr.slice(), evSum]};
+  }
+  // model: 按当前车体类型 + 归属（厂商/品牌）过滤；state.bodyType===-1 表示不按车体类型过滤
+  var m = RAW.model;
+  var names=[], fuel=[], ev=[];
+  filteredModelIndices().forEach(function(i){
+    names.push(m.n[i]); fuel.push(m.f[i]); ev.push(m.e[i]);
+  });
   return {n:names, f:fuel, e:ev};
 }
 function entityKey(gran, name){
@@ -1041,6 +1073,10 @@ function monthlyValue(fuelArr, evArr, year, month){
   var idx = ymIndex(year, month);
   if(idx < 0 || idx >= RAW.nMonths) return null;
   var f = fuelArr[idx]||0, e = evArr[idx]||0;
+  // 能源类型粒度下，f/e 已经是"只含燃油"或"只含新能源"的聚合数组（另一半是全0），
+  // 能源筛选 chip 在这个粒度下被禁用、且不改 state.energy，因此这里必须忽略 state.energy，
+  // 直接返回 f+e——否则用户之前选的「燃油」筛选会把「新能源」这条虚拟对象的数据吃掉。
+  if(state.gran==='energy') return f+e;
   if(state.energy==='fuel') return f;
   if(state.energy==='ev') return e;
   return f+e;
@@ -1069,9 +1105,43 @@ function monthlyValueAt(fuelArr, evArr, year, month){
   var idx = ymIndex(year, month);
   if(idx < 0 || idx >= RAW.nMonths) return null;
   var f = fuelArr[idx]||0, e = evArr[idx]||0;
+  if(state.gran==='energy') return f+e; // 同 monthlyValue()：能源类型粒度下忽略 state.energy
   if(state.energy==='fuel') return f;
   if(state.energy==='ev') return e;
   return f+e;
+}
+// 不依赖 state.energy/state.gran 的纯粹"某一列月度数组截至某年 lastM 月"求和，供能源类型粒度的
+// 「统计范围」审计表使用：那里需要的是"这个车型在燃油这一列（或新能源这一列）上的 YTD"，
+// 跟 monthlyValueAt() 里"忽略 state.energy"的口径是两回事，不能混用。
+function modelYTDForArr(arr, year){
+  var lastM = lastMonthOfYear(year);
+  var sum = 0;
+  for(var m=1;m<=lastM;m++){
+    var idx = ymIndex(year, m);
+    if(idx<0 || idx>=RAW.nMonths) continue;
+    sum += (arr[idx]||0);
+  }
+  return sum;
+}
+// energyType: 'fuel' | 'ev'。返回当前车体类型/归属范围内、该能源类型下有销量的车型列表
+// （按 YTD 降序），供能源类型粒度抽屉的「统计范围」表使用。与 entityModels() 同构。
+function energyModels(energyType, year){
+  var idxs = filteredModelIndices();
+  var out = [];
+  idxs.forEach(function(i){
+    var arr = energyType==='fuel' ? RAW.model.f[i] : RAW.model.e[i];
+    var ytd = modelYTDForArr(arr, year);
+    if(ytd<=0) return;
+    out.push({
+      name: RAW.model.n[i],
+      bodyType: RAW.bodyTypes[RAW.modelBody[i]],
+      manuName: RAW.manu.n[RAW.modelManu[i]],
+      brandName: RAW.brand.n[RAW.modelBrand[i]],
+      ytd: ytd
+    });
+  });
+  out.sort(function(a,b){ return b.ytd-a.ytd; });
+  return out;
 }
 // gran: 'manu' | 'brand'；返回当前 year/energy 筛选下，归属于该厂商/品牌的全部车型（销量>0），按销量降序
 function entityModels(gran, name, year){
@@ -1235,8 +1305,9 @@ function renderYearChips(){
 document.querySelectorAll('#granChips .chip').forEach(function(c){
   c.addEventListener('click', function(){
     state.gran = c.getAttribute('data-gran');
-    document.getElementById('bodyTypeGroup').style.display = state.gran==='model' ? '' : 'none';
-    document.getElementById('ownerGroup').style.display = state.gran==='model' ? '' : 'none';
+    var showScopeCtrls = (state.gran==='model' || state.gran==='energy');
+    document.getElementById('bodyTypeGroup').style.display = showScopeCtrls ? '' : 'none';
+    document.getElementById('ownerGroup').style.display = showScopeCtrls ? '' : 'none';
     // 修正2：不再无条件 resetToTop20()——切粒度后 state.shown 里没有该粒度前缀的 key，
     // renderAll() 里的交集会自然为空，自动落到 Top20；同时保留其它粒度下用户的勾选不被清空。
     // 改动1（范围限定器 vs 度量切换器/呈现开关）：粒度本身是范围限定器，切粒度代表用户明确
@@ -1253,6 +1324,10 @@ document.querySelectorAll('#granChips .chip').forEach(function(c){
 });
 document.querySelectorAll('#energyChips .chip').forEach(function(c){
   c.addEventListener('click', function(){
+    // 能源类型粒度下这组 chip 被禁用（见 syncControlStates()），CSS 上已经
+    // pointer-events:none 挡掉了点击，这里再加一道防线，绝不修改 state.energy——
+    // 用户切走能源类型粒度后，原来选的能源筛选要原样恢复生效。
+    if(state.gran==='energy') return;
     state.energy = c.getAttribute('data-energy');
     // 修正5：切换能源类型同样不再 resetToTop20()，与年份/车体类型/归属保持一致的语义——
     // 已勾选且在新口径下仍有销量的对象保留，全部落空时才回落到 Top20。
@@ -1357,16 +1432,21 @@ function syncControlStates(){
   document.querySelectorAll('#granChips .chip').forEach(function(c){
     c.classList.toggle('active', c.getAttribute('data-gran')===state.gran);
   });
+  var energyDisabled = state.gran==='energy';
   document.querySelectorAll('#energyChips .chip').forEach(function(c){
     c.classList.toggle('active', c.getAttribute('data-energy')===state.energy);
+    c.classList.toggle('disabled', energyDisabled);
   });
+  var energyHint = document.getElementById('energyDisabledHint');
+  if(energyHint) energyHint.style.display = energyDisabled ? '' : 'none';
   document.getElementById('modeSwitch').classList.toggle('on', state.stacked);
   document.getElementById('otherToggle').checked = state.otherVisible;
   document.getElementById('otherToggleLabel').textContent = otherToggleHintText();
   bodySelect.value = state.bodyType;
   ownerSelect.value = state.owner;
-  document.getElementById('bodyTypeGroup').style.display = state.gran==='model' ? '' : 'none';
-  document.getElementById('ownerGroup').style.display = state.gran==='model' ? '' : 'none';
+  var showScopeCtrls = (state.gran==='model' || state.gran==='energy');
+  document.getElementById('bodyTypeGroup').style.display = showScopeCtrls ? '' : 'none';
+  document.getElementById('ownerGroup').style.display = showScopeCtrls ? '' : 'none';
 }
 
 /* ---------------- 主图表 ---------------- */
@@ -1381,6 +1461,7 @@ var lastShownKeys = new Set();
 function granLabel(){
   if(state.gran==='manu') return '厂商';
   if(state.gran==='brand') return '品牌';
+  if(state.gran==='energy') return '能源类型';
   var bt = state.bodyType===-1 ? '全部车体类型' : RAW.bodyTypes[state.bodyType];
   return '车型（' + bt + '）';
 }
@@ -1403,14 +1484,25 @@ function ownerLabel(){
   return ' · 归属：' + o.name + (o.isBrand ? '（品牌）' : '');
 }
 function filterScopeLabelParts(){
-  // 车型粒度下当前生效的筛选条件（车体类型 + 归属），用于给"排名"/"其他"等口径打标注
+  // 车型粒度 / 能源类型粒度下当前生效的筛选条件（车体类型 + 归属），用于给"排名"/"其他"等口径打标注
   var parts = [];
-  if(state.gran==='model'){
+  if(state.gran==='model' || state.gran==='energy'){
     if(state.bodyType!==-1) parts.push(RAW.bodyTypes[state.bodyType]);
     var o = ownerRawName();
     if(o) parts.push(o.name + (o.isBrand ? '（品牌）' : ''));
   }
   return parts;
+}
+// 能源类型粒度下，归属 + 车体类型的合并标注（顺序：归属在前，车体类型在后），
+// 用于图表标题与抽屉副标题；没有任何限定时返回空串。能源类型粒度下能源筛选 chip 被禁用，
+// 因此不像 model 粒度那样在标题里再拼一段 energyLabel()——那会把"忽略中的筛选"误显示成生效中。
+function energyScopeLabel(){
+  var parts = [];
+  var o = ownerRawName();
+  if(o) parts.push('归属：' + o.name + (o.isBrand ? '（品牌）' : ''));
+  if(state.bodyType!==-1) parts.push(RAW.bodyTypes[state.bodyType]);
+  if(parts.length===0) return '';
+  return ' · ' + parts.join(' · ');
 }
 function rankScopeLabel(){
   var parts = filterScopeLabelParts();
@@ -1431,7 +1523,7 @@ function otherToggleHintText(){
 // 改动4：范围限定器（车体类型 / 归属）当前生效值的用户可读描述，供空状态提示使用；
 // 没有任何范围限定时返回 null。只在车型粒度下可能非 null——车体类型/归属仅在 gran==='model' 时生效。
 function scopeLabel(){
-  if(state.gran!=='model') return null;
+  if(state.gran!=='model' && state.gran!=='energy') return null;
   var parts = [];
   if(state.owner!=='all' && state.owner){
     var idx = state.owner.indexOf(':');
@@ -1539,7 +1631,7 @@ function updateEmptyHint(){
   var u = lastUniverse;
   // 修正7：加 scopeLabel() 判断——没有任何范围限定时池子却为空（理论边界情况），
   // 给一个点了什么都不会发生的"清除范围限定"按钮反而更让人困惑。
-  if(state.gran==='model' && u && u.entities.length===0 && scopeLabel()!==null){
+  if((state.gran==='model' || state.gran==='energy') && u && u.entities.length===0 && scopeLabel()!==null){
     var ownerName = null;
     if(state.owner!=='all' && state.owner){
       var idx = state.owner.indexOf(':');
@@ -1865,7 +1957,7 @@ function downloadCsv(universe){
   var a = document.createElement('a');
   var scopeParts = [granLabel().replace(/[\s（）()]/g,'')];
   var ownerName = ownerRawName();
-  if(state.gran==='model' && ownerName) scopeParts.push('归属' + ownerName.name.replace(/[\s（）()]/g,''));
+  if((state.gran==='model' || state.gran==='energy') && ownerName) scopeParts.push('归属' + ownerName.name.replace(/[\s（）()]/g,''));
   var fname = '汽车销量_' + state.year + '_' + scopeParts.join('_') + '_' + energyLabel() + '.csv';
   a.href = url; a.download = fname;
   document.body.appendChild(a);
@@ -1881,7 +1973,12 @@ function openDrawer(key, name){
   var drawer = document.getElementById('drawer');
   backdrop.classList.add('open'); drawer.classList.add('open');
   document.getElementById('drawerTitle').textContent = name;
-  document.getElementById('drawerSub').textContent = granLabel() + ownerLabel() + ' · ' + state.year + '年 · ' + energyLabel();
+  // 能源类型粒度：能源筛选 chip 被禁用、与本次展示无关，副标题不拼 energyLabel()，
+  // 改用 energyScopeLabel() 体现归属/车体类型这两个仍然生效的范围限定。
+  var drawerSubTail = state.gran==='energy'
+    ? (energyScopeLabel() + ' · ' + state.year + '年')
+    : (ownerLabel() + ' · ' + state.year + '年 · ' + energyLabel());
+  document.getElementById('drawerSub').textContent = granLabel() + drawerSubTail;
 
   var cur = findEntity(key, state.year);
   var prevYear = state.year - 1;
@@ -2003,8 +2100,17 @@ function openDrawer(key, name){
   hideCompTooltip();
   renderScope(key, name);
 
-  // 动态：快照底版 + 用户触发实时查询
-  initNewsForEntity(key, name, dynLevel, dynContext);
+  // 相关动态：能源类型（燃油/新能源）不是真实实体，没有"最新动态"可查——整节隐藏，
+  // 不调用 initNewsForEntity（避免遗留上一个真实对象的快照/触发无意义的实时查询）。
+  var newsBoxEl = document.getElementById('newsBox');
+  if(state.gran==='energy'){
+    if(newsBoxEl) newsBoxEl.style.display = 'none';
+    dynCancelInFlight();
+  } else {
+    if(newsBoxEl) newsBoxEl.style.display = '';
+    // 动态：快照底版 + 用户触发实时查询
+    initNewsForEntity(key, name, dynLevel, dynContext);
+  }
 }
 function pct(v,total){ return total>0 ? (v/total*100).toFixed(1)+'%' : '—'; }
 function buildScopeTable(headers, rows){
@@ -2025,6 +2131,9 @@ function buildScopeTable(headers, rows){
 }
 function buildDrillDownBtn(gran, name){
   // 改动4：厂商/品牌抽屉 -> 一键下钻到"这些车型"的车型粒度折线图，归属筛选自动带上当前厂商/品牌
+  // 能源类型抽屉（gran==='energy'）-> 同样下钻到车型粒度，但语义不同：车体类型/归属这两个
+  // 范围限定器要保持不变（用户在能源粒度下已经设好的范围，下钻后应该还是那个范围），
+  // 只把能源筛选切到对应类型（燃油→'fuel'，新能源→'ev'），这样看到的就是"这个范围 + 这个能源类型"的车型。
   var btn = document.createElement('button');
   btn.type = 'button';
   btn.id = 'drillDownBtn';
@@ -2033,8 +2142,12 @@ function buildDrillDownBtn(gran, name){
   btn.addEventListener('click', function(){
     closeDrawer();
     state.gran = 'model';
-    state.bodyType = -1;
-    state.owner = (gran==='manu' ? 'manu:' : 'brand:') + name;
+    if(gran==='energy'){
+      state.energy = (name==='燃油') ? 'fuel' : 'ev';
+    } else {
+      state.bodyType = -1;
+      state.owner = (gran==='manu' ? 'manu:' : 'brand:') + name;
+    }
     resetToTop20();
     // 修正3：下钻前如果图例搜索框里有残留内容，下钻后这个过滤条件还在生效，
     // 会让图例看起来"0 个对象"（其实图表是对的），必须在这里一并清空。
@@ -2071,6 +2184,32 @@ function renderScope(key, name){
     hint0.className='scope-hint'; hint0.style.marginTop='6px';
     hint0.textContent = '车型是本工具的最小统计单位，不再向下细分——因此这里不展示"构成"，只展示它归属的厂商与品牌，方便对照。';
     el.appendChild(hint0);
+    return;
+  }
+
+  if(parsed.gran==='energy'){
+    // 能源类型（燃油 / 新能源）的构成明细：跟厂商/品牌抽屉那张表同构——
+    // 车型 / 车体类型 / 累计销量 / 占比，不截断，这是本工具的审计传统，必须有。
+    titleEl.textContent = '统计范围';
+    el.appendChild(buildDrillDownBtn('energy', name));
+    var energyType = (name==='燃油') ? 'fuel' : 'ev';
+    var eModels = energyModels(energyType, state.year);
+    var eTotalYtd = eModels.reduce(function(s,m){return s+m.ytd;},0);
+    if(eModels.length===0){
+      var eEmpty = document.createElement('div');
+      eEmpty.className='scope-hint';
+      eEmpty.textContent = '当前范围内没有「'+name+'」的车型销量数据。';
+      el.appendChild(eEmpty);
+      return;
+    }
+    var eHint = document.createElement('div');
+    eHint.className='scope-hint';
+    eHint.textContent = '由 '+eModels.length+' 个车型构成，合计 '+formatNum(eTotalYtd)+'（与上方 YTD 对得上就说明口径一致）';
+    el.appendChild(eHint);
+    el.appendChild(buildScopeTable(
+      ['车型','车体类型','累计销量','占比'],
+      eModels.map(function(m){ return [m.name, m.bodyType, formatNum(m.ytd), pct(m.ytd,eTotalYtd)]; })
+    ));
     return;
   }
 
@@ -2676,8 +2815,11 @@ function renderAll(){
   // 修正2：交给 computeShownKeys 统一算"当前展示集合"（交集为空且未主动清空时才补 Top20，
   // 并把补的 Top20 持久化进 state.shown），不再用 state.shown.size===0 直接整体替换。
   lastShownKeys = computeShownKeys(u);
+  // 能源类型粒度下标题不拼 energyLabel()（能源筛选被禁用、与图上两条线的口径无关），
+  // 改用 energyScopeLabel() 拼归属/车体类型；没有限定时自然省略，跟 model 粒度标题的拼接风格一致。
+  var titleTail = state.gran==='energy' ? energyScopeLabel() : (ownerLabel() + ' · ' + energyLabel());
   document.getElementById('chartTitle').textContent =
-    state.year + '年 · ' + granLabel() + ownerLabel() + ' · ' + energyLabel() + ' · 年初至今累计销量（辆）';
+    state.year + '年 · ' + granLabel() + titleTail + ' · 年初至今累计销量（辆）';
   renderChart(u);
   renderLegend(u);
   if(state.tableView) renderTable(u);
