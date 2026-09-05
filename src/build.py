@@ -855,6 +855,7 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
       <div class="btn-pair">
         <button class="small-btn primary" id="resetBtn" type="button">重置为 Top 20</button>
         <button class="small-btn" id="clearBtn" type="button">清除勾选</button>
+        <button class="small-btn" id="resetAllBtn" type="button">一键复位</button>
       </div>
     </div>
   </div>
@@ -1510,6 +1511,42 @@ document.getElementById('clearBtn').addEventListener('click', function(){
   syncControlStates();
   renderAll();
 });
+/* 「一键复位」——把整个看板恢复到首屏状态。
+   这里必须跟文件末尾的启动序列（renderYearChips → resetToTop20 → renderAll）保持一致，
+   任何一处漏复位，用户点完还会残留上一次的筛选，比不给这个按钮更糟。
+   刻意不复位的只有主题（深/浅色）：那是个人偏好、存在 localStorage 里，
+   跟"看板筛选状态"不是一回事，复位它等于替用户改设置。 */
+function resetAll(){
+  state.year        = YEARS[YEARS.length-1];   // 最新年份，从数据推导，不写死
+  state.viewMode    = 'month';
+  state.gran        = 'manu';
+  state.bodyType    = -1;
+  state.owner       = 'all';
+  state.energy      = 'all';
+  state.stacked     = false;
+  state.searchTerm  = '';
+  state.hoverKey    = null;
+  state.tableView   = false;
+  state.otherVisible= false;
+  state.otherManual = false;
+
+  var si = document.getElementById('legendSearch');
+  if(si) si.value = '';
+
+  // 表格视图的 DOM 状态不在 state 里，必须手工还原（否则复位后还停在表格视图）
+  document.getElementById('chart').style.display = '';
+  document.getElementById('tableview').style.display = 'none';
+  document.getElementById('downloadCsvBtn').style.display = 'none';
+  document.getElementById('tableToggleBtn').textContent = '切换为表格视图';
+  var ot = document.getElementById('otherToggle');
+  if(ot) ot.checked = false;
+
+  resetToTop20();          // 内部会把 userClearedAll / shownIsFallback 复位
+  syncControlStates();
+  renderAll();
+}
+document.getElementById('resetAllBtn').addEventListener('click', resetAll);
+
 document.getElementById('legendSearch').addEventListener('input', function(e){
   state.searchTerm = e.target.value.trim();
   renderLegend(lastUniverse);
