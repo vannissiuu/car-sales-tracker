@@ -614,6 +614,7 @@ jobs:
           .chip.active{background:var(--chip-bg-active);color:var(--chip-fg-active);border-color:var(--chip-bg-active);}
           .chip.disabled{cursor:not-allowed;opacity:.45;pointer-events:none;}
           .chip-disabled-hint{font-size:10.5px;color:var(--text-muted);}
+          .switch.disabled{cursor:not-allowed;opacity:.45;pointer-events:none;}
           select.bodytype-select{
             border:1px solid var(--border);background:var(--chip-bg);color:var(--text-primary);
             border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer;
@@ -696,6 +697,10 @@ jobs:
           .legend-item input[type=checkbox]{flex:none;accent-color:var(--series-1);width:14px;height:14px;cursor:pointer;}
           .legend-item.dim .name,.legend-item.dim .val{opacity:.45;}
           .legend-item.other .dot{border:1px dashed var(--other-line);background:transparent;}
+
+          .year-legend{display:none;align-items:center;gap:14px;padding:0 4px 10px;font-size:11.5px;color:var(--text-secondary);flex-wrap:wrap;}
+          .year-legend-item{display:flex;align-items:center;gap:5px;}
+          .year-legend-swatch{width:12px;height:12px;border-radius:3px;flex:none;}
 
           .footnote{font-size:11.5px;color:var(--text-muted);line-height:1.7;padding:14px 6px 0;}
 
@@ -864,6 +869,7 @@ jobs:
               <div class="ctrl-group">
                 <div class="ctrl-label">年份</div>
                 <div class="chip-row" id="yearChips"></div>
+                <div class="chip-disabled-hint" id="yearDisabledHint" style="display:none;">年度视图已含全部年份</div>
               </div>
               <div class="ctrl-group">
                 <div class="ctrl-label">粒度</div>
@@ -898,6 +904,7 @@ jobs:
                   <div class="switch" id="modeSwitch"><div class="knob"></div></div>
                   <span class="switch-label">堆积面积</span>
                 </div>
+                <div class="chip-disabled-hint" id="stackedDisabledHint" style="display:none;">年视图不支持堆积</div>
               </div>
               <div class="ctrl-group">
                 <div class="ctrl-label">&nbsp;</div>
@@ -914,9 +921,11 @@ jobs:
                   <div class="chart-title" id="chartTitle"></div>
                   <div style="display:flex;gap:8px;">
                     <button class="small-btn" id="downloadCsvBtn" type="button" style="display:none;">下载 CSV</button>
+                    <button class="small-btn" id="viewModeBtn" type="button">按年对比</button>
                     <button class="small-btn" id="tableToggleBtn" type="button">切换为表格视图</button>
                   </div>
                 </div>
+                <div class="year-legend" id="yearLegend"></div>
                 <div class="chart-stage">
                   <div id="chart"></div>
                   <div class="chart-empty-hint" id="chartEmptyHint" style="display:none;">
@@ -936,11 +945,18 @@ jobs:
               </div>
             </div>
 
-            <div class="footnote">
+            <div class="footnote" id="footnoteMonth">
               折线图：默认展示当年 Top 20（按年初至今累计销量排名），前 8 名使用可辨识色，其余以及「其他」聚合线为淡灰色，
-              悬停/点击线条或图例可高亮；勾选右侧列表可手动增补关注的对象。2026 年数据仅至 7 月，后续月份不补零，折线在此处断开。
+              悬停/点击线条或图例可高亮；勾选右侧列表可手动增补关注的对象。当年数据只到最新已发布月份，后续月份不补零，折线在此处断开。
               点击任意折线或图例条目可在右侧查看该对象的月度明细、同比、统计范围与相关动态。
               悬停「厂商」「品牌」粒度的折线或图例，会额外提示该对象当前统计范围包含哪些车型；「车型」是本工具的最小统计单位，不再细分。
+            </div>
+            <div class="footnote" id="footnoteYear" style="display:none;">
+              年度对比图：横轴为对象（按最新年份同期值降序），每个对象下三根柱依次是各年份，颜色由淡到浓表示年份由早到新。
+              <b>完整年份的柱高是全年合计，最新的不完整年份柱高是同期合计（口径写在横轴标签上）</b>；
+              完整年份柱内的横线是该年<b>同期值</b>，用来跟最新年份的柱顶直接比高矮——这是判断"今年能不能追平"的依据。
+              最新年份的柱顶为虚线开口，表示年度尚未结束，<b>本工具不做任何全年预测</b>。
+              某对象某年无销量时不画柱，留空位。默认展示前 10 个对象，可在右侧列表自行增补。
             </div>
 
             <details class="about-block card" id="aboutBlock">
@@ -1046,6 +1062,7 @@ jobs:
           var YEARS = META.years.slice().sort();
           var state = {
             year: YEARS[YEARS.length-1],
+            viewMode: 'month',      // month | year —— 按月累计(YTD折线) | 按年对比(分组柱)
             gran: 'manu',           // manu | brand | model | energy
             bodyType: -1,            // index into RAW.bodyTypes, or -1 = 全部车体类型 (used when gran==='model')
             owner: 'all',            // 'all' | 'manu:<厂商名>' | 'brand:<品牌名>'，仅 gran==='model' 时生效，用于按归属筛选车型池
@@ -1067,6 +1084,11 @@ jobs:
           function lastMonthOfYear(year){
             var idx = Math.min(12, RAW.nMonths - (year-2024)*12);
             return Math.max(0, idx);
+          }
+          // 年视图下，图例数值/抽屉/悬浮构成提示等"当前参照年份"一律用最新年份，绝不修改 state.year
+          // （切回按月视图时 state.year 要原样保留用户之前选的年份）。按月视图下这个函数就是 state.year 本身。
+          function refYear(){
+            return state.viewMode==='year' ? YEARS[YEARS.length-1] : state.year;
           }
 
           // 车型粒度（及能源类型粒度，二者共用同一套范围过滤）当前生效的车体类型 + 归属过滤，
@@ -1301,6 +1323,71 @@ jobs:
             return entities;
           }
 
+          /* ---------------- 按年对比（年视图）专用数据层 ----------------
+             capMonth 完全由数据推导，不写死任何月份数字：capMonth = 最新年份(YEARS 最大值)
+             实际有数据的最后一个月，用既有的 lastMonthOfYear() 取。
+             完整年份（不是最新年份，或最新年份但 capMonth===12）用全年合计；
+             最新且不完整的年份（capMonth<12）用 1..capMonth 同期合计。
+             "同期值"（1..capMonth 累计）对每个年份都算，供参考线 / 同比使用；
+             capMonth===12 时同期==全年，参考线/同期说明按规则整体隐藏。 */
+          function yearRangeSum(fuelArr, evArr, year, m1, m2){
+            var s = 0;
+            for(var m=m1;m<=m2;m++){
+              var v = monthlyValueAt(fuelArr, evArr, year, m);
+              if(v!=null) s += v;
+            }
+            return s;
+          }
+          function isYearComplete(year){ return lastMonthOfYear(year) === 12; }
+          function computeYearUniverse(){
+            var dim = currentDim();
+            var latestYear = YEARS[YEARS.length-1];
+            var capMonth = lastMonthOfYear(latestYear);
+            var entities = [];
+            for(var i=0;i<dim.n.length;i++){
+              var perYear = {};
+              var anySales = false;
+              YEARS.forEach(function(y){
+                var complete = isYearComplete(y);
+                var full = complete ? yearRangeSum(dim.f[i], dim.e[i], y, 1, 12) : null;
+                var samePeriod = capMonth>0 ? yearRangeSum(dim.f[i], dim.e[i], y, 1, capMonth) : 0;
+                var barVal = complete ? full : samePeriod;
+                if(barVal>0) anySales = true;
+                perYear[y] = {complete:complete, full:full, samePeriod:samePeriod, barVal:barVal};
+              });
+              if(!anySales) continue;
+              entities.push({
+                name: dim.n[i],
+                key: entityKey(state.gran, dim.n[i]),
+                perYear: perYear,
+                // 排序 / 图例数值口径：最新年份的同期值（capMonth===12 时同期==全年，两者相等）
+                ytd: perYear[latestYear].samePeriod
+              });
+            }
+            entities.sort(function(a,b){ return b.ytd - a.ytd; });
+            entities.forEach(function(e,idx){ e.rank = idx+1; });
+            return {entities:entities, years:YEARS, latestYear:latestYear, capMonth:capMonth};
+          }
+          // 「其他」= 年度对象池里未展示对象的合计，按年分别求和：完整年份用全年值，不完整年份用同期值
+          // （即每年分别加总各未展示实体的 perYear[y].barVal，口径与柱高完全一致）。
+          function computeOtherYear(yearUniverse, shownList){
+            var shownKeys = new Set(shownList.map(function(e){return e.key;}));
+            var perYear = {};
+            var hasOther = false;
+            yearUniverse.years.forEach(function(y){ perYear[y] = {complete:isYearComplete(y), full:0, samePeriod:0, barVal:0}; });
+            yearUniverse.entities.forEach(function(e){
+              if(shownKeys.has(e.key)) return;
+              yearUniverse.years.forEach(function(y){
+                var v = e.perYear[y];
+                perYear[y].barVal += v.barVal;
+                perYear[y].samePeriod += v.samePeriod;
+                if(v.full!=null) perYear[y].full = (perYear[y].full||0) + v.full;
+                if(v.barVal>0.4) hasOther = true;
+              });
+            });
+            return {hasOther:hasOther, perYear:perYear};
+          }
+
           // 修正2：state.shown 是跨筛选条件持续累积的"用户意图"全集，不因筛选变化而删除任何 key
           // （旧的 ensureDefaultShown 会把不在当前池子里的 key 直接删掉，导致切换车体类型/归属后
           // 用户手动勾选的对象再也回不来——已废弃，改用下面这个非破坏性的交集计算）。
@@ -1308,15 +1395,16 @@ jobs:
           // 才把 Top20 的 key 补进 state.shown（同时持久化，不是只在这次渲染里临时借用）。
           // 所有需要"当前展示了哪些对象"的地方（折线 series、图例勾选态、已选计数、"其他"聚合线的补集
           // 计算、表格视图、CSV 导出）都必须调用这个函数取得同一份交集，不能各算各的。
-          function computeShownKeys(universe){
+          function computeShownKeys(universe, topN){
+            topN = topN || 20; // 按月视图 Top20；按年视图调用方传 10（展示上限 10 个对象，见年视图对象池规则）
             var valid = new Set(universe.entities.map(function(e){return e.key;}));
             var inter = new Set();
             state.shown.forEach(function(k){ if(valid.has(k)) inter.add(k); });
             if(inter.size===0 && !state.userClearedAll){
-              // 回落：只是这一次渲染"借用"当前池子的 Top20 来展示，不代表用户选了它们——
+              // 回落：只是这一次渲染"借用"当前池子的 TopN 来展示，不代表用户选了它们——
               // 不写回 state.shown，避免污染其它筛选口径下同名 key 的交集判定（年份/能源切换尤其如此）。
               // state.shown 保持不变，只标记这次展示的是"借来的"，供 materializeShown() 在用户动手时固化。
-              universe.entities.slice(0,20).forEach(function(e){ inter.add(e.key); });
+              universe.entities.slice(0,topN).forEach(function(e){ inter.add(e.key); });
               state.shownIsFallback = true;
             } else {
               state.shownIsFallback = false;
@@ -1334,8 +1422,15 @@ jobs:
             }
           }
           function resetToTop20(){
-            var u = computeUniverse();
-            state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;}));
+            // 年视图下"重置"对应的是年视图自己的展示上限（10 个对象），不是按月视图的 Top20——
+            // 两套池子/排序口径完全不同，必须各用各的 computeXxxUniverse()，不能混用。
+            if(state.viewMode==='year'){
+              var yu = computeYearUniverse();
+              state.shown = new Set(yu.entities.slice(0,10).map(function(e){return e.key;}));
+            } else {
+              var u = computeUniverse();
+              state.shown = new Set(u.entities.slice(0,20).map(function(e){return e.key;}));
+            }
             state.userClearedAll = false;
             state.shownIsFallback = false;
           }
@@ -1350,6 +1445,10 @@ jobs:
               c.setAttribute('data-year', y);
               c.textContent = y + '年';
               c.addEventListener('click', function(){
+                // 年视图下年份 chip 被禁用（见 syncControlStates()），CSS 上已经 pointer-events:none
+                // 挡掉了点击，这里再加一道防线，绝不修改 state.year——年度视图本就包含全部年份，
+                // 且切回按月视图时用户原来选的年份要原样恢复。
+                if(state.viewMode==='year') return;
                 // 修正5：切换年份不再 resetToTop20()——同一组对象换一年看走势是最常见的操作，
                 // 用户手动勾选的对象应当跨年份保留；若该年这些对象都没有销量（交集为空），
                 // renderAll() 里的回退逻辑会自动补上该年的 Top20。
@@ -1435,6 +1534,9 @@ jobs:
             renderAll();
           });
           document.getElementById('modeSwitch').addEventListener('click', function(){
+            // 年视图下堆积面积开关被禁用（跟"比高矮"的目的冲突），CSS 上已经 pointer-events:none
+            // 挡掉了点击，这里再加一道防线。
+            if(state.viewMode==='year') return;
             state.stacked = !state.stacked;
             if(!state.otherManual){
               // 未手动改过开关时，按模式套用默认值：独立折线默认关闭「其他」，堆积面积默认打开
@@ -1480,11 +1582,54 @@ jobs:
           document.getElementById('downloadCsvBtn').addEventListener('click', function(){
             downloadCsv(lastUniverse);
           });
+          document.getElementById('viewModeBtn').addEventListener('click', function(){
+            // 视图切换：不清空已勾选对象（两个视图共享 state.shown），不修改 state.year，
+            // 不重置粒度/车体类型/归属/能源筛选——这些筛选照常生效，且跟切视图无关。
+            state.viewMode = state.viewMode==='year' ? 'month' : 'year';
+            syncControlStates();
+            renderAll();
+          });
 
+          // 图表区上方的年份小图例：只在年视图下显示，2024/2025/2026 三格配对应浓淡的小色块
+          // （同一色相 + yearOpacityAt 的不透明度，跟柱子颜色来源完全一致，不另起一套颜色）。
+          function renderYearLegend(){
+            var el = document.getElementById('yearLegend');
+            if(!el) return;
+            if(state.viewMode!=='year'){ el.style.display='none'; return; }
+            el.style.display='flex';
+            var color = cssVar('--series-1');
+            el.innerHTML = YEARS.map(function(y, idx){
+              var op = yearOpacityAt(idx, YEARS.length);
+              // 修正9：横轴翻转成"对象"之后，原先挂在横轴标签上的口径（"2024 全年"/"2026 1–7月"）
+              // 就没地方放了。口径是这张图赖以成立的前提，绝不能丢——移到年份图例上。
+              // capMonth===12 时同期==全年，统一写"全年"。
+              var cap = lastMonthOfYear(YEARS[YEARS.length-1]);
+              var cal = (cap===12 || lastMonthOfYear(y)===12) ? ' 全年' : (' 1–'+cap+'月');
+              return '<span class="year-legend-item"><span class="year-legend-swatch" style="background:'+color+';opacity:'+op+';"></span>'+escapeHtml(String(y)+cal)+'</span>';
+            }).join('');
+          }
           function syncControlStates(){
+            var yearDisabled = state.viewMode==='year';
+            renderYearLegend();
             document.querySelectorAll('#yearChips .chip').forEach(function(c){
               c.classList.toggle('active', String(state.year)===c.getAttribute('data-year'));
+              c.classList.toggle('disabled', yearDisabled);
             });
+            var yearHint = document.getElementById('yearDisabledHint');
+            if(yearHint) yearHint.style.display = yearDisabled ? '' : 'none';
+            var stackedHint = document.getElementById('stackedDisabledHint');
+            if(stackedHint) stackedHint.style.display = yearDisabled ? '' : 'none';
+            var vmBtn = document.getElementById('viewModeBtn');
+            if(vmBtn) vmBtn.textContent = yearDisabled ? '按月累计' : '按年对比';
+            // 修正8：年视图的默认展示上限是 10 不是 20，按钮文案必须跟着实际行为走，
+            // 否则点了「重置为 Top 20」却只出现 10 个对象，是标签说谎。
+            var rsBtn = document.getElementById('resetBtn');
+            if(rsBtn) rsBtn.textContent = yearDisabled ? '重置为 Top 10' : '重置为 Top 20';
+            // 修正8：脚注整段只描述折线图，年视图下每一句都不成立，按视图切换。
+            var fnM = document.getElementById('footnoteMonth');
+            var fnY = document.getElementById('footnoteYear');
+            if(fnM) fnM.style.display = yearDisabled ? 'none' : '';
+            if(fnY) fnY.style.display = yearDisabled ? '' : 'none';
             document.querySelectorAll('#granChips .chip').forEach(function(c){
               c.classList.toggle('active', c.getAttribute('data-gran')===state.gran);
             });
@@ -1496,6 +1641,7 @@ jobs:
             var energyHint = document.getElementById('energyDisabledHint');
             if(energyHint) energyHint.style.display = energyDisabled ? '' : 'none';
             document.getElementById('modeSwitch').classList.toggle('on', state.stacked);
+            document.getElementById('modeSwitch').classList.toggle('disabled', yearDisabled);
             document.getElementById('otherToggle').checked = state.otherVisible;
             document.getElementById('otherToggleLabel').textContent = otherToggleHintText();
             bodySelect.value = state.bodyType;
@@ -1513,6 +1659,19 @@ jobs:
           // 必要时已补 Top20）。renderAll() 之外的直接调用（搜索框 input、下载CSV、切换表格视图）都读它，
           // 保证"当前展示了哪些对象"全站只有一份口径。
           var lastShownKeys = new Set();
+          // 年视图专用：本次渲染的分组柱行数据（一个 custom series 里所有对象x年份的格子），
+          // 供图表 click 事件反查"点了哪个对象"。
+          var yearChartRows = null;
+          // 年视图配色：年份是有序维度，统一用同一色相（CSS 变量 --series-1），靠不透明度区分深浅，
+          // 不生成任何新的颜色字符串。数组长度与建议值对齐（3 个年份）；年份数不是 3 时按首尾值线性插值，
+          // 保持"越新越浓、单调递增"这条硬性约束。
+          var YEAR_OPACITIES = [0.42, 0.68, 1.0];
+          function yearOpacityAt(idx, total){
+            if(total === YEAR_OPACITIES.length) return YEAR_OPACITIES[idx];
+            if(total<=1) return 1;
+            var lo = YEAR_OPACITIES[0], hi = YEAR_OPACITIES[YEAR_OPACITIES.length-1];
+            return lo + (hi-lo) * idx / (total-1);
+          }
 
           function granLabel(){
             if(state.gran==='manu') return '厂商';
@@ -1625,7 +1784,7 @@ jobs:
             return {hasOther:hasOther, cum:cum, monthly:monthly};
           }
 
-          function buildSeries(universe){
+          function buildSeriesMonth(universe){
             var shownList = universe.entities.filter(function(e){ return lastShownKeys.has(e.key); });
             // 颜色分配：仅按“默认Top20排名”的前8名给主色，其余（含手动增补）一律淡灰
             var top20Keys = universe.entities.slice(0,20).map(function(e){return e.key;});
@@ -1708,8 +1867,14 @@ jobs:
               card.textContent = '已清除全部勾选，请从右侧列表勾选要对比的对象';
             }
           }
+          // 总入口：按月视图走既有折线逻辑；按年视图走全新的自定义 series 分组柱逻辑（形态已用
+          // /tmp/yearview-mock/index.html 验证过，这里搬运其 renderItem 布局算法，不重新设计）。
           function renderChart(universe){
-            var built = buildSeries(universe);
+            if(state.viewMode==='year'){ renderChartYear(universe); return; }
+            renderChartMonth(universe);
+          }
+          function renderChartMonth(universe){
+            var built = buildSeriesMonth(universe);
             updateEmptyHint();
             var isDark = currentTheme()==='dark';
             var textColor = cssVar('--text-secondary');
@@ -1778,11 +1943,227 @@ jobs:
             chart.setOption(option, true);
           }
 
+          /* ---------------- 按年对比（年视图）图表：单个 custom series + renderItem 自绘分组柱 ----------------
+             ECharts 的 markLine 定位不到分组柱状图里某一根具体的柱子（只能落在类目刻度中心，拿不到组内
+             偏移），所以参考线没法用 markLine 做。这里照搬 /tmp/yearview-mock/index.html 已验证过的形态：
+             renderItem 里用 api.size([1,0]) 拿类目宽度，按对象数手动切分每根柱的左边界/宽度，柱子矩形、
+             参考线、虚线开口顶边都用同一套坐标画，参考线因此是像素级对齐的——不是重新设计，是原样搬运。 */
+          function yearTooltipLines(d){
+            if(d.skip){
+              return [d.name+' · '+d.year+'年', '该年无销量'].join('<br/>');
+            }
+            var caliber = d.complete ? '全年' : ('1–'+d.capMonth+'月');
+            var lines = [d.name+' · '+d.year+'年 · '+caliber];
+            lines.push(caliber+'值：'+formatNum(d.value));
+            if(d.complete && d.capMonth<12){
+              lines.push('1–'+d.capMonth+'月同期值：'+formatNum(d.samePeriod));
+            }
+            if(!d.hasPrevYear){
+              lines.push('同期同比：无上年同期数据');
+            } else if(d.prevSamePeriod>0){
+              var pct = (d.samePeriod - d.prevSamePeriod) / d.prevSamePeriod * 100;
+              lines.push('同期同比：' + (pct>=0?'+':'') + pct.toFixed(1) + '%');
+            } else if(d.samePeriod>0){
+              lines.push('同期同比：新增');
+            } else {
+              lines.push('同期同比：—');
+            }
+            return lines.join('<br/>');
+          }
+          function makeYearRenderItem(rows, yMax, textColor, refColor){
+            return function(params, api){
+              var d = rows[params.dataIndex];
+              if(!d) return {type:'group', children:[]};
+              var n = d.seriesCount, si = d.seriesIndex, catIndex = d.catIndex;
+
+              // 分组柱布局：category band 宽度 -> 减去组间间隙 -> 按对象数均分 -> 每份再减去组内间隙
+              var bandWidth = api.size([1,0])[0];
+              var categoryGap = 0.28;
+              var usableWidth = bandWidth * (1 - categoryGap);
+              var step = usableWidth / n;
+              var barGapRatio = 0.18;
+              var barWidth = step * (1 - barGapRatio);
+              var basePt = api.coord([catIndex, 0]);
+              var groupLeft = basePt[0] - usableWidth / 2;
+              var barLeft = groupLeft + si * step + (step - barWidth) / 2;
+              var yBase = basePt[1];
+
+              if(d.skip){
+                // 零值柱：不画柱/参考线/端帽，只留一个透明命中区（覆盖整个柱高范围），让悬浮能弹出
+                // "该年无销量" 提示；柱子位置本身自然留空，不需要额外处理。
+                var topPt = api.coord([catIndex, yMax]);
+                return {type:'group', children:[{
+                  type:'rect',
+                  shape:{x:barLeft, y:topPt[1], width:barWidth, height: Math.max(0, yBase-topPt[1])},
+                  style:{fill:'rgba(0,0,0,0)'}
+                }]};
+              }
+
+              var centerPt = api.coord([catIndex, d.value]);
+              var yTop = centerPt[1];
+              var barHeight = Math.max(0, yBase - yTop);
+              var children = [{
+                type:'rect',
+                shape:{x:barLeft, y:yTop, width:barWidth, height:barHeight},
+                style:{fill:d.color, opacity:d.opacity}
+              }];
+
+              if(d.open){
+                // 不完整年份：柱顶不封口，画一条正好落在真实柱顶上的虚线——没有任何外推，只是几何上不封口
+                children.push({
+                  type:'line',
+                  shape:{x1:barLeft, y1:yTop, x2:barLeft+barWidth, y2:yTop},
+                  style:{stroke:d.color, lineWidth:2, lineDash:[4,3], opacity:d.opacity}
+                });
+              }
+
+              // 柱顶数值标签：只在展示对象数（横轴类目数，d.catCount）<=3 时常驻，超过就只留给 tooltip，
+              // 避免密集时糊成一片——注意这里不能用 n（=seriesCount=每组柱子数=年份数，固定3，跟"展示对象数"
+              // 是两个概念），否则这条规则会永远生效。
+              if(d.catCount<=3){
+                children.push({
+                  type:'text',
+                  style:{
+                    text: formatNum(d.value), x: barLeft+barWidth/2, y: yTop-6,
+                    textAlign:'center', textVerticalAlign:'bottom', fontSize:10, fill:textColor
+                  }
+                });
+              }
+
+              if(d.showRef){
+                // 参考线：该年 1..capMonth 同期值，数值标签任何情况都不常驻（移到 tooltip 里）
+                var refPt = api.coord([catIndex, d.samePeriod]);
+                var ry = refPt[1];
+                children.push({type:'line', shape:{x1:barLeft, y1:ry, x2:barLeft+barWidth, y2:ry},
+                  style:{stroke:refColor, lineWidth:2.5}});
+                children.push({type:'line', shape:{x1:barLeft, y1:ry-3, x2:barLeft, y2:ry+3},
+                  style:{stroke:refColor, lineWidth:2}});
+                children.push({type:'line', shape:{x1:barLeft+barWidth, y1:ry-3, x2:barLeft+barWidth, y2:ry+3},
+                  style:{stroke:refColor, lineWidth:2}});
+              }
+
+              return {type:'group', children:children};
+            };
+          }
+          function renderChartYear(universe){
+            updateEmptyHint();
+            var textColor = cssVar('--text-secondary');
+            var mutedColor = cssVar('--text-muted');
+            var gridColor = cssVar('--grid');
+            var surface = cssVar('--surface-1');
+            var refColor = cssVar('--text-primary'); // 参考线：高对比中性色（浅色模式深、深色模式浅），非新写死颜色
+            var barColor = cssVar('--series-1'); // 年份是有序维度：只用这一个色相，深浅靠 opacity 区分，见 yearOpacityAt
+
+            var shownList = universe.entities.filter(function(e){ return lastShownKeys.has(e.key); });
+            shownList.sort(function(a,b){ return a.rank-b.rank; });
+
+            var otherInfo = computeOtherYear(universe, shownList);
+            var showOther = otherInfo.hasOther && state.otherVisible;
+
+            // 横轴类目 = 展示的对象，已经是 computeYearUniverse() 算好的"最新年份同期值降序"；
+            // 「其他」聚合（如果开启）追加在最后，排在最右。展示上限 10 个对象（用户可手动增补更多）。
+            var objects = shownList.map(function(e){
+              return {key:e.key, name:e.name, perYear:e.perYear, isOther:false};
+            });
+            if(showOther){
+              objects.push({key:'__other__', name: otherLineName().series, perYear: otherInfo.perYear, isOther:true});
+            }
+
+            var years = universe.years; // YEARS 升序：每个对象下柱子固定顺序 2024→2025→2026
+            var capMonth = universe.capMonth;
+            var seriesCount = years.length; // 每个对象下并排的柱子数（=年份数），用于 renderItem 里的分组布局
+            var n = objects.length; // 横轴类目数（展示对象数），标注策略里的"展示对象数"看这个，不是 seriesCount
+            var cats = objects.map(function(o){ return o.name; });
+
+            var rows = [];
+            var maxVal = 0;
+            objects.forEach(function(obj, ci){
+              years.forEach(function(y, si){
+                var py = obj.perYear[y];
+                var prevY = si>0 ? years[si-1] : null;
+                var prevPy = prevY!=null ? obj.perYear[prevY] : null;
+                var row = {
+                  key:obj.key, name:obj.name, isOther:obj.isOther,
+                  catIndex:ci, seriesIndex:si, seriesCount:seriesCount, catCount:n,
+                  year:y, complete:py.complete, capMonth:capMonth,
+                  value:py.barVal, samePeriod:py.samePeriod,
+                  skip: !(py.barVal>0),
+                  showRef: (py.complete && capMonth<12 && py.barVal>0),
+                  open: !py.complete,
+                  color: barColor,
+                  opacity: yearOpacityAt(si, seriesCount),
+                  hasPrevYear: prevY!=null,
+                  prevSamePeriod: prevPy ? prevPy.samePeriod : null
+                };
+                rows.push(row);
+                if(py.barVal>maxVal) maxVal = py.barVal;
+              });
+            });
+            yearChartRows = rows;
+
+            var yMax = Math.ceil(maxVal*1.2/10000)*10000;
+            if(yMax<=0) yMax = 10;
+
+            // 对象数 >6 时横轴标签旋转 30°，避免中文对象名互相重叠；同时给底部多留一点空间。
+            var rotateLabels = n>6;
+
+            var option = {
+              backgroundColor:'transparent',
+              animationDuration:280,
+              textStyle:{color:textColor, fontFamily:'inherit'},
+              grid:{left:56,right:20,top:28,bottom: rotateLabels?58:36,containLabel:true},
+              xAxis:{
+                type:'category', data:cats,
+                axisLine:{lineStyle:{color: cssVar('--baseline')}},
+                axisTick:{show:false},
+                axisLabel:{color:textColor, fontSize:12.5, fontWeight:600, interval:0, rotate: rotateLabels?30:0}
+              },
+              yAxis:{
+                // custom series 不会给 y 轴提供任何数据范围，min 必须显式写 0，否则轴会塌掉、
+                // 所有柱子高度看起来一样（这里踩过的坑，见需求文档）。
+                type:'value', min:0, max:yMax,
+                splitLine:{lineStyle:{color:gridColor}},
+                axisLabel:{color:mutedColor, fontSize:11.5, formatter:function(v){return formatCompact(v);}}
+              },
+              tooltip:{
+                trigger:'item',
+                backgroundColor:surface, borderColor:cssVar('--border'),
+                textStyle:{color:cssVar('--text-primary'), fontSize:12.5},
+                confine:true,
+                formatter:function(p){
+                  var d = rows[p.dataIndex];
+                  return d ? yearTooltipLines(d) : '';
+                }
+              },
+              legend:{show:false},
+              series:[{
+                id:'__yearSeries__',
+                type:'custom',
+                renderItem: makeYearRenderItem(rows, yMax, textColor, refColor),
+                data: rows.map(function(_,i){ return i; }),
+                z:2
+              }]
+            };
+            chart.setOption(option, true);
+          }
+
           chart.on('click', function(params){
+            if(state.viewMode==='year'){
+              // 年视图是单个 custom series（分组柱由 renderItem 自行绘制），没有按对象拆分的
+              // 多个 series，只能靠 dataIndex 反查行数据；rows 由 renderChartYear 存进 yearChartRows。
+              if(!yearChartRows) return;
+              var row = yearChartRows[params.dataIndex];
+              if(!row || row.isOther) return;
+              openDrawer(row.key, row.name);
+              return;
+            }
             if(params.seriesId==='__other__'){ return; }
             if(params.seriesName){ openDrawer(params.seriesId, params.seriesName); }
           });
           chart.on('mouseover', {seriesIndex:'all'}, function(params){
+            // 年视图的分组柱是单个 custom series，params.seriesId 在各柱之间不区分对象，
+            // 走这条线联动图例高亮反而会全体图例一起变暗——年视图不接这套折线高亮机制。
+            if(state.viewMode==='year') return;
             if(params.seriesId) highlightKey(params.seriesId);
           });
           chart.getZr().on('globalout', function(){ highlightKey(null); hideCompTooltip(); });
@@ -1798,8 +2179,10 @@ jobs:
 
           function highlightKey(key){
             state.hoverKey = key;
-            chart.dispatchAction({type:'downplay'});
-            if(key){ chart.dispatchAction({type:'highlight', seriesId:key}); }
+            if(state.viewMode!=='year'){
+              chart.dispatchAction({type:'downplay'});
+              if(key){ chart.dispatchAction({type:'highlight', seriesId:key}); }
+            }
             renderLegendDim();
           }
 
@@ -1807,13 +2190,15 @@ jobs:
           var compTooltipEl = document.getElementById('compTooltip');
           function buildCompNode(gran, name){
             var frag = document.createDocumentFragment();
-            var models = entityModels(gran, name, state.year);
+            // 年视图下这里的"当前筛选年份"必须用最新年份（refYear()），不是 state.year——
+            // 年份 chip 在年视图下被禁用/不生效，state.year 只是切回按月视图时要恢复的旧选择。
+            var models = entityModels(gran, name, refYear());
             var head = document.createElement('div'); head.className='ct-head';
             if(models.length===0){
               head.textContent = (gran==='manu'?'厂商「':'品牌「')+name+'」';
               frag.appendChild(head);
               var subE = document.createElement('div'); subE.className='ct-sub';
-              subE.textContent = '当前筛选（'+state.year+'年 · '+energyLabel()+'）下暂无销量数据';
+              subE.textContent = '当前筛选（'+refYear()+'年 · '+energyLabel()+'）下暂无销量数据';
               frag.appendChild(subE);
               return frag;
             }
@@ -1907,9 +2292,18 @@ jobs:
 
               var dot = document.createElement('span');
               dot.className='dot';
-              var top8idx = top8Keys.indexOf(e.key);
-              dot.style.background = lastShownKeys.has(e.key) ? (top8idx>=0?palette[top8idx]:mutedColor) : 'transparent';
-              dot.style.border = lastShownKeys.has(e.key) ? 'none' : '1px solid ' + mutedColor;
+              // 年视图下对象身份不再靠颜色（颜色改为按年份编码，见 renderChartYear），图例圆点
+              // 整体停用——只隐藏圆点本身，勾选框/名字/数值照常显示。年份小图例见 #yearLegend。
+              if(state.viewMode==='year'){
+                dot.hidden = true;
+              } else {
+                var dotColor = null;
+                if(lastShownKeys.has(e.key)){
+                  var top8idx = top8Keys.indexOf(e.key); dotColor = top8idx>=0 ? palette[top8idx] : mutedColor;
+                }
+                dot.style.background = dotColor || 'transparent';
+                dot.style.border = dotColor ? 'none' : '1px solid ' + mutedColor;
+              }
               row.appendChild(dot);
 
               var nameEl = document.createElement('span');
@@ -1965,9 +2359,15 @@ jobs:
             // 修正6：搜索框有内容时，只显示过滤后的条数会误导——"0 个对象（2026年有销量）"看起来
             // 像"这个池子当年没有任何对象"，而实际上池子里有 20 个、只是没有一个匹配搜索词。
             // 有搜索词时同时给出"匹配数 / 池子总数"，让这一行永远只描述它真正在描述的东西。
+            // 年视图下池子口径不一样："YEARS 里任意一年有销量"，而不是"state.year 这一年有销量"——
+            // 措辞必须跟着换，否则用户会以为池子大小是按 state.year（这个年份 chip 在年视图下已经
+            // 被禁用，跟当前展示无关）筛出来的。
+            var poolYearDesc = state.viewMode==='year'
+              ? (YEARS[0] + '–' + YEARS[YEARS.length-1] + '年 任一年有销量')
+              : (state.year + '年有销量');
             document.getElementById('legendCount').textContent = state.searchTerm
-              ? ('匹配 ' + filtered.length + ' 个 / 共 ' + universe.entities.length + ' 个对象（' + state.year + '年有销量）')
-              : (filtered.length + ' 个对象（' + state.year + '年有销量）');
+              ? ('匹配 ' + filtered.length + ' 个 / 共 ' + universe.entities.length + ' 个对象（' + poolYearDesc + '）')
+              : (filtered.length + ' 个对象（' + poolYearDesc + '）');
             document.getElementById('legendShownCount').textContent = '已选 ' + shownCount;
             renderLegendDim();
           }
@@ -1980,8 +2380,8 @@ jobs:
           }
 
           /* ---------------- 表格视图 ---------------- */
-          // 表格视图与 CSV 导出共用同一份行数据，保证两者口径一致
-          function buildTableRows(universe){
+          // 表格视图与 CSV 导出共用同一份行数据，保证两者口径一致（按月/按年各一套，视图分派）
+          function buildTableRowsMonth(universe){
             var shownList = universe.entities.filter(function(e){return lastShownKeys.has(e.key);});
             shownList.sort(function(a,b){return a.rank-b.rank;});
             var rows = shownList.map(function(e){
@@ -1995,8 +2395,12 @@ jobs:
           }
 
           function renderTable(universe){
+            if(state.viewMode==='year'){ renderTableYear(universe); return; }
+            renderTableMonth(universe);
+          }
+          function renderTableMonth(universe){
             var el = document.getElementById('tableview');
-            var rows = buildTableRows(universe);
+            var rows = buildTableRowsMonth(universe);
             var html = '<table class="datatable"><thead><tr><th>排名</th><th>名称</th>';
             for(var m=1;m<=12;m++) html += '<th>'+m+'月累计</th>';
             html += '</tr></thead><tbody>';
@@ -2009,14 +2413,99 @@ jobs:
             el.innerHTML = html;
           }
 
+          // 年视图表格/CSV 列结构：对象名 | Y1全年 | Y1同期 | Y2全年 | Y2同期 | ... | 同期同比(最新年 vs 上一年)
+          // 完全由 YEARS + capMonth 动态生成，不写死年份/月份：完整年份才有"全年"列，capMonth<12 时
+          // 每年才有"同期"列（capMonth===12 时同期==全年，同期列整体省略，只留每年的"全年"列）。
+          function buildYearTableColumns(universe){
+            var years = universe.years, capMonth = universe.capMonth;
+            var cols = [];
+            years.forEach(function(y){
+              if(isYearComplete(y)){ cols.push({type:'full', year:y, header: y+'全年'}); }
+              if(capMonth<12){ cols.push({type:'same', year:y, header: y+'同期（1–'+capMonth+'月）'}); }
+            });
+            var latestYear = years[years.length-1];
+            var prevYear = years.length>=2 ? years[years.length-2] : null;
+            var yoyCol = prevYear!=null
+              ? {header: (capMonth<12?'同期同比':'同比') + '（'+prevYear+'→'+latestYear+'）'}
+              : null;
+            return {cols:cols, yoyCol:yoyCol, latestYear:latestYear, prevYear:prevYear, capMonth:capMonth};
+          }
+          function yoyCellText(curVal, prevVal){
+            if(prevVal>0){
+              var pct = (curVal-prevVal)/prevVal*100;
+              return (pct>=0?'+':'')+pct.toFixed(1)+'%';
+            }
+            if(curVal>0) return '新增';
+            return '—';
+          }
+          function buildTableRowsYear(universe){
+            var shownList = universe.entities.filter(function(e){return lastShownKeys.has(e.key);});
+            shownList.sort(function(a,b){return a.rank-b.rank;});
+            var otherInfo = computeOtherYear(universe, shownList);
+            var meta = buildYearTableColumns(universe);
+            function rowFor(name, rank, perYear){
+              var cells = meta.cols.map(function(c){
+                var py = perYear[c.year];
+                return c.type==='full' ? py.full : py.samePeriod;
+              });
+              var yoyText = null;
+              if(meta.yoyCol){
+                yoyText = yoyCellText(perYear[meta.latestYear].samePeriod, perYear[meta.prevYear].samePeriod);
+              }
+              return {rank:rank, name:name, cells:cells, yoyText:yoyText};
+            }
+            var rows = shownList.map(function(e){ return rowFor(e.name, '#'+e.rank, e.perYear); });
+            if(otherInfo.hasOther && state.otherVisible){
+              rows.push(rowFor(otherLineName().table, '', otherInfo.perYear));
+            }
+            return {meta:meta, rows:rows};
+          }
+          function renderTableYear(universe){
+            var el = document.getElementById('tableview');
+            var built = buildTableRowsYear(universe);
+            var headHtml = '<th>排名</th><th>名称</th>' +
+              built.meta.cols.map(function(c){return '<th>'+escapeHtml(c.header)+'</th>';}).join('') +
+              (built.meta.yoyCol ? ('<th>'+escapeHtml(built.meta.yoyCol.header)+'</th>') : '');
+            var html = '<table class="datatable"><thead><tr>'+headHtml+'</tr></thead><tbody>';
+            built.rows.forEach(function(r){
+              html += '<tr><td>'+escapeHtml(r.rank)+'</td><td>'+escapeHtml(r.name)+'</td>';
+              r.cells.forEach(function(v){ html += '<td>'+(v==null?'—':formatNum(v))+'</td>'; });
+              if(built.meta.yoyCol) html += '<td>'+escapeHtml(r.yoyText)+'</td>';
+              html += '</tr>';
+            });
+            html += '</tbody></table>';
+            el.innerHTML = html;
+          }
+
           function csvEscape(s){
             s = String(s);
             if(/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
             return s;
           }
           function downloadCsv(universe){
+            if(state.viewMode==='year'){ downloadCsvYear(universe); return; }
+            downloadCsvMonth(universe);
+          }
+          function csvFileNameScopeParts(){
+            var scopeParts = [granLabel().replace(/[\s（）()]/g,'')];
+            var ownerName = ownerRawName();
+            if((state.gran==='model' || state.gran==='energy') && ownerName) scopeParts.push('归属' + ownerName.name.replace(/[\s（）()]/g,''));
+            return scopeParts;
+          }
+          function triggerCsvDownload(fname, lines){
+            var csv = '\ufeff' + lines.join('\r\n'); // 前缀 BOM，Excel 打开中文不乱码
+            var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = fname;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+          }
+          function downloadCsvMonth(universe){
             if(!universe) return;
-            var rows = buildTableRows(universe);
+            var rows = buildTableRowsMonth(universe);
             var header = ['排名','名称'];
             for(var m=1;m<=12;m++) header.push(m+'月累计销量（YTD）');
             // 修正4：去掉首行的 "# 口径：..." 注释——表头必须是第1行，否则 Excel 筛选/数据透视表会坏掉。
@@ -2026,19 +2515,23 @@ jobs:
               var line = [r.rank, r.name].concat(r.cum.map(function(v){ return v==null ? '' : Math.round(v); }));
               lines.push(line.map(csvEscape).join(','));
             });
-            var csv = '\ufeff' + lines.join('\r\n'); // 前缀 BOM，Excel 打开中文不乱码
-            var blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
-            var url = URL.createObjectURL(blob);
-            var a = document.createElement('a');
-            var scopeParts = [granLabel().replace(/[\s（）()]/g,'')];
-            var ownerName = ownerRawName();
-            if((state.gran==='model' || state.gran==='energy') && ownerName) scopeParts.push('归属' + ownerName.name.replace(/[\s（）()]/g,''));
-            var fname = '汽车销量_' + state.year + '_' + scopeParts.join('_') + '_' + energyLabel() + '.csv';
-            a.href = url; a.download = fname;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+            var fname = '汽车销量_' + state.year + '_' + csvFileNameScopeParts().join('_') + '_' + energyLabel() + '.csv';
+            triggerCsvDownload(fname, lines);
+          }
+          function downloadCsvYear(universe){
+            if(!universe) return;
+            var built = buildTableRowsYear(universe);
+            var header = ['排名','名称'].concat(built.meta.cols.map(function(c){return c.header;}));
+            if(built.meta.yoyCol) header.push(built.meta.yoyCol.header);
+            var lines = [header.map(csvEscape).join(',')];
+            built.rows.forEach(function(r){
+              var line = [r.rank, r.name].concat(r.cells.map(function(v){ return v==null ? '' : Math.round(v); }));
+              if(built.meta.yoyCol) line.push(r.yoyText);
+              lines.push(line.map(csvEscape).join(','));
+            });
+            var yearsTag = YEARS[0] + '-' + YEARS[YEARS.length-1];
+            var fname = '汽车销量_按年对比_' + yearsTag + '_' + csvFileNameScopeParts().join('_') + '_' + energyLabel() + '.csv';
+            triggerCsvDownload(fname, lines);
           }
 
           /* ---------------- 抽屉 ---------------- */
@@ -2048,18 +2541,24 @@ jobs:
             var drawer = document.getElementById('drawer');
             backdrop.classList.add('open'); drawer.classList.add('open');
             document.getElementById('drawerTitle').textContent = name;
+            // 年视图下抽屉一律参照最新年份（refYear()），不是 state.year——年份 chip 在年视图下
+            // 被禁用/不生效，state.year 只是切回按月视图时要原样恢复的旧选择，绝不能被这里读出来当真。
+            var dy = refYear();
+            var yearViewNote = state.viewMode==='year' ? '（年视图参照最新年份）' : '';
             // 能源类型粒度：能源筛选 chip 被禁用、与本次展示无关，副标题不拼 energyLabel()，
             // 改用 energyScopeLabel() 体现归属/车体类型这两个仍然生效的范围限定。
             var drawerSubTail = state.gran==='energy'
-              ? (energyScopeLabel() + ' · ' + state.year + '年')
-              : (ownerLabel() + ' · ' + state.year + '年 · ' + energyLabel());
+              ? (energyScopeLabel() + ' · ' + dy + '年' + yearViewNote)
+              : (ownerLabel() + ' · ' + dy + '年' + yearViewNote + ' · ' + energyLabel());
             document.getElementById('drawerSub').textContent = granLabel() + drawerSubTail;
 
-            var cur = findEntity(key, state.year);
-            var prevYear = state.year - 1;
+            var cur = findEntity(key, dy);
+            var prevYear = dy - 1;
             // prevFull：上年的完整 12 个月原始数据，供逐月柱状图/表格做"同月对同月"展示（本身没有跨期问题）。
             var prevFull = YEARS.indexOf(prevYear)>=0 ? findEntity(key, prevYear) : null;
-            var lastM = lastUniverse.lastMonth; // N = 当前选中年份实际有数据的最后一个月（2026 年是 7，2024/2025 是 12）
+            // N = dy 年实际有数据的最后一个月（不再依赖 lastUniverse.lastMonth——年视图下 lastUniverse
+            // 是年度池子，没有这个字段；lastMonthOfYear() 是纯函数，直接算，按月/按年视图都适用）。
+            var lastM = lastMonthOfYear(dy);
 
             // prevCapped：上年"截至同一个第 N 月"的累计与排名——YTD 同比、排名同比都必须用这个，
             // 不能直接用 prevFull.ytd / prevFull.rank（那是上年全年数据，会把「7个月 vs 12个月」这种
@@ -2116,7 +2615,7 @@ jobs:
             // 不重算（这里是唯一权威口径）。yoy_pct 四舍五入到一位小数，与展示层的 toFixed(1) 对齐。
             var dynLevel = GRAN_TO_NEWS_LEVEL[state.gran] || 'brand';
             var dynContext = {
-              year: state.year,
+              year: dy,
               ytd_months: lastM,
               yoy_pct: (dynYoyRaw!=null && isFinite(dynYoyRaw)) ? Math.round(dynYoyRaw*10)/10 : null,
               rank: (rank!=null) ? rank : null
@@ -2149,7 +2648,7 @@ jobs:
                 }},
               legend:{show:!!prevFull, top:0, right:0, textStyle:{color:cssVar('--text-secondary'),fontSize:11}, itemWidth:12,itemHeight:8},
               series:[
-                {name:state.year+'年', type:'bar', data:curMonthly, itemStyle:{color:palette[0], borderRadius:[3,3,0,0]}, barMaxWidth:18},
+                {name:dy+'年', type:'bar', data:curMonthly, itemStyle:{color:palette[0], borderRadius:[3,3,0,0]}, barMaxWidth:18},
                 prevFull?{name:prevYear+'年', type:'bar', data:prevMonthly, itemStyle:{color:cssVar('--muted-line'), borderRadius:[3,3,0,0]}, barMaxWidth:18}:null
               ].filter(Boolean)
             }, true);
@@ -2157,7 +2656,7 @@ jobs:
 
             // 明细表格
             var tEl = document.getElementById('drawerTable');
-            var html = '<thead><tr><th>月份</th><th>'+state.year+'年销量</th>' + (prevFull?('<th>'+prevYear+'年同月</th><th>同比</th>'):'') + '</tr></thead><tbody>';
+            var html = '<thead><tr><th>月份</th><th>'+dy+'年销量</th>' + (prevFull?('<th>'+prevYear+'年同月</th><th>同比</th>'):'') + '</tr></thead><tbody>';
             for(var i=0;i<12;i++){
               var cv = curMonthly[i], pv = prevMonthly[i];
               html += '<tr><td>'+months[i]+'</td><td>'+(cv==null?'—':formatNum(cv))+'</td>';
@@ -2238,7 +2737,8 @@ jobs:
             var el = document.getElementById('scopeBody');
             var titleEl = document.getElementById('scopeTitle');
             el.innerHTML='';
-            var filterLabel = state.year+'年 · '+energyLabel();
+            // 年视图下参照最新年份（refYear()），与 openDrawer 里其余年份口径保持一致，不用 state.year。
+            var filterLabel = refYear()+'年 · '+energyLabel();
             var parsed = parseEntityKey(key);
 
             if(parsed.gran==='model'){
@@ -2268,7 +2768,7 @@ jobs:
               titleEl.textContent = '统计范围';
               el.appendChild(buildDrillDownBtn('energy', name));
               var energyType = (name==='燃油') ? 'fuel' : 'ev';
-              var eModels = energyModels(energyType, state.year);
+              var eModels = energyModels(energyType, refYear());
               var eTotalYtd = eModels.reduce(function(s,m){return s+m.ytd;},0);
               if(eModels.length===0){
                 var eEmpty = document.createElement('div');
@@ -2290,7 +2790,7 @@ jobs:
 
             titleEl.textContent = '统计范围（' + filterLabel + '）';
             el.appendChild(buildDrillDownBtn(parsed.gran, name));
-            var models = entityModels(parsed.gran, name, state.year);
+            var models = entityModels(parsed.gran, name, refYear());
             var totalYtd = models.reduce(function(s,m){return s+m.ytd;},0);
 
             if(models.length===0){
@@ -2885,16 +3385,26 @@ jobs:
           /* ---------------- 总渲染入口 ---------------- */
           function renderAll(){
             syncControlStates();
-            var u = computeUniverse();
+            // 按月视图：computeUniverse() 依赖 state.year；按年视图：computeYearUniverse() 自己算
+            // capMonth，池子/排序都跟 state.year 无关（对象池是"YEARS 里任意一年有销量"）。
+            // 展示上限也不同：按月 Top20，按年 Top10（见需求"展示上限 10 个对象"）。
+            var u = state.viewMode==='year' ? computeYearUniverse() : computeUniverse();
             lastUniverse = u;
-            // 修正2：交给 computeShownKeys 统一算"当前展示集合"（交集为空且未主动清空时才补 Top20，
-            // 并把补的 Top20 持久化进 state.shown），不再用 state.shown.size===0 直接整体替换。
-            lastShownKeys = computeShownKeys(u);
+            // 修正2：交给 computeShownKeys 统一算"当前展示集合"（交集为空且未主动清空时才补 TopN，
+            // 并把补的 TopN 持久化进 state.shown），不再用 state.shown.size===0 直接整体替换。
+            lastShownKeys = computeShownKeys(u, state.viewMode==='year' ? 10 : 20);
             // 能源类型粒度下标题不拼 energyLabel()（能源筛选被禁用、与图上两条线的口径无关），
             // 改用 energyScopeLabel() 拼归属/车体类型；没有限定时自然省略，跟 model 粒度标题的拼接风格一致。
             var titleTail = state.gran==='energy' ? energyScopeLabel() : (ownerLabel() + ' · ' + energyLabel());
-            document.getElementById('chartTitle').textContent =
-              state.year + '年 · ' + granLabel() + titleTail + ' · 年初至今累计销量（辆）';
+            if(state.viewMode==='year'){
+              // capMonth===12（最新年份也完整）时不再有"同期"概念，标题里的同期说明一并去掉。
+              var periodNote = u.capMonth===12 ? '' : ('（最新年份 '+u.latestYear+' 同期至 '+u.capMonth+' 月）');
+              document.getElementById('chartTitle').textContent =
+                granLabel() + titleTail + ' · ' + YEARS[0] + '–' + u.latestYear + '年 按年对比' + periodNote;
+            } else {
+              document.getElementById('chartTitle').textContent =
+                state.year + '年 · ' + granLabel() + titleTail + ' · 年初至今累计销量（辆）';
+            }
             renderChart(u);
             renderLegend(u);
             if(state.tableView) renderTable(u);
