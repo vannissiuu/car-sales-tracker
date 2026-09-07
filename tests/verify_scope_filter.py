@@ -385,6 +385,109 @@ class DataOracle:
         out.sort(key=lambda m: -m["ytd"])
         return out
 
+    # ---- O/P 组新增的口径复刻：按年对比视图（年视图）----
+    # 独立复刻页面 computeYearUniverse() + currentDim()/filteredModelIndices() 的口径。
+    # capMonth 完全从 nMonths 推导（不写死任何月份数字），跟页面"capMonth 完全由数据推导"
+    # 的设计意图保持独立对照。
+
+    def years_list(self):
+        """独立算出 YEARS（页面用 META.years.slice().sort()）：优先用 META.years（若存在），
+        否则用 nMonths 反推——两条路径互为交叉验证，META 缺失时也不至于整组用例全挂。"""
+        ys = sorted(self.meta.get("years", []) or [])
+        if ys:
+            return ys
+        n_full_years = (self.n_months + 11) // 12
+        return [2024 + i for i in range(n_full_years)]
+
+    def year_dim_entities(self, gran, manu_name=None, brand_name=None, body_type_idx=None):
+        """复刻 currentDim()：gran='manu'/'brand' 直接用对应维度全集；gran='model' 按
+        车体类型/归属过滤车型池（复用 _filtered_model_indices，跟月视图口径同一份判断逻辑）。
+        返回 [(name, fArr, eArr), ...]。"""
+        if gran in ("manu", "brand"):
+            dim = self.raw[gran]
+            return list(zip(dim["n"], dim["f"], dim["e"]))
+        if gran == "model":
+            idxs = self._filtered_model_indices(body_type_idx, manu_name, brand_name)
+            m = self.raw["model"]
+            return [(m["n"][i], m["f"][i], m["e"][i]) for i in idxs]
+        raise ValueError("year_dim_entities: 不支持的 gran=%r" % gran)
+
+    def year_universe(self, gran, manu_name=None, brand_name=None, body_type_idx=None):
+        """独立复刻 computeYearUniverse()：完整年份(lastMonthOfYear(y)===12)用全年合计
+        (full)，最新且不完整的年份用 1..capMonth 同期合计(samePeriod)当柱高(barVal)；
+        同期值(samePeriod)对每一年都算，供参考线/同比使用；剔除三年都没有销量(anySales=False)
+        的对象；按最新年份同期值降序排序（Python list.sort 是稳定排序，边界情况下的并列顺序
+        跟 JS Array.prototype.sort(ES2019 起保证稳定) 一致）。
+        返回 {entities:[{name,perYear:{year:{complete,full,samePeriod,barVal}},ytd,rank}],
+              years, latest_year, cap_month}"""
+        years = self.years_list()
+        latest_year = years[-1]
+        cap_month = self.last_month_of_year(latest_year)
+        raw_entities = self.year_dim_entities(gran, manu_name, brand_name, body_type_idx)
+        out = []
+        for name, f, e in raw_entities:
+            per_year = {}
+            any_sales = False
+            for y in years:
+                complete = (self.last_month_of_year(y) == 12)
+                full = self.ytd(f, e, y, 12, "all") if complete else None
+                same_period = self.ytd(f, e, y, cap_month, "all") if cap_month > 0 else 0
+                bar_val = full if complete else same_period
+                if bar_val and bar_val > 0:
+                    any_sales = True
+                per_year[y] = {"complete": complete, "full": full,
+                                "samePeriod": same_period, "barVal": bar_val}
+            if not any_sales:
+                continue
+            out.append({"name": name, "perYear": per_year,
+                        "ytd": per_year[latest_year]["samePeriod"]})
+        out.sort(key=lambda ent: -ent["ytd"])
+        for idx, ent in enumerate(out):
+            ent["rank"] = idx + 1
+        return {"entities": out, "years": years, "latest_year": latest_year, "cap_month": cap_month}
+
+    def year_tooltip_expected(self, gran, name, year, manu_name=None, brand_name=None,
+                               body_type_idx=None):
+        """独立复刻 yearTooltipLines()：给定过滤条件 + 对象名 + 悬浮的具体年份，
+        算出 tooltip 应该显示的完整文本（用 \\n 连接，对应 DOM 里 <br/> 展开成的 innerText
+        换行），供跟真实 tooltip DOM 文本逐字比对。找不到对象或年份不在池子里时返回 None。"""
+        yu = self.year_universe(gran, manu_name, brand_name, body_type_idx)
+        years = yu["years"]
+        cap_month = yu["cap_month"]
+        ent = next((e for e in yu["entities"] if e["name"] == name), None)
+        if ent is None or year not in ent["perYear"]:
+            return None
+        py = ent["perYear"]
+        d = py[year]
+        idx = years.index(year)
+        prev_year = years[idx - 1] if idx > 0 else None
+        has_prev = prev_year is not None
+        prev_same_period = py[prev_year]["samePeriod"] if has_prev else None
+        if not (d["barVal"] and d["barVal"] > 0):
+            return name + " · " + str(year) + "年\n该年无销量"
+        caliber = "全年" if d["complete"] else ("1–%d月" % cap_month)
+        lines = [name + " · " + str(year) + "年 · " + caliber]
+        lines.append(caliber + "值：" + _fmt_num_cn(d["barVal"]))
+        if d["complete"] and cap_month < 12:
+            lines.append("1–%d月同期值：%s" % (cap_month, _fmt_num_cn(d["samePeriod"])))
+        if not has_prev:
+            lines.append("同期同比：无上年同期数据")
+        elif prev_same_period and prev_same_period > 0:
+            pct = (d["samePeriod"] - prev_same_period) / prev_same_period * 100
+            sign = "+" if pct >= 0 else ""
+            lines.append("同期同比：%s%.1f%%" % (sign, pct))
+        elif d["samePeriod"] and d["samePeriod"] > 0:
+            lines.append("同期同比：新增")
+        else:
+            lines.append("同期同比：—")
+        return "\n".join(lines)
+
+
+def _fmt_num_cn(v):
+    """独立复刻页面 formatNum()：Math.round(v).toLocaleString('zh-CN') —— 对整数销量数据
+    而言就是千分位逗号分隔（zh-CN/en-US 在 Chromium 里数字分组是同一套西式逗号）。"""
+    return format(int(round(v)), ",")
+
 
 # ============================================================
 # Playwright DOM 辅助函数
@@ -3095,6 +3198,939 @@ def run_group_N(page, shots_dir, oracle):
     safe_run("N13", "其他聚合线口径自洽（能源粒度）", n13)
 
 
+# ============================================================
+# O/P 组专用辅助：canvas 绘制捕获 + 年视图坐标换算 + tooltip 悬浮
+# ============================================================
+# 年视图分组柱是单个 ECharts `custom` series，renderItem 自己拿 api.coord()/api.size()
+# 手工画 rect/line——getOption() 只能拿到配置(renderItem 是个函数)，拿不到最终画了什么、
+# 用了什么颜色/透明度/线型。要验证"颜色按年份/参考线/虚线开口"这些视觉规则，只能从
+# canvas 的真实绘制调用下手：monkey-patch CanvasRenderingContext2D 的
+# rect/fill/stroke/setLineDash，在渲染瞬间把每次调用的关键状态记下来。
+# 已用 /tmp/p2-chart/docs/index.html 实测验证：柱子矩形是 ctx.rect(x,y,w,h) 紧接
+# ctx.fill()（fillStyle/globalAlpha 在调用时已经是这次绘制的真实值）；参考线/虚线开口是
+# ctx.stroke()（虚线额外有 ctx.setLineDash([4,3]) 后紧跟 stroke，随后 setLineDash([]) 复位）。
+
+_DRAW_CAPTURE_INSTALL_JS = """
+() => {
+  if (window.__drawPatched) return;
+  window.__drawPatched = true;
+  window.__draws = {bars: [], strokes: [], dashes: []};
+  window.__lastRect = null;
+  const proto = CanvasRenderingContext2D.prototype;
+  const origRect = proto.rect;
+  proto.rect = function(x, y, w, h){
+    window.__lastRect = {x: x, y: y, w: w, h: h};
+    return origRect.apply(this, arguments);
+  };
+  const origFill = proto.fill;
+  proto.fill = function(){
+    window.__draws.bars.push({fillStyle: this.fillStyle, globalAlpha: this.globalAlpha, rect: window.__lastRect});
+    window.__lastRect = null;
+    return origFill.apply(this, arguments);
+  };
+  const origStroke = proto.stroke;
+  proto.stroke = function(){
+    window.__draws.strokes.push({strokeStyle: this.strokeStyle, lineWidth: this.lineWidth, globalAlpha: this.globalAlpha});
+    return origStroke.apply(this, arguments);
+  };
+  const origSetLineDash = proto.setLineDash;
+  proto.setLineDash = function(arr){
+    if (arr && arr.length) { window.__draws.dashes.push(arr.slice()); }
+    return origSetLineDash.apply(this, arguments);
+  };
+}
+"""
+
+
+def install_draw_capture(page):
+    """monkey-patch canvas 绘制方法，捕获年视图 custom series 的真实绘制调用。
+    幂等：同一个 page 上重复调用不会重复打补丁（否则 orig* 会互相嵌套导致重复计数）。"""
+    page.evaluate(_DRAW_CAPTURE_INSTALL_JS)
+
+
+def reset_draw_capture(page):
+    """清空捕获缓冲区。调用时机：装好补丁之后、触发那次要观测的重绘之前——
+    这样缓冲区里只有这一次重绘产生的调用，不会被之前无关操作的绘制混进来。"""
+    page.evaluate("() => { window.__draws = {bars: [], strokes: [], dashes: []}; window.__lastRect = null; }")
+
+
+def get_draws(page):
+    return page.evaluate("() => window.__draws")
+
+
+def get_css_var(page, name):
+    return page.evaluate(
+        "(n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim()", name
+    )
+
+
+def get_chart_option_bits(page):
+    """读取当前 echarts option 里 xAxis[0].data / yAxis[0].max / series 概览(id/name)。
+    年视图(单个 id='__yearSeries__' 的 custom series)和月视图都能用；O 组主要用它读
+    横轴类目(=对象名)顺序，比 get_echarts_series() 多读 xAxis/yAxis。"""
+    if q(page, "#chart") is None:
+        return None
+    return page.evaluate(
+        """() => {
+            try {
+                const dom = document.getElementById('chart');
+                if (typeof echarts === 'undefined') return {__error__: 'echarts undefined'};
+                const inst = echarts.getInstanceByDom(dom);
+                if (!inst) return {__error__: 'no echarts instance'};
+                const opt = inst.getOption();
+                return {
+                    xAxisData: (opt.xAxis && opt.xAxis[0]) ? opt.xAxis[0].data : null,
+                    yAxisMax: (opt.yAxis && opt.yAxis[0]) ? opt.yAxis[0].max : null,
+                    series: (opt.series||[]).map(s => ({id: s.id, name: s.name}))
+                };
+            } catch (e) { return {__error__: String(e)}; }
+        }"""
+    )
+
+
+def bar_value_scale(page, cat_index=0):
+    """返回"每像素高度对应多少数据值"的换算比例：value = rect.h(像素) * scale。
+    用 echarts 自己的 convertToPixel() 在同一个 catIndex 下取 (值=0) 与 (值=yAxisMax)
+    两个像素点反推比例尺，回避手写 grid/containLabel 布局算法——那是实现细节，
+    容易跟真实渲染的四舍五入误差对不上，交给 echarts 自己换算最可靠。"""
+    data = page.evaluate(
+        """(catIndex) => {
+            const inst = echarts.getInstanceByDom(document.getElementById('chart'));
+            const opt = inst.getOption();
+            const yMax = opt.yAxis[0].max;
+            const p0 = inst.convertToPixel({xAxisIndex:0, yAxisIndex:0}, [catIndex, 0]);
+            const pMax = inst.convertToPixel({xAxisIndex:0, yAxisIndex:0}, [catIndex, yMax]);
+            return {yBase: p0[1], yMaxPixel: pMax[1], yAxisMax: yMax};
+        }""",
+        cat_index
+    )
+    denom = (data["yBase"] - data["yMaxPixel"])
+    if not denom:
+        return 0
+    return data["yAxisMax"] / denom
+
+
+_DRAWS_AND_SCALE_JS = """
+(catIndex) => {
+    const inst = echarts.getInstanceByDom(document.getElementById('chart'));
+    let scale = null;
+    try {
+        const opt = inst.getOption();
+        const yMax = (opt.yAxis && opt.yAxis[0]) ? opt.yAxis[0].max : null;
+        if (yMax != null) {
+            const p0 = inst.convertToPixel({xAxisIndex:0, yAxisIndex:0}, [catIndex, 0]);
+            const pMax = inst.convertToPixel({xAxisIndex:0, yAxisIndex:0}, [catIndex, yMax]);
+            if (p0 && pMax && (p0[1]-pMax[1])) scale = yMax/(p0[1]-pMax[1]);
+        }
+    } catch(e) {}
+    return {draws: window.__draws, scale: scale};
+}
+"""
+
+
+def get_stable_draws_and_scale(page, cat_index=0, min_gap_ms=120, max_wait_ms=1500):
+    """年视图的柱子更新有过渡动画，尤其是"已经在年视图里、再切一次新的年视图渲染"这种更新
+    场景（而不是第一次从月视图进入的appear动画），实测比固定等待更容易踩到动画还没结束的
+    中间帧。这里改成轮询到"连续两次读到的绘制调用总数不再增长"为止再返回；并且把柱子矩形
+    数据(draws)和"像素->数值"换算比例(scale)放在同一次 page.evaluate 里原子读出，避免
+    两次分开的 evaluate 调用之间容器发生二次布局/resize，导致 draws 和 scale 各自反映了
+    不同时刻的画布尺寸而对不上（这正是 O2 早期版本偶发数值对不上的根因）。"""
+    elapsed = 0
+    prev_counts = None
+    result = None
+    while elapsed <= max_wait_ms:
+        result = page.evaluate(_DRAWS_AND_SCALE_JS, cat_index)
+        d = result["draws"]
+        counts = (len(d["bars"]), len(d["strokes"]), len(d["dashes"]))
+        if counts == prev_counts and counts[0] > 0:
+            return result
+        prev_counts = counts
+        page.wait_for_timeout(min_gap_ms)
+        elapsed += min_gap_ms
+    return result
+
+
+# renderItem 里的分组柱布局常量（categoryGap/seriesCount/barGapRatio），照抄自
+# docs/index.html 的 makeYearRenderItem()，只用来把鼠标精确移到某一根柱子的中心，
+# 不是复刻业务口径，因此允许照抄字面值（这几个数字本身就是布局实现细节，不是"数据"）。
+_YEAR_HOVER_JS = """
+(args) => {
+    const inst = echarts.getInstanceByDom(document.getElementById('chart'));
+    if(!inst) return {error:'no instance'};
+    const catIndex = args.catIndex, seriesIdx = args.seriesIdx;
+    const p0 = inst.convertToPixel({xAxisIndex:0, yAxisIndex:0}, [0, 0]);
+    const p1 = inst.convertToPixel({xAxisIndex:0, yAxisIndex:0}, [1, 0]);
+    const categoryGap = 0.28, seriesCount = 3, barGapRatio = 0.18;
+    const basePt = inst.convertToPixel({xAxisIndex:0, yAxisIndex:0}, [catIndex, 0]);
+    let barCenterX = basePt[0];
+    if (p1 && Number.isFinite(p1[0])) {
+        const bandWidth = p1[0] - p0[0];
+        const usableWidth = bandWidth * (1 - categoryGap);
+        const step = usableWidth / seriesCount;
+        const barWidth = step * (1 - barGapRatio);
+        const groupLeft = basePt[0] - usableWidth / 2;
+        const barLeft = groupLeft + seriesIdx * step + (step - barWidth) / 2;
+        barCenterX = barLeft + barWidth / 2;
+    }
+    const topPt = inst.convertToPixel({xAxisIndex:0, yAxisIndex:0}, [catIndex, args.targetVal]);
+    return {x: barCenterX, y: topPt[1]};
+}
+"""
+
+
+def get_year_tooltip_dom_text(page):
+    """年视图 tooltip 是 echarts 内置 tooltip，实测挂在 #chart 容器内部（不是全局 body 下
+    一个独立 class 的元素），从 #chart 里找"文本非空的最深一层 div"即可定位到它。"""
+    return page.evaluate("""() => {
+        const chart = document.getElementById('chart');
+        if(!chart) return null;
+        const divs = Array.from(chart.querySelectorAll('div'));
+        let best = null;
+        divs.forEach(function(d){ if(d.innerText && d.innerText.trim().length>0){ best = d; } });
+        return best ? best.innerText : null;
+    }""")
+
+
+def hover_year_tooltip(page, cat_index, series_idx, value, frac=0.15):
+    """悬浮年视图第 cat_index 个横轴类目、第 series_idx 个年份(0=最早)对应的柱子，返回
+    tooltip 文本。value 是调用方用 Oracle 独立算出的该柱真实柱高，frac 取一小部分保证
+    落点在 0~柱高之间、稳稳落在矩形内部（不需要精确落在正中）。"""
+    canvas_rect = page.eval_on_selector(
+        "#chart canvas",
+        "el => { const r = el.getBoundingClientRect(); return {left:r.left, top:r.top}; }"
+    )
+    if canvas_rect is None:
+        return None
+    pt = page.evaluate(_YEAR_HOVER_JS, {"catIndex": cat_index, "seriesIdx": series_idx,
+                                          "targetVal": value * frac})
+    if not pt or pt.get("error"):
+        return None
+    mx = canvas_rect["left"] + pt["x"]
+    my = canvas_rect["top"] + pt["y"]
+    # 先移到旁边再移回目标点，制造一次真实的坐标变化，确保 mousemove 处理器必然触发一次。
+    page.mouse.move(max(mx - 40, canvas_rect["left"] + 1), my, steps=2)
+    page.wait_for_timeout(60)
+    page.mouse.move(mx, my, steps=3)
+    page.wait_for_timeout(220)
+    return get_year_tooltip_dom_text(page)
+
+
+def is_year_view(page):
+    """viewModeBtn 文案是"点了会切到哪个视图"：年视图下显示"按月累计"。"""
+    txt = (inner_text_or_none(page, "#viewModeBtn") or "").strip()
+    return txt == "按月累计"
+
+
+def enter_year_view(page):
+    if not is_year_view(page):
+        btn = q(page, "#viewModeBtn")
+        if btn is not None:
+            btn.click()
+            page.wait_for_timeout(300)
+
+
+def enter_month_view(page):
+    if is_year_view(page):
+        btn = q(page, "#viewModeBtn")
+        if btn is not None:
+            btn.click()
+            page.wait_for_timeout(300)
+
+
+def download_csv_via_ui(page):
+    """跟 K 组 `_download_csv` 同构的独立实现（K 组那份是局部函数，跨函数不可复用，
+    这里为 O16 单独复制一份，保持行为一致：确保处于表格视图后点下载，读文件名+内容，
+    结束时把表格视图开关还原成调用前的状态）。"""
+    btn = q(page, "#tableToggleBtn")
+    dl_btn = q(page, "#downloadCsvBtn")
+    if btn is None or dl_btn is None:
+        return None, None, "找不到 #tableToggleBtn 或 #downloadCsvBtn"
+    btn_text = inner_text_or_none(page, "#tableToggleBtn") or ""
+    is_table = ("图表视图" in btn_text)
+    if not is_table:
+        btn.click()
+        page.wait_for_timeout(300)
+    try:
+        with page.expect_download(timeout=5000) as dl_info:
+            dl_btn.click()
+        download = dl_info.value
+        path = download.path()
+        text = None
+        if path:
+            with open(path, "r", encoding="utf-8-sig") as f:
+                text = f.read()
+        fname = download.suggested_filename
+        return fname, text, None
+    except Exception as e:
+        return None, None, str(e)
+    finally:
+        if not is_table:
+            try:
+                btn.click()
+                page.wait_for_timeout(150)
+            except Exception:
+                pass
+
+
+# ============================================================
+# O 组 · 按年对比视图
+# ============================================================
+
+def run_group_O(page, shots_dir, oracle):
+    # 防御性预处理：N 组的最后一条用例(N13)刻意把粒度停在"能源类型"、能源筛选停在"新能源"
+    # ——那是 N13 自己场景收尾时的状态，N 组历史上一直是最后一组，不需要为"下一组"复位。
+    # O 组新增在它后面，且下面每一条用例的 Oracle 核对都假定"能源=全部"，所以必须自己先把
+    # 地基摆正，不能依赖前一组测试跑完后碰巧留下什么状态。先切粒度出"能源类型"（否则能源
+    # chip 是禁用的，点了也没用），再把能源筛选拨回"全部"。
+    set_gran(page, "manu")
+    page.wait_for_timeout(100)
+    set_energy(page, "all")
+    page.wait_for_timeout(100)
+
+    def o1():
+        enter_month_view(page)
+        btn = q(page, "#viewModeBtn")
+        if btn is None:
+            R.record("O1", "进入年视图", "FAIL", detail="找不到 #viewModeBtn")
+            return
+        text_before = inner_text_or_none(page, "#viewModeBtn") or ""
+        btn.click()
+        page.wait_for_timeout(300)
+        text_after = inner_text_or_none(page, "#viewModeBtn") or ""
+        bits = get_chart_option_bits(page) or {}
+        xdata = bits.get("xAxisData")
+        has_year_pattern = isinstance(xdata, list) and any(re.search(r"20\d\d", str(x)) for x in xdata)
+        shot(page, shots_dir, "O1_enter_year_view")
+        ok = (text_before == "按年对比" and text_after == "按月累计"
+              and isinstance(xdata, list) and len(xdata) > 0 and not has_year_pattern)
+        R.record("O1", "进入年视图：按钮文案从“按年对比”变成“按月累计”，xAxis[0].data是对象名"
+                 "（不含形如20XX的年份字符串）",
+                 "PASS" if ok else "FAIL",
+                 expected="切换前='按年对比'，切换后='按月累计'；xAxis类目非空且不含年份片段",
+                 actual=f"切换前='{text_before}'，切换后='{text_after}'；xAxis类目={xdata}")
+    safe_run("O1", "进入年视图", o1)
+
+    def o2():
+        set_gran(page, "manu")
+        enter_month_view(page)
+        clear_btn = q(page, "#clearBtn")
+        if clear_btn is None:
+            R.record("O2", "单对象数值", "FAIL", detail="找不到 #clearBtn")
+            return
+        clear_btn.click()
+        page.wait_for_timeout(150)
+        try:
+            click_legend_checkbox_by_exact_name(page, "广汽本田")
+        except AssertionError as e:
+            R.record("O2", "单对象数值", "FAIL", detail=str(e))
+            return
+        install_draw_capture(page)
+        reset_draw_capture(page)
+        enter_year_view(page)
+        rs = get_stable_draws_and_scale(page)
+        draws = rs["draws"]
+        scale = rs["scale"] or 0
+        bar_color = get_css_var(page, "--series-1")
+        bars = [b for b in draws["bars"] if b["fillStyle"] == bar_color and b.get("rect")]
+        bars.sort(key=lambda b: b["rect"]["x"])
+        actual_values = [b["rect"]["h"] * scale for b in bars]
+        yu = oracle.year_universe("manu")
+        ent = next((e for e in yu["entities"] if e["name"] == "广汽本田"), None)
+        if ent is None:
+            R.record("O2", "单对象数值", "FAIL", detail="Oracle 里找不到广汽本田（anySales 过滤异常？）")
+            return
+        expected_values = [ent["perYear"][y]["barVal"] for y in yu["years"]]
+        shot(page, shots_dir, "O2_single_object_values")
+        ok = (len(actual_values) == 3
+              and all(abs(a - e) < 1.0 for a, e in zip(actual_values, expected_values)))
+        R.record("O2", "单对象数值：只勾选“广汽本田”，2024/2025/2026三根柱高度(从canvas矩形高度反推)"
+                 "跟Oracle独立复算的YTD/同期值逐一相等",
+                 "PASS" if ok else "FAIL",
+                 expected=f"{expected_values}",
+                 actual=f"{actual_values}（捕获柱子数={len(bars)}）")
+    safe_run("O2", "单对象数值", o2)
+
+    def o3():
+        set_gran(page, "model")
+        enter_month_view(page)
+        set_select_maybe(page, "#ownerSelect", "manu:广汽本田")
+        page.wait_for_timeout(150)
+        enter_year_view(page)
+        bits = get_chart_option_bits(page) or {}
+        xdata = bits.get("xAxisData")
+        yu = oracle.year_universe("model", manu_name="广汽本田")
+        expected_order_full = [e["name"] for e in yu["entities"]]
+        n = len(xdata) if isinstance(xdata, list) else 0
+        expected_order = expected_order_full[:n]
+        shot(page, shots_dir, "O3_xaxis_order")
+        ok = (n > 0 and xdata == expected_order)
+        R.record("O3", "横轴排序：车型粒度+归属=广汽本田，xAxis[0].data顺序==Oracle独立算出的"
+                 "“按最新年份同期值降序”顺序",
+                 "PASS" if ok else "FAIL",
+                 expected=f"{expected_order}",
+                 actual=f"{xdata}")
+        set_select_maybe(page, "#ownerSelect", "all")
+    safe_run("O3", "横轴排序", o3)
+
+    def o4():
+        set_gran(page, "manu")
+        enter_month_view(page)
+        reset_btn = q(page, "#resetBtn")
+        if reset_btn is not None:
+            reset_btn.click()
+            page.wait_for_timeout(150)
+        install_draw_capture(page)
+        reset_draw_capture(page)
+        enter_year_view(page)
+        rs = get_stable_draws_and_scale(page)
+        draws = rs["draws"]
+        bar_color = get_css_var(page, "--series-1")
+        bars = [b for b in draws["bars"] if b["fillStyle"] == bar_color]
+        alphas = sorted(set(round(b["globalAlpha"], 3) for b in bars))
+        shown_names = legend_checked_names(page) or []
+        yu = oracle.year_universe("manu")
+        expected_bar_count = 0
+        for name in shown_names:
+            ent = next((e for e in yu["entities"] if e["name"] == name), None)
+            if ent is None:
+                continue
+            for y in yu["years"]:
+                v = ent["perYear"][y]["barVal"]
+                if v and v > 0:
+                    expected_bar_count += 1
+        strictly_increasing = (len(alphas) == 3 and alphas[0] < alphas[1] < alphas[2])
+        shot(page, shots_dir, "O4_color_by_year")
+        ok = (len(bars) > 0 and len(bars) == expected_bar_count and strictly_increasing)
+        R.record("O4", "颜色按年份：真实柱矩形的fillStyle只有一种色相(--series-1)，"
+                 "对应3档严格单调递增的不透明度；柱子总数==Oracle算出的非零格子数",
+                 "PASS" if ok else "FAIL",
+                 expected=f"柱子数={expected_bar_count}，alpha={{3个值，严格递增}}",
+                 actual=f"柱子数={len(bars)}，alpha取值={alphas}")
+    safe_run("O4", "颜色按年份", o4)
+
+    def o5():
+        set_gran(page, "manu")
+        enter_month_view(page)
+        reset_btn = q(page, "#resetBtn")
+        if reset_btn is not None:
+            reset_btn.click()
+            page.wait_for_timeout(150)
+        install_draw_capture(page)
+        reset_draw_capture(page)
+        enter_year_view(page)
+        rs = get_stable_draws_and_scale(page)
+        draws = rs["draws"]
+        ref_color = get_css_var(page, "--text-primary")
+        ref_lines = [s for s in draws["strokes"] if abs(s["lineWidth"] - 2.5) < 0.05]
+        shown_names = legend_checked_names(page) or []
+        yu = oracle.year_universe("manu")
+        complete_years = [y for y in yu["years"] if oracle.last_month_of_year(y) == 12]
+        expected = 0
+        for name in shown_names:
+            ent = next((e for e in yu["entities"] if e["name"] == name), None)
+            if ent is None:
+                continue
+            for y in complete_years:
+                v = ent["perYear"][y]["barVal"]
+                if v and v > 0:
+                    expected += 1
+        same_color = all(s["strokeStyle"] == ref_color for s in ref_lines)
+        shot(page, shots_dir, "O5_reference_lines")
+        ok = (expected > 0 and len(ref_lines) == expected and same_color)
+        R.record("O5", "参考线：只在完整年份的柱内出现(lineWidth=2.5,颜色=--text-primary)，"
+                 "条数==Oracle独立算出的“展示对象数×完整年份数(剔除该年零销量)”；"
+                 "最新不完整年份没有参考线（隐含在总数相等这条断言里——多出的会被计入差异）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"条数={expected}，颜色={ref_color}",
+                 actual=f"条数={len(ref_lines)}，颜色集合={sorted(set(s['strokeStyle'] for s in ref_lines))}")
+    safe_run("O5", "参考线", o5)
+
+    def o6():
+        set_gran(page, "manu")
+        enter_month_view(page)
+        reset_btn = q(page, "#resetBtn")
+        if reset_btn is not None:
+            reset_btn.click()
+            page.wait_for_timeout(150)
+        install_draw_capture(page)
+        reset_draw_capture(page)
+        enter_year_view(page)
+        rs = get_stable_draws_and_scale(page)
+        draws = rs["draws"]
+        shown_names = legend_checked_names(page) or []
+        yu = oracle.year_universe("manu")
+        latest_year = yu["years"][-1]
+        expected = 0
+        for name in shown_names:
+            ent = next((e for e in yu["entities"] if e["name"] == name), None)
+            if ent is None:
+                continue
+            v = ent["perYear"][latest_year]["barVal"]
+            if v and v > 0:
+                expected += 1
+        actual = len(draws["dashes"])
+        shot(page, shots_dir, "O6_dashed_open_top")
+        ok = (expected > 0 and actual == expected)
+        R.record("O6", "虚线开口：只在最新(不完整)年份的柱顶出现lineDash描边，"
+                 "条数==Oracle算出的“最新年份非零柱的展示对象数”（对象数×1）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"{expected}", actual=f"{actual}")
+    safe_run("O6", "虚线开口", o6)
+
+    def o7():
+        set_gran(page, "model")
+        enter_month_view(page)
+        set_select_maybe(page, "#ownerSelect", "manu:广汽本田")
+        page.wait_for_timeout(150)
+        clear_btn = q(page, "#clearBtn")
+        if clear_btn is not None:
+            clear_btn.click()
+            page.wait_for_timeout(150)
+        # 清除勾选会把 owner 归零，需要重新设置一次
+        set_select_maybe(page, "#ownerSelect", "manu:广汽本田")
+        page.wait_for_timeout(150)
+        try:
+            click_legend_checkbox_by_exact_name(page, "广汽本田P7")
+            click_legend_checkbox_by_exact_name(page, "雅阁")
+        except AssertionError as e:
+            R.record("O7", "零值柱不画", "FAIL", detail=str(e))
+            set_select_maybe(page, "#ownerSelect", "all")
+            return
+        install_draw_capture(page)
+        reset_draw_capture(page)
+        enter_year_view(page)
+        rs = get_stable_draws_and_scale(page)
+        draws = rs["draws"]
+        bar_color = get_css_var(page, "--series-1")
+        real_bars = [b for b in draws["bars"] if b["fillStyle"] == bar_color]
+        yu = oracle.year_universe("model", manu_name="广汽本田")
+        expected = 0
+        zero_cells = 0
+        for name in ("广汽本田P7", "雅阁"):
+            ent = next((e for e in yu["entities"] if e["name"] == name), None)
+            if ent is None:
+                continue
+            for y in yu["years"]:
+                v = ent["perYear"][y]["barVal"]
+                if v and v > 0:
+                    expected += 1
+                else:
+                    zero_cells += 1
+        shot(page, shots_dir, "O7_zero_bar_skipped")
+        ok = (zero_cells > 0 and len(real_bars) == expected)
+        R.record("O7", "零值柱不画：广汽本田P7(2024年=0)+雅阁(三年都>0)，实心柱数=="
+                 "Oracle算出的“对象数×3－零值格子数”",
+                 "PASS" if ok else "FAIL",
+                 expected=f"{expected}（零值格子数={zero_cells}）",
+                 actual=f"{len(real_bars)}")
+        set_select_maybe(page, "#ownerSelect", "all")
+    safe_run("O7", "零值柱不画", o7)
+
+    def o8():
+        set_gran(page, "manu")
+        enter_month_view(page)
+        set_year(page, 2024)
+        page.wait_for_timeout(150)
+        enter_year_view(page)
+        chips = qa(page, "#yearChips .chip") or []
+        disabled_flags = [("disabled" in (c.get_attribute("class") or "")) for c in chips]
+        hint_visible = is_visible(page, "#yearDisabledHint")
+        enter_month_view(page)
+        active = q(page, "#yearChips .chip.active")
+        year_after = active.get_attribute("data-year") if active is not None else None
+        shot(page, shots_dir, "O8_year_chip_disabled")
+        ok = (len(chips) == 3 and len(disabled_flags) == 3 and all(disabled_flags)
+              and hint_visible and year_after == "2024")
+        R.record("O8", "年份chip禁用且不改state：进年视图前选2024→年视图下3个年份chip都带"
+                 ".disabled+#yearDisabledHint可见→切回月视图仍选中2024（证明state.year没被年视图改动）",
+                 "PASS" if ok else "FAIL",
+                 expected="3个chip都disabled，提示可见；切回后仍选中2024",
+                 actual=f"disabled标记={disabled_flags}，提示可见={hint_visible}，切回后选中={year_after}")
+    safe_run("O8", "年份chip禁用且不改state", o8)
+
+    def o9():
+        set_gran(page, "manu")
+        enter_year_view(page)
+        cls = page.eval_on_selector("#modeSwitch", "el => el.className") or ""
+        hint_visible = is_visible(page, "#stackedDisabledHint")
+        pointer_events = page.eval_on_selector("#modeSwitch", "el => getComputedStyle(el).pointerEvents")
+        shot(page, shots_dir, "O9_stacked_disabled")
+        ok = ("disabled" in cls) and hint_visible and (pointer_events == "none")
+        R.record("O9", "堆积面积开关禁用：年视图下#modeSwitch带.disabled且computed "
+                 "pointer-events:none，#stackedDisabledHint可见",
+                 "PASS" if ok else "FAIL",
+                 expected="modeSwitch有.disabled且pointer-events:none；提示可见",
+                 actual=f"class='{cls}'，pointer-events='{pointer_events}'，提示可见={hint_visible}")
+    safe_run("O9", "堆积开关禁用", o9)
+
+    def o10():
+        set_gran(page, "manu")
+        enter_year_view(page)
+        txt = inner_text_or_none(page, "#yearLegend") or ""
+        visible = is_visible(page, "#yearLegend")
+        years = oracle.years_list()
+        latest_year = years[-1]
+        cap = oracle.last_month_of_year(latest_year)
+        expected_lines = []
+        for y in years:
+            if cap == 12 or oracle.last_month_of_year(y) == 12:
+                expected_lines.append(f"{y} 全年")
+            else:
+                expected_lines.append(f"{y} 1–{cap}月")
+        actual_lines = [ln.strip() for ln in txt.split("\n") if ln.strip()]
+        shot(page, shots_dir, "O10_year_legend_caliber")
+        ok = visible and actual_lines == expected_lines
+        R.record("O10", "年份图例带口径：#yearLegend文本==Oracle独立算出的口径"
+                 "（全年 / 1–capMonth月，capMonth从数据推导，不写死7）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"{expected_lines}",
+                 actual=f"{actual_lines}（可见={visible}）")
+    safe_run("O10", "年份图例带口径", o10)
+
+    def o11():
+        set_gran(page, "manu")
+        enter_year_view(page)
+        dots_hidden = page.eval_on_selector_all("#legendList .dot", "els => els.map(e => e.hidden)")
+        enter_month_view(page)
+        dots_after = page.eval_on_selector_all("#legendList .dot", "els => els.map(e => e.hidden)")
+        shot(page, shots_dir, "O11_dot_hidden")
+        ok = (len(dots_hidden) > 0 and all(dots_hidden)
+              and len(dots_after) > 0 and not any(dots_after))
+        R.record("O11", "图例圆点隐藏：年视图下#legendList里所有.dot的hidden===true，"
+                 "切回月视图后全部恢复hidden===false",
+                 "PASS" if ok else "FAIL",
+                 expected="年视图: 全部True；月视图: 全部False",
+                 actual=f"年视图dots={dots_hidden}，月视图dots={dots_after}")
+    safe_run("O11", "图例圆点隐藏", o11)
+
+    def o12():
+        set_gran(page, "manu")
+        enter_month_view(page)
+        m_vis1 = is_visible(page, "#footnoteMonth")
+        y_vis1 = is_visible(page, "#footnoteYear")
+        enter_year_view(page)
+        m_vis2 = is_visible(page, "#footnoteMonth")
+        y_vis2 = is_visible(page, "#footnoteYear")
+        shot(page, shots_dir, "O12_footnote_switch")
+        ok = m_vis1 and (not y_vis1) and (not m_vis2) and y_vis2
+        R.record("O12", "脚注按视图切换：月视图#footnoteMonth可见/#footnoteYear隐藏，年视图相反",
+                 "PASS" if ok else "FAIL",
+                 expected="月视图=(可见,隐藏)，年视图=(隐藏,可见)",
+                 actual=f"月视图=({m_vis1},{y_vis1})，年视图=({m_vis2},{y_vis2})")
+    safe_run("O12", "脚注按视图切换", o12)
+
+    def o13():
+        set_gran(page, "manu")
+        enter_month_view(page)
+        txt_m = inner_text_or_none(page, "#resetBtn") or ""
+        enter_year_view(page)
+        txt_y = inner_text_or_none(page, "#resetBtn") or ""
+        shot(page, shots_dir, "O13_reset_btn_label")
+        ok = (txt_m == "重置为 Top 20") and (txt_y == "重置为 Top 10")
+        R.record("O13", "重置按钮文案：月视图“重置为 Top 20”，年视图“重置为 Top 10”",
+                 "PASS" if ok else "FAIL",
+                 expected="月='重置为 Top 20'，年='重置为 Top 10'",
+                 actual=f"月='{txt_m}'，年='{txt_y}'")
+    safe_run("O13", "重置按钮文案", o13)
+
+    def o14():
+        set_gran(page, "manu")
+        enter_year_view(page)
+        reset_btn = q(page, "#resetBtn")
+        if reset_btn is None:
+            R.record("O14", "年视图默认10个", "FAIL", detail="找不到 #resetBtn")
+            return
+        reset_btn.click()
+        page.wait_for_timeout(200)
+        bits = get_chart_option_bits(page) or {}
+        xdata = bits.get("xAxisData")
+        n_pool = len(oracle.year_universe("manu")["entities"])
+        shot(page, shots_dir, "O14_year_default_top10")
+        ok = (n_pool > 10) and isinstance(xdata, list) and len(xdata) == 10
+        R.record("O14", "年视图默认10个：点“重置为 Top 10”后xAxis类目数==10（对象池>10）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"10（对象池大小={n_pool}）",
+                 actual=f"{len(xdata) if isinstance(xdata, list) else xdata}")
+    safe_run("O14", "年视图默认10个", o14)
+
+    def o15():
+        set_gran(page, "manu")
+        enter_year_view(page)
+        reset_btn = q(page, "#resetBtn")
+        if reset_btn is not None:
+            reset_btn.click()
+            page.wait_for_timeout(150)
+        other_toggle = q(page, "#otherToggle")
+        if other_toggle is None:
+            R.record("O15", "「其他」排最右", "FAIL", detail="找不到 #otherToggle")
+            return
+        if not other_toggle.is_checked():
+            other_toggle.click()
+            page.wait_for_timeout(250)
+        bits = get_chart_option_bits(page) or {}
+        xdata = bits.get("xAxisData")
+        last = xdata[-1] if isinstance(xdata, list) and xdata else None
+        shot(page, shots_dir, "O15_other_last")
+        ok = (isinstance(xdata, list) and len(xdata) == 11 and last is not None and "其他" in last)
+        if other_toggle.is_checked():
+            other_toggle.click()
+            page.wait_for_timeout(150)
+        R.record("O15", "「其他」排最右：打开“其他”聚合线开关后，xAxis[0].data最后一项含“其他”，"
+                 "长度=10+1",
+                 "PASS" if ok else "FAIL",
+                 expected="长度11，最后一项含“其他”",
+                 actual=f"{xdata}")
+    safe_run("O15", "「其他」排最右", o15)
+
+    def o16():
+        set_gran(page, "manu")
+        enter_year_view(page)
+        reset_btn = q(page, "#resetBtn")
+        if reset_btn is not None:
+            reset_btn.click()
+            page.wait_for_timeout(150)
+        ttb = q(page, "#tableToggleBtn")
+        if ttb is None:
+            R.record("O16", "表格与CSV", "FAIL", detail="找不到 #tableToggleBtn")
+            return
+        ttb.click()
+        page.wait_for_timeout(250)
+        try:
+            headers = qa(page, "#tableview table thead th") or []
+            headers_text = [h.inner_text() for h in headers]
+        except Exception as e:
+            # 表头没读到也必须先切回图表视图再 return，不然会把“表格视图/#chart隐藏”这个
+            # 状态一直留到后面的用例（O17 需要悬浮 canvas，#chart 被 display:none 就彻底找不到了）。
+            ttb2 = q(page, "#tableToggleBtn")
+            if ttb2 is not None:
+                ttb2.click()
+                page.wait_for_timeout(150)
+            enter_month_view(page)
+            R.record("O16", "表格与CSV", "FAIL", detail=f"读表头失败: {e}")
+            return
+        joined = " ".join(headers_text)
+        has_year_terms = ("同期" in joined) and ("全年" in joined)
+        has_month_cols = bool(re.search(r"\d+月累计", joined))
+        fname, text, err = download_csv_via_ui(page)
+        shot(page, shots_dir, "O16_table_csv_year")
+        csv_first_line = text.splitlines()[0] if text else ""
+        ok_csv = (fname is not None and text is not None and not err
+                  and "排名" in csv_first_line and "按年对比" in fname)
+        ok = has_year_terms and (not has_month_cols) and ok_csv
+        R.record("O16", "表格与CSV：年视图表头含各年份“同期”“全年”字样、不含“N月累计”列；"
+                 "CSV第1行是表头，文件名含“按年对比”体现年度视图",
+                 "PASS" if ok else "FAIL",
+                 expected="表头含同期/全年，不含N月累计；CSV首行含“排名”，文件名含“按年对比”",
+                 actual=f"表头={headers_text}；CSV文件名={fname}；CSV首行='{csv_first_line}'；"
+                        f"下载错误={err}")
+        # download_csv_via_ui() 内部只在“调用它之前不在表格视图”时才会把表格视图切回去；
+        # 这里是我们自己先手动切进表格视图的，它不知情也不会替我们切回来，必须自己切回图表视图
+        # ——否则会把 #chart 处于 display:none 的状态一直留给后面的用例（尤其是 O17 要悬浮 canvas）。
+        ttb3 = q(page, "#tableToggleBtn")
+        if ttb3 is not None:
+            cur_text = inner_text_or_none(page, "#tableToggleBtn") or ""
+            if "图表视图" in cur_text:  # 文案是“切换为图表视图”，说明当前仍停在表格视图
+                ttb3.click()
+                page.wait_for_timeout(150)
+        enter_month_view(page)
+    safe_run("O16", "表格与CSV", o16)
+
+    def o17():
+        set_gran(page, "manu")
+        enter_month_view(page)
+        reset_btn = q(page, "#resetBtn")
+        if reset_btn is not None:
+            reset_btn.click()
+            page.wait_for_timeout(150)
+        enter_year_view(page)
+        page.wait_for_timeout(200)
+        yu = oracle.year_universe("manu")
+        ent = next((e for e in yu["entities"] if e["name"] == "比亚迪"), None)
+        if ent is None:
+            R.record("O17", "tooltip", "FAIL", detail="Oracle 里找不到比亚迪")
+            return
+        # 比亚迪应当是同期值最高的对象，理应排在 catIndex=0；如果不是（数据变了），
+        # 直接从 xAxis 里查它实际的位置，不写死 0。
+        bits = get_chart_option_bits(page) or {}
+        xdata = bits.get("xAxisData") or []
+        if "比亚迪" not in xdata:
+            R.record("O17", "tooltip", "FAIL", detail=f"“比亚迪”不在当前展示的xAxis类目里: {xdata}")
+            return
+        cat_index = xdata.index("比亚迪")
+        years = yu["years"]
+        mismatches = []
+        for si, y in enumerate(years):
+            barval = ent["perYear"][y]["barVal"]
+            if not barval or barval <= 0:
+                continue
+            actual_txt = hover_year_tooltip(page, cat_index, si, barval)
+            expected_txt = oracle.year_tooltip_expected("manu", "比亚迪", y)
+            if (actual_txt or "").strip() != (expected_txt or "").strip():
+                mismatches.append({"year": y, "expected": expected_txt, "actual": actual_txt})
+        shot(page, shots_dir, "O17_tooltip")
+        ok = (not mismatches)
+        R.record("O17", "tooltip：悬浮比亚迪三根柱，逐条跟Oracle独立复算的yearTooltipLines文本"
+                 "逐字比对（柱高值/完整年份同期值/同期同比）",
+                 "PASS" if ok else "FAIL",
+                 expected="全部年份tooltip文本完全匹配",
+                 actual=f"不匹配={mismatches}" if mismatches else "全部匹配")
+    safe_run("O17", "tooltip", o17)
+
+
+# ============================================================
+# P 组 · 一键复位
+# ============================================================
+
+def run_group_P(page, shots_dir, console_errors, page_errors):
+    baseline_console = len(console_errors)
+    baseline_page = len(page_errors)
+
+    def snapshot():
+        year_active = q(page, "#yearChips .chip.active")
+        gran_active = q(page, "#granChips .chip.active")
+        energy_active = q(page, "#energyChips .chip.active")
+        return {
+            "year": year_active.get_attribute("data-year") if year_active is not None else None,
+            "gran": gran_active.get_attribute("data-gran") if gran_active is not None else None,
+            "energy": energy_active.get_attribute("data-energy") if energy_active is not None else None,
+            "bodyType": get_select_value(page, "#bodyTypeSelect"),
+            "owner": get_select_value(page, "#ownerSelect"),
+            "viewModeBtnText": inner_text_or_none(page, "#viewModeBtn"),
+            "search": get_input_value(page, "#legendSearch"),
+            "shownCount": len(legend_checked_names(page) or []),
+            "tableToggleBtnText": inner_text_or_none(page, "#tableToggleBtn"),
+            "chartVisible": is_visible(page, "#chart"),
+            "otherChecked": page.eval_on_selector("#otherToggle", "el => el.checked"),
+            "stackedOn": "on" in (page.eval_on_selector("#modeSwitch", "el => el.className") or ""),
+            "resetBtnText": inner_text_or_none(page, "#resetBtn"),
+        }
+
+    def p1():
+        btn = q(page, "#resetAllBtn")
+        clear_btn = q(page, "#clearBtn")
+        if btn is None or clear_btn is None:
+            R.record("P1", "按钮存在", "FAIL", detail="找不到 #resetAllBtn 或 #clearBtn")
+            return
+        txt = inner_text_or_none(page, "#resetAllBtn") or ""
+        order_ok = page.evaluate("""() => {
+            const clearBtn = document.getElementById('clearBtn');
+            const resetAllBtn = document.getElementById('resetAllBtn');
+            if(!clearBtn || !resetAllBtn) return false;
+            const pos = clearBtn.compareDocumentPosition(resetAllBtn);
+            return !!(pos & Node.DOCUMENT_POSITION_FOLLOWING);
+        }""")
+        shot(page, shots_dir, "P1_reset_all_btn")
+        ok = (txt == "一键复位") and bool(order_ok)
+        R.record("P1", "按钮存在：#resetAllBtn文案=“一键复位”，DOM顺序在#clearBtn之后",
+                 "PASS" if ok else "FAIL",
+                 expected="文案='一键复位'，位置在#clearBtn之后",
+                 actual=f"文案='{txt}'，位置在之后={order_ok}")
+    safe_run("P1", "按钮存在", p1)
+
+    def p2():
+        rab = q(page, "#resetAllBtn")
+        if rab is None:
+            R.record("P2", "全量复位", "FAIL", detail="找不到 #resetAllBtn")
+            return
+        # 先点一次一键复位，拿到一份"首屏状态快照"作参照；接下来把每一项都弄乱，
+        # 再点一次一键复位，只要两次快照逐项一致，就证明这个按钮完整覆盖了下面弄乱的每一项
+        # ——如果它漏复位了某一项，"弄乱"操作对那一项造成的改动会原样保留到 after 快照里，
+        # 从而在 before/after 对比上现出原形。
+        rab.click()
+        page.wait_for_timeout(300)
+        before = snapshot()
+
+        set_year(page, 2024)
+        page.wait_for_timeout(100)
+        set_gran(page, "model")
+        page.wait_for_timeout(100)
+        clear_btn = q(page, "#clearBtn")
+        if clear_btn is not None:
+            clear_btn.click()
+            page.wait_for_timeout(150)
+        # 清除勾选会顺带把 bodyType/owner/search 归零，所以下面这几项要在它之后再弄乱一次，
+        # 不然它们会在弄乱阶段就已经"看起来是默认值"，测不出一键复位有没有真的管这几项。
+        set_select_maybe(page, "#bodyTypeSelect", "0")
+        page.wait_for_timeout(100)
+        set_select_maybe(page, "#ownerSelect", "manu:比亚迪")
+        page.wait_for_timeout(100)
+        try:
+            page.fill("#legendSearch", "测试搜索词")
+        except Exception:
+            pass
+        page.wait_for_timeout(100)
+        set_energy(page, "ev")
+        page.wait_for_timeout(100)
+        ms = q(page, "#modeSwitch")
+        if ms is not None:
+            ms.click()  # 必须在切年视图之前点：进了年视图这个开关会被禁用、点击是空操作
+            page.wait_for_timeout(100)
+        ttb = q(page, "#tableToggleBtn")
+        if ttb is not None:
+            ttb.click()
+            page.wait_for_timeout(150)
+        vmb = q(page, "#viewModeBtn")
+        if vmb is not None:
+            vmb.click()
+            page.wait_for_timeout(200)
+        ot = q(page, "#otherToggle")
+        if ot is not None and not ot.is_checked():
+            ot.click()
+            page.wait_for_timeout(150)
+
+        messed = snapshot()
+
+        rab.click()
+        page.wait_for_timeout(300)
+        after = snapshot()
+
+        shot(page, shots_dir, "P2_full_reset")
+        diffs = {k: (before[k], after[k]) for k in before if before[k] != after[k]}
+        ok = (not diffs)
+        R.record("P2", "全量复位：把首屏每一项(年份/粒度/能源/车体类型/归属/视图/图表模式/"
+                 "搜索框/其他线/勾选/表格视图)都弄乱后点“一键复位”，快照跟首屏逐项完全一致",
+                 "PASS" if ok else "FAIL",
+                 expected=f"首屏快照={before}",
+                 actual=f"复位后快照={after}；差异字段={diffs}；(弄乱后快照供参考={messed})")
+    safe_run("P2", "全量复位", p2)
+
+    def p3():
+        btn = q(page, "#themeBtn")
+        rab = q(page, "#resetAllBtn")
+        if btn is None or rab is None:
+            R.record("P3", "主题不被复位", "FAIL", detail="找不到 #themeBtn 或 #resetAllBtn")
+            return
+        t0 = theme_attr(page)
+        btn.click()
+        page.wait_for_timeout(250)
+        t1 = theme_attr(page)
+        rab.click()
+        page.wait_for_timeout(250)
+        t2 = theme_attr(page)
+        shot(page, shots_dir, "P3_theme_not_reset")
+        ok = (t1 != t0) and (t2 == t1)
+        R.record("P3", "主题不被复位：切换主题后点“一键复位”，主题保持不变（主题是"
+                 "localStorage里的个人偏好，不属于看板筛选状态）",
+                 "PASS" if ok else "FAIL",
+                 expected=f"切换后主题={t1}（须≠切换前={t0}）；复位后主题仍应是{t1}",
+                 actual=f"切换前={t0}，切换后={t1}，复位后={t2}")
+        if theme_attr(page) == "dark":
+            btn.click()
+            page.wait_for_timeout(150)
+    safe_run("P3", "主题不被复位", p3)
+
+    def p4():
+        n_console = len(console_errors) - baseline_console
+        n_page = len(page_errors) - baseline_page
+        ok = (n_console == 0 and n_page == 0)
+        R.record("P4", "无报错：整个P组过程中新增的console error/page error为0",
+                 "PASS" if ok else "FAIL",
+                 expected="P组期间新增 console error=0, page error=0",
+                 actual=f"P组期间新增 console error={n_console}, page error={n_page}",
+                 detail=None if ok else "; ".join(
+                     str(m) for m in (console_errors[baseline_console:] + page_errors[baseline_page:])
+                 )[:800])
+    safe_run("P4", "无报错", p4)
 
 
 # ============================================================
@@ -3234,6 +4270,22 @@ def main():
                                ("N11", "下钻行为"), ("N12", "范围归零规则"),
                                ("N13", "其他聚合线口径自洽(能源粒度)")]:
                 R.record(gid, name, "FAIL", detail="RAW/META 提取失败，无法建立 Python 侧口径参照")
+
+        if oracle is not None:
+            run_group_O(page, shots_dir, oracle)
+        else:
+            for gid, name in [("O1", "进入年视图"), ("O2", "单对象数值"), ("O3", "横轴排序"),
+                               ("O4", "颜色按年份"), ("O5", "参考线"), ("O6", "虚线开口"),
+                               ("O7", "零值柱不画"), ("O8", "年份chip禁用且不改state"),
+                               ("O9", "堆积开关禁用"), ("O10", "年份图例带口径"),
+                               ("O11", "图例圆点隐藏"), ("O12", "脚注按视图切换"),
+                               ("O13", "重置按钮文案"), ("O14", "年视图默认10个"),
+                               ("O15", "「其他」排最右"), ("O16", "表格与CSV"), ("O17", "tooltip")]:
+                R.record(gid, name, "FAIL", detail="RAW/META 提取失败，无法建立 Python 侧口径参照")
+
+        # P 组（一键复位）不依赖 oracle（不需要跟数据核对，只核对 state/DOM 是否复位到默认值），
+        # 因此始终执行，即便 RAW/META 提取失败也不受影响。
+        run_group_P(page, shots_dir, console_errors, page_errors)
 
         browser.close()
 
