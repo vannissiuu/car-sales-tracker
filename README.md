@@ -133,18 +133,18 @@
 .github/workflows/
 ├── probe.yml        数据同步（定时 + 手动）—— 抓取、校验、对账、通知
 ├── build.yml        图表构建（由 probe.yml 完成后链式触发）
-├── archive.yml      一次性归档测试、工具和项目文档
 └── probe_news.yml   新闻源探针（独立运行，不在月度主链路）
 
-src/                 从 workflow 中落地的源码（供阅读和 diff，运行时以内嵌副本为准）
+src/                 workflow 直接运行的源码本身（不是落地副本）
 ├── sync_script.py   抓取 + 校验 + 对账 + 品牌映射
 ├── build.py         看板 HTML 构建
-└── notify_feishu.py 飞书卡片推送
+├── notify_feishu.py 飞书卡片推送
+└── probe_news.py    新闻源探针脚本
 
 tests/               回归测试（本地运行，非 CI 强制）
 ├── verify_scope_filter.py     看板功能回归套件，100 条用例（A–P 共 16 组），改 build.py 后必须跑
 └── verify_capmonth12_edge.py  capMonth===12 边界验证，7 条用例，独立运行，不并入上面的套件
-tools/               workflow 生成器 —— 改完 src/ 后用它重新生成 workflow
+tools/               历史遗留的 workflow 生成器，改造后已不在流程中，保留备查
 docs/index.html      构建产物，GitHub Pages 发布目录
 docs-project/        项目文档（使用场景、实施计划、口径判定、品牌映射审阅、配置指南、
                      自动部署说明、海外销量调研与搁置决定）
@@ -231,24 +231,21 @@ Settings → Secrets and variables → Actions → New repository secret，
 
 ## 七、修改代码的正确姿势
 
-现在改代码后的 push 已由 Claude 在用户本机沙箱直接完成，人工粘贴 workflow 的流程已不在
-主链路上，细节见 `docs-project/自动部署说明.md`；下面的手工流程作为回退路径保留。
-
-源码在 workflow YAML 里是以 heredoc **内嵌**的（为了让非技术用户只粘贴一个文件就能部署）。
-`src/` 下是运行时落地的副本，供阅读和 diff。
+现在源码就是仓库里的普通文件——`src/build.py`、`src/sync_script.py`、`src/notify_feishu.py`、
+`src/probe_news.py`，workflow 里直接用 `python3 src/xxx.py` 运行它们。以前那套"改完源码
+再用生成器把源码内嵌回 workflow YAML"的流程已经取消，`tools/` 下的生成器不再是必经步骤。
+改代码就直接改 `src/` 下的文件，提交即可。
 
 **改动流程**：
 
-1. 改 `src/` 下的源码
-2. 用 `tools/` 下对应的生成器重新生成 workflow YAML
-3. 生成器会自动校验：YAML 可解析、内嵌 Python 可编译、提取回来与源文件逐字节一致
-4. 跑 `tests/` 下的回归测试。改动 `src/build.py` 时**必须**跑：
+1. 改 `src/` 下对应的源码。
+2. 改动 `src/build.py` 时，本地重建产物再跑回归测试。必须在仓库根目录执行：
 
    ```bash
    pip install playwright --break-system-packages   # 首次
    python3 -m playwright install chromium           # 首次
 
-   # 必须在仓库根目录执行；默认测的是本仓库的 docs/index.html
+   python3 src/build.py            # 重建 docs/index.html
    python3 tests/verify_scope_filter.py
    python3 tests/verify_capmonth12_edge.py
    ```
@@ -263,12 +260,14 @@ Settings → Secrets and variables → Actions → New repository secret，
    补齐后）：这时年视图应整体退化成"每一年都是全年"——参考线应当全部消失，口径标注
    统一写「全年」，不再出现「1–N月」。
 
-   跑之前**先确认 `docs/index.html` 是你刚重建的那一份**（本地跑 `python3 src/build.py`，
-   或者等 workflow 跑完再 `git pull`）。测的是构建产物，不是源码——拿一份过期产物去跑，
-   得到的全绿是假的。
-5. 提交
+3. 测的是构建产物 `docs/index.html`，不是源码——跑测试之前先确认它是你刚重建的那一份，
+   拿一份过期产物去跑，得到的全绿是假的。现在因为可以本地直接 `python3 src/build.py`，
+   这一步比以前简单了。
+4. 提交。push 之后 GitHub Actions 会自动重建并发布，不需要手动点 Run workflow。
 
-**不要**直接手改 workflow 里的 heredoc —— 缩进极易出错，且会与 `src/` 脱节。
+**为什么改**：内嵌 heredoc 当初是为了让非技术用户只粘贴一个文件就能完成首次部署，代价是
+之后每次更新都要粘贴一个十几万字的 YAML、缩进极易出错、diff 完全不可读。现在 push 已经
+自动化（见 `docs-project/自动部署说明.md`），这个取舍不再成立，所以改回普通文件。
 
 ---
 
