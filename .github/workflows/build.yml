@@ -48,16 +48,32 @@ jobs:
         run: python3 src/build.py
 
       - name: Commit dashboard back to repo
-        # 已知问题的修复：新闻探针等其它工作流也可能在这段时间往仓库推 docs/ 之外的改动，
-        # 或者本工作流的上一次运行还没完全跑完，导致 push 撞上 non-fast-forward 被拒绝。
-        # 之前 continue-on-error 会把这类失败直接吞掉、日志上完全看不出发生过什么。
-        # 现在改成显式重试：push 失败就 git pull --rebase --autostash 再试，最多 3 次，
-        # 间隔递增；三次都失败时打印醒目的失败信息（不再静默），
-        # 但步骤本身仍然 continue-on-error —— 构建产物已经进 artifact 了，
-        # 不应该因为一次推送竞争让整个 job 显示失败。
+        # 两类失败在这里被显式处理：
+        #
+        # 1) detached HEAD（2026-09 修复的真 bug）。上面的 checkout 步骤用的是
+        #    ref: <具体 SHA>，所以 workflow_run 链式触发时 git 处于 detached HEAD，
+        #    不带参数的 `git push` 必然报 "You are not currently on a branch" 而失败。
+        #    而 continue-on-error 会把整步吞成成功——表现就是：每月同步完之后自动构建
+        #    "跑成功了"，但看板从来没被更新，必须有人手动去点一次 Run workflow
+        #    （workflow_dispatch 触发时 ref 是分支名，才不会 detached）。
+        #    修法：显式 `git push origin HEAD:<分支>`，detached 与否都成立。
+        #
+        # 2) 推送竞争。新闻探针等其它工作流可能同时往仓库推东西，撞上 non-fast-forward。
+        #    失败就 fetch + rebase 到远端最新再试，最多 3 次，间隔递增。
+        #    注意不能用 `git pull --rebase`：detached HEAD 下它没有上游分支可跟。
+        #
+        # 三次都失败时打印醒目的失败信息（不再静默），但步骤本身仍然 continue-on-error
+        # —— 构建产物已经进 artifact 了，不该因为一次推送竞争让整个 job 显示失败。
         if: always()
         continue-on-error: true
+        env:
+          # workflow_run 触发时取触发方那次运行所在的分支；手动触发时取本次运行选的分支。
+          TARGET_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
         run: |
+          set -u
+          BRANCH="${TARGET_BRANCH:-main}"
+          echo "目标分支: $BRANCH"
+          echo "当前 HEAD: $(git rev-parse --abbrev-ref HEAD)  ($(git rev-parse --short HEAD))"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A docs/ || true
@@ -65,22 +81,28 @@ jobs:
             echo "没有变化，跳过提交"
           else
             git commit -m "chore: build dashboard [skip ci]"
+            PUSH_OK=0
             for i in 1 2 3; do
-              if git push; then
-                echo "push 成功"
+              if git push origin HEAD:"$BRANCH"; then
+                echo "push 成功（第 $i 次尝试）"
+                PUSH_OK=1
                 break
               fi
-              echo "push 失败（第 $i 次），拉取远端后重试 ..."
-              git pull --rebase --autostash || true
+              echo "push 失败（第 $i 次），fetch + rebase 到 origin/$BRANCH 后重试 ..."
+              # 用 FETCH_HEAD 而不是 origin/$BRANCH：actions/checkout 是浅克隆 +
+              # 定制 refspec，远端跟踪引用不一定被更新，FETCH_HEAD 一定是刚拉到的那个。
+              git fetch origin "$BRANCH" || true
+              git rebase FETCH_HEAD || git rebase --abort || true
               sleep $((i * 5))
-              if [ "$i" = "3" ]; then
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-                echo "!! git push 连续 3 次失败，docs/ 的更新没有推送成功，仓库里看到的"
-                echo "!! 还是旧看板。构建产物仍然在本次运行的 artifact 里，可以手动下载，"
-                echo "!! 但需要人工介入排查为什么远端一直推不上去。"
-                echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-              fi
             done
+            if [ "$PUSH_OK" != "1" ]; then
+              echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+              echo "!! git push 连续 3 次失败，docs/ 的更新没有推送成功，仓库里看到的"
+              echo "!! 还是旧看板。构建产物仍然在本次运行的 artifact 里，可以手动下载，"
+              echo "!! 但需要人工介入排查为什么远端一直推不上去。"
+              echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+              exit 1
+            fi
           fi
 
       - name: Upload build output
