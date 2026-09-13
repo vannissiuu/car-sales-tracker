@@ -5,11 +5,18 @@
   1. 两厢车/三厢车 -> 轿车 的分类映射 + 优先级裁决 (SUV > MPV > 轿车 > 运动汽车)
   2. normalize_legacy_body_types 对存量数据的幂等原地规范化
   3. reconcile_categories 的并集去重对账口径
+  4. fetch_full_listing 的分页完整性校验与修复（销量并列车型排序在两次请求间随机，
+     骑在分页边界上时会导致一个车型被重复抓到、另一个车型被挤出窗口）
 
-全部基于 sync_script.py 里实际会跑的纯函数，不发任何网络请求。
+全部基于 sync_script.py 里实际会跑的纯函数，不发任何网络请求
+（第4部分用 monkeypatch 替换 fetch_page/parse_style_like_table 模拟"网络返回"，
+不发真实请求）。
 """
 
+import collections
+import json
 import os
+import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -132,6 +139,92 @@ def main():
     check(f"轿车对账 actual == 8 (本月主榜8个车型全都在) (实际: {sedan_result_5['actual']})",
           sedan_result_5["actual"] == 8)
     check("并集去重后 page_side == actual，不产生对账不平", sedan_result_5["mismatch"] is False)
+
+    print()
+    print("=== 断言 6: fetch_full_listing 分页完整性校验 —— 并列漂移导致丢车型 -> 被检测到 -> 重抓补回 ===")
+    print("(复现 2026-07 真实案例：菱智新能源/标致508 销量并列，两次独立请求把'标致508'都排到了")
+    print(" 第10页末行/第11页首行，'菱智新能源'两页都没抓到；重抓边界两页后应该补回)")
+
+    PAGE6_TOTAL = 520  # 11页：前10页各50条、第11页20条
+
+    def _make_row(rank, model):
+        return {"rank": rank, "model": model, "manufacturer": "厂商X", "sales": 100}
+
+    def _canonical_model_6(rank):
+        if rank == 500:
+            return "菱智新能源"
+        if rank == 501:
+            return "标致508"
+        return f"型号{rank:04d}"
+
+    call_counts_6 = collections.defaultdict(int)
+
+    def _rows_for_page_6(page, call_idx):
+        start = (page - 1) * 50 + 1
+        end = min(page * 50, PAGE6_TOTAL)
+        rows = []
+        for rank in range(start, end + 1):
+            if rank == 500:
+                # 第1次抓取复现 bug：这个名次被"标致508"占了；第2次(重抓修复)"菱智新能源"归位
+                model = "标致508" if call_idx == 1 else "菱智新能源"
+            elif rank == 501:
+                # 两次独立请求都把"标致508"排到了这个名次上，这正是真实 bug 的样子
+                model = "标致508"
+            else:
+                model = _canonical_model_6(rank)
+            rows.append(_make_row(rank, model))
+        return rows
+
+    def _fake_fetch_page_6(session, url, allow_404_as_empty=False):
+        m = re.search(r"-(\d+)\.html$", url)
+        page = int(m.group(1))
+        call_counts_6[page] += 1
+        rows = _rows_for_page_6(page, call_counts_6[page])
+        marker = f"共{PAGE6_TOTAL}条" if page == 1 else "(no total marker on this page)"
+        return marker + "\n" + json.dumps(rows, ensure_ascii=False), None, 200
+
+    def _fake_parse_style_like_table_6(html_text):
+        _, _, payload = html_text.partition("\n")
+        return json.loads(payload)
+
+    _orig_fetch_page = S.fetch_page
+    _orig_parse_style_like_table = S.parse_style_like_table
+    try:
+        S.fetch_page = _fake_fetch_page_6
+        S.parse_style_like_table = _fake_parse_style_like_table_6
+
+        report_6 = {"failures": [], "pagination_integrity": []}
+        rows_6, ok_6, _page1_html_6, probe_6 = S.fetch_full_listing(
+            session=object(),
+            url_template="https://xl.16888.com/style-202607-202607-{page}.html",
+            report=report_6,
+            label="202607 主榜",
+        )
+    finally:
+        S.fetch_page = _orig_fetch_page
+        S.parse_style_like_table = _orig_parse_style_like_table
+
+    check("fetch_full_listing 最终返回成功 (ok=True)", ok_6 is True)
+    check(f"返回行数 == 声明总数 520 (实际: {len(rows_6) if rows_6 else None})",
+          rows_6 is not None and len(rows_6) == PAGE6_TOTAL)
+    if rows_6 is not None:
+        model_counts_6 = collections.Counter(r["model"] for r in rows_6)
+        check("菱智新能源被补回 (出现1次)", model_counts_6.get("菱智新能源", 0) == 1)
+        check("标致508不再重复 (出现1次)", model_counts_6.get("标致508", 0) == 1)
+        check("去重后车型数 == total，且没有任何车型重复",
+              len(model_counts_6) == PAGE6_TOTAL and all(v == 1 for v in model_counts_6.values()))
+    check("第10/11页各被重抓了一次 (1次初抓 + 1次修复重抓 = 2次)",
+          call_counts_6.get(10) == 2 and call_counts_6.get(11) == 2)
+    check("其余页 (如第1页) 只抓了1次，没有被无谓地重抓",
+          call_counts_6.get(1) == 1)
+
+    integrity_entries_6 = report_6.get("pagination_integrity", [])
+    check("report['pagination_integrity'] 留了一条记录", len(integrity_entries_6) == 1)
+    if integrity_entries_6:
+        entry_6 = integrity_entries_6[0]
+        check("留痕记录状态是 'fixed'", entry_6["status"] == "fixed")
+        check("留痕记录里补回车型包含菱智新能源", "菱智新能源" in entry_6.get("recovered_models", []))
+    check("report['failures'] 里没有新增失败记录 (修复成功，不算失败)", report_6["failures"] == [])
 
     print()
     print("=" * 60)

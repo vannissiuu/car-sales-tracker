@@ -544,6 +544,44 @@ def fetch_page(session, url, allow_404_as_empty=False):
     return None, last_err or "重试耗尽", last_http_code
 
 
+def _dedupe_rows_by_model(rows):
+    """
+    按车型名分组。返回 (model_to_row, rank_history)：
+      - model_to_row: {车型名: 第一次出现时的行 dict}，用于最终产出（一个车型只留一条）。
+      - rank_history: {车型名: [该车型出现过的所有 rank]}，只用于诊断"哪些车型重复了、
+        重复出现在哪些 rank 上"，不参与产出。
+    """
+    model_to_row = {}
+    rank_history = {}
+    for r in rows:
+        model_to_row.setdefault(r["model"], r)
+        rank_history.setdefault(r["model"], []).append(r["rank"])
+    return model_to_row, rank_history
+
+
+def _find_boundary_pages(duplicate_ranks):
+    """
+    根据重复车型名占用的 rank，反推是哪几组"并列车型骑在分页边界上"导致的重复。
+
+    只认形如 (R, R+1) 且 R % ROWS_PER_PAGE == 0 的相邻 rank 对——对应第 R//ROWS_PER_PAGE 页
+    末行和第 R//ROWS_PER_PAGE + 1 页首行。只要有任何一组重复的 rank 不是这个形态（比如同一
+    车型出现了 3 次、或者两个 rank 不相邻/不落在整 50 的边界上），就不要硬套边界推导——
+    返回 None，让调用方走"整趟重抓"的兜底路径。
+
+    返回：需要重抓的页码集合（set[int]），或 None（表示"这批重复不构成边界形态"）。
+    """
+    pages = set()
+    for _name, ranks in duplicate_ranks.items():
+        if len(ranks) != 2:
+            return None
+        r1, r2 = sorted(ranks)
+        if r2 - r1 != 1 or r1 % ROWS_PER_PAGE != 0:
+            return None
+        pages.add(r1 // ROWS_PER_PAGE)
+        pages.add(r1 // ROWS_PER_PAGE + 1)
+    return pages
+
+
 def fetch_full_listing(session, url_template, report, label, allow_missing=False):
     """
     抓取一个榜单（主榜 / 某个 body-N / ev）在某个月份的全部页面，拼成一个 rows 列表。
@@ -555,6 +593,14 @@ def fetch_full_listing(session, url_template, report, label, allow_missing=False
       - page1_html 是第 1 页的原始文本，调用方可以用它顺便提取分类中文名，不用再多发一次请求。
       - probe 是一个 dict：{"http_status": int或None, "total": int或None, "parsed_rows": int或None,
         "error": str或None}，专门给 body-1..8 探测报告用，不影响任何控制流。
+
+    分页完整性校验与修复（应对"销量并列车型排序在两次请求间随机"的数据源缺陷）：
+      正确的不变式是"去重后的车型数 == 页面声明的共N条"。逐页拼完 all_rows 之后，如果
+      这个不变式不成立（说明某组并列车型的排序，在抓不同页时不一致，导致一个车型被重复
+      抓到、另一个车型被挤出窗口），就只重抓出问题的那一两页（能推出分页边界的话），把
+      新抓到的、集合里还没有的车型补进去，最多重试 3 次。3 次后仍不平，判定这个榜单抓取
+      失败（返回 (None, False, None, probe)），绝不返回一份已知有缺损的数据。
+      每次校验（无论是否触发修复）都会在 report["pagination_integrity"] 里留一条记录。
     """
     probe = {"http_status": None, "total": None, "parsed_rows": None, "error": None}
 
@@ -615,8 +661,96 @@ def fetch_full_listing(session, url_template, report, label, allow_missing=False
         log(f"  [{label}] 警告: 抓到 {len(all_rows)} 行，页面声明共 {total} 条")
         probe["error"] = f"抓到{len(all_rows)}行 != 声明{total}条"
 
-    probe["parsed_rows"] = len(all_rows)
-    return all_rows, True, page1_html, probe
+    # ---- 分页完整性校验（并列漂移检测与修复） ----
+    integrity = {
+        "label": label, "total": total, "raw_rows": len(all_rows),
+        "distinct_before": None, "duplicate_models_before": [],
+        "attempts": 0, "recovered_models": [], "repair_notes": [],
+        "status": "skipped", "note": "",
+    }
+
+    if total is None:
+        # 没有声明总数，没有比对基准，无法校验——如实记一笔"跳过"，不要静默过去。
+        integrity["note"] = "未获取到页面声明的「共N条」，跳过分页完整性校验"
+        report.setdefault("pagination_integrity", []).append(integrity)
+        probe["parsed_rows"] = len(all_rows)
+        return all_rows, True, page1_html, probe
+
+    model_to_row, rank_history = _dedupe_rows_by_model(all_rows)
+    duplicate_ranks = {name: ranks for name, ranks in rank_history.items() if len(ranks) > 1}
+    integrity["distinct_before"] = len(model_to_row)
+    integrity["duplicate_models_before"] = sorted(duplicate_ranks.keys())
+
+    if len(model_to_row) == total and not duplicate_ranks:
+        integrity["status"] = "ok"
+        integrity["note"] = "去重后车型数与声明总数一致，未发现重复车型名，分页完整性校验：通过"
+        report.setdefault("pagination_integrity", []).append(integrity)
+        probe["parsed_rows"] = len(all_rows)
+        return all_rows, True, page1_html, probe
+
+    log(f"  [{label}] 分页完整性校验未通过：去重后 {len(model_to_row)} 个车型，声明 {total} 条，"
+        f"重复车型 {integrity['duplicate_models_before']}，进入重抓修复")
+
+    fixed = False
+    attempt = 0
+    while attempt < 3:
+        attempt += 1
+        boundary_pages = _find_boundary_pages(duplicate_ranks) if duplicate_ranks else None
+        if duplicate_ranks and boundary_pages is not None:
+            refetch_pages = sorted(boundary_pages)
+            integrity["repair_notes"].append(
+                f"第{attempt}次重抓：重复车型 {sorted(duplicate_ranks.keys())} 落在分页边界，"
+                f"只重抓第 {refetch_pages} 页"
+            )
+        else:
+            refetch_pages = list(range(1, total_pages + 1))
+            reason = (
+                "重复车型的 rank 不构成分页边界形态" if duplicate_ranks
+                else "去重后车型数与声明总数不符但未发现重复车型名"
+            )
+            integrity["repair_notes"].append(f"第{attempt}次重抓：{reason}，整趟重抓兜底（共{total_pages}页）")
+
+        for p in refetch_pages:
+            url = url_template.format(page=p)
+            html, status, _hc = fetch_page(session, url)
+            if html is None:
+                integrity["repair_notes"].append(f"第{attempt}次重抓：第{p}页失败: {status}")
+                continue
+            for r in parse_style_like_table(html):
+                if r["model"] not in model_to_row:
+                    model_to_row[r["model"]] = r
+                    integrity["recovered_models"].append(r["model"])
+
+        if len(model_to_row) == total:
+            fixed = True
+            break
+
+    integrity["attempts"] = attempt
+
+    if not fixed:
+        integrity["status"] = "failed"
+        integrity["note"] = (
+            f"重试 {attempt} 次后仍不平：去重后 {len(model_to_row)} 个车型，声明 {total} 条，"
+            "判定该榜单抓取失败"
+        )
+        report.setdefault("pagination_integrity", []).append(integrity)
+        report["failures"].append(
+            f"{label} 分页完整性校验修复失败：重试{attempt}次后仍不平"
+            f"（去重后{len(model_to_row)}个车型 != 声明{total}条）"
+        )
+        probe["error"] = f"分页完整性校验失败：重试{attempt}次仍不平"
+        probe["parsed_rows"] = len(model_to_row)
+        return None, False, None, probe
+
+    integrity["status"] = "fixed"
+    integrity["note"] = (
+        f"重试 {attempt} 次后修复成功，补回车型：{integrity['recovered_models']}，分页完整性校验：通过"
+    )
+    report.setdefault("pagination_integrity", []).append(integrity)
+
+    fixed_rows = sorted(model_to_row.values(), key=lambda r: r["rank"])
+    probe["parsed_rows"] = len(fixed_rows)
+    return fixed_rows, True, page1_html, probe
 
 
 # ---------------------------------------------------------------------------
@@ -1602,6 +1736,52 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
         lines.append("(本次运行没有发现任何跨分类车型)")
     lines.append("")
 
+    lines.append("## 分页完整性校验\n")
+    lines.append("应对「销量并列车型的排序在两次独立请求之间随机」这个数据源缺陷：一份榜单"
+                  "的正确不变式是「去重后的车型数 == 页面声明的共N条」。抓完每个榜单后都会做"
+                  "这项校验；如果不平，说明某组并列车型的顺序在抓不同页时不一致，导致某个车型"
+                  "被重复抓到、另一个车型被挤出了分页窗口——这时只重抓能推出来的那一两个分页"
+                  "边界（推不出来就整趟重抓兜底），把缺的车型按名字补回去，最多重试 3 次；3 次"
+                  "后仍不平就判定这个榜单抓取失败，不会让缺损数据流入结果。")
+    lines.append("")
+    integrity_rows = report.get("pagination_integrity", [])
+    if integrity_rows:
+        status_label = {
+            "ok": "✅ 通过（无需修复）",
+            "fixed": "🛠️ 已修复",
+            "failed": "❌ 修复失败（该榜单已判定抓取失败）",
+            "skipped": "⏭️ 跳过（未获取到声明总数）",
+        }
+        lines.append("| 榜单 | 声明总数(共N条) | 去重后车型数(初次) | 重试次数 | 补回的车型 | 结果 |")
+        lines.append("|---|---|---|---|---|---|")
+        for it in integrity_rows:
+            recovered_str = "、".join(it["recovered_models"]) if it.get("recovered_models") else "(无)"
+            total_str = it["total"] if it["total"] is not None else "-"
+            distinct_str = it["distinct_before"] if it["distinct_before"] is not None else "-"
+            status_str = status_label.get(it["status"], it["status"])
+            lines.append(
+                f"| {it['label']} | {total_str} | {distinct_str} | {it.get('attempts', 0)} | "
+                f"{recovered_str} | {status_str} |"
+            )
+        fixed_list = [it for it in integrity_rows if it["status"] == "fixed"]
+        failed_list = [it for it in integrity_rows if it["status"] == "failed"]
+        lines.append("")
+        lines.append(
+            f"本次运行共校验 {len(integrity_rows)} 个榜单：{len(fixed_list)} 个触发并修复成功，"
+            f"{len(failed_list)} 个修复失败，"
+            f"{sum(1 for it in integrity_rows if it['status'] == 'ok')} 个一次通过，"
+            f"{sum(1 for it in integrity_rows if it['status'] == 'skipped')} 个因无声明总数被跳过。"
+        )
+        if fixed_list or failed_list:
+            lines.append("")
+            for it in fixed_list + failed_list:
+                lines.append(f"- **{it['label']}**：{it['note']}")
+                for n in it.get("repair_notes", []):
+                    lines.append(f"  - {n}")
+    else:
+        lines.append("(本次运行没有成功进入任何榜单的抓取阶段，无法校验；分页完整性校验：未执行)")
+    lines.append("")
+
     lines.append(f"## body-1..8 探测结果（本次试运行的核心产出）\n")
     body_probe = report.get("body_probe", [])
     if body_probe:
@@ -1741,6 +1921,7 @@ def main():
         "blocked_reason": None,
         "body_names": {},
         "body_probe": [],
+        "pagination_integrity": [],
         "reconciliation": [],
         "body_type_conflicts": [],
         "cross_category_models": {},
