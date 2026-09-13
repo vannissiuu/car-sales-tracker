@@ -99,7 +99,11 @@ DEFAULT_MAPPING_JSON = r'''
     "version": "1.0",
     "resolution_order": "model_to_brand 优先（按车型名精确匹配），其次 manufacturer_to_brand，都没有则回退为 manufacturer 原值（本数据集18814行中，回退发生次数应为0，见 self-check）",
     "generated_from": "data/manufacturers.txt (117 家), data/sales.csv (18814 行, 2024-01 至 2026-07 共31个月, 累计57,124,329辆)",
-    "rules": "1. 品牌 = 消费者认知里的那个车标/emblem，不是母公司或合资公司名。如 上汽大众/一汽-大众 → 大众；上汽大众斯柯达 → 斯柯达；一汽-大众捷达 → 捷达（2019年已独立成品牌）。2. 同一合资公司下的多个独立品牌要拆开：上汽通用别克/雪佛兰/凯迪拉克 → 三个独立品牌；长安福特/长安马自达/长安林肯 → 福特/马自达/林肯。3. 自主品牌集团下已独立运营的子品牌要拆开：长安启源→启源、广汽埃安→埃安；同一车标的不同生产主体要合并：五菱新能源 和 上汽通用五菱 都→五菱；一汽海马 和 海马汽车 都→海马。4. 合资公司的外方品牌名统一为中文通行译名：一汽奥迪/上汽奥迪→奥迪，广汽本田/东风本田→本田。5. 比亚迪子品牌方程豹/腾势/仰望：经用户拍板，按独立品牌处理，不并入比亚迪（决定2）。6. 华为鸿蒙智行『界』系列（问界/智界/享界/尊界/尚界）：厂商名与品牌名基本一一对应，直接采用（问界/智界经确认采纳）。7. 【核心规则，决定1】当一个厂商条目内混合多个消费者认知品牌（不同车标/渠道/定位）时，manufacturer_to_brand 只给一个保守的『哨兵/兜底』值（通常等于厂商原名，蔚来除外——蔚来主品牌本身也叫『蔚来』故兜底值恰好正确），真正的品牌归类通过 model_to_brand 按车型名精确匹配实现，解析时 model_to_brand 优先级高于 manufacturer_to_brand。适用：长城汽车（哈弗/坦克/魏牌）、蔚来（蔚来/乐道/萤火虫）、上汽集团（荣威/MG/飞凡/科莱威）、奇瑞捷豹路虎（捷豹/路虎）；此外星途（星途/星纪元）、北京汽车制造厂（锐胜/勇士/元宝/家宝/212）、江汽集团（江淮/瑞风/钇为/爱跑/花仙子）、江铃集团新能源（易至/羿）也按同一机制处理，只是这些厂商没有强制要求做到100%精细拆分，manufacturer_to_brand的默认值已覆盖大部分销量。8. 兜底值选择原则：优先选'哪怕未来出现字典未覆盖的新车型，这个值也大概率仍然正确'的选项——蔚来主品牌用『蔚来』；无法判断哪个子品牌最具代表性、或用主品牌名会造成后续新车型被误分类风险的（长城汽车/上汽集团/奇瑞捷豹路虎），选择厂商原名作为哨兵值，使其在品牌视角下清晰地表现为'未分类，需要更新model_to_brand'，而不是悄悄地被错误合并进某个具体子品牌。9. 拿不准、样本量小、无法用现有知识确认的车型/厂商，一律记录进 _unresolved_notes 并给出已采用的近似处理方式，不藏在字典里假装确定。"
+    "rules": "1. 品牌 = 消费者认知里的那个车标/emblem，不是母公司或合资公司名。如 上汽大众/一汽-大众 → 大众；上汽大众斯柯达 → 斯柯达；一汽-大众捷达 → 捷达（2019年已独立成品牌）。2. 同一合资公司下的多个独立品牌要拆开：上汽通用别克/雪佛兰/凯迪拉克 → 三个独立品牌；长安福特/长安马自达/长安林肯 → 福特/马自达/林肯。3. 自主品牌集团下已独立运营的子品牌要拆开：长安启源→启源、广汽埃安→埃安；同一车标的不同生产主体要合并：五菱新能源 和 上汽通用五菱 都→五菱；一汽海马 和 海马汽车 都→海马。4. 合资公司的外方品牌名统一为中文通行译名：一汽奥迪/上汽奥迪→奥迪，广汽本田/东风本田→本田。5. 比亚迪子品牌方程豹/腾势/仰望：经用户拍板，按独立品牌处理，不并入比亚迪（决定2）。6. 华为鸿蒙智行『界』系列（问界/智界/享界/尊界/尚界）：厂商名与品牌名基本一一对应，直接采用（问界/智界经确认采纳）。7. 【核心规则，决定1】当一个厂商条目内混合多个消费者认知品牌（不同车标/渠道/定位）时，manufacturer_to_brand 只给一个保守的『哨兵/兜底』值（通常等于厂商原名，蔚来除外——蔚来主品牌本身也叫『蔚来』故兜底值恰好正确），真正的品牌归类通过 model_to_brand 按车型名精确匹配实现，解析时 model_to_brand 优先级高于 manufacturer_to_brand。适用：长城汽车（哈弗/坦克/魏牌）、蔚来（蔚来/乐道/萤火虫）、上汽集团（荣威/MG/飞凡/科莱威）、奇瑞捷豹路虎（捷豹/路虎）；此外星途（星途/星纪元）、北京汽车制造厂（锐胜/勇士/元宝/家宝/212）、江汽集团（江淮/瑞风/钇为/爱跑/花仙子）、江铃集团新能源（易至/羿）也按同一机制处理，只是这些厂商没有强制要求做到100%精细拆分，manufacturer_to_brand的默认值已覆盖大部分销量。8. 兜底值选择原则：优先选'哪怕未来出现字典未覆盖的新车型，这个值也大概率仍然正确'的选项——蔚来主品牌用『蔚来』；无法判断哪个子品牌最具代表性、或用主品牌名会造成后续新车型被误分类风险的（长城汽车/上汽集团/奇瑞捷豹路虎），选择厂商原名作为哨兵值，使其在品牌视角下清晰地表现为'未分类，需要更新model_to_brand'，而不是悄悄地被错误合并进某个具体子品牌。9. 拿不准、样本量小、无法用现有知识确认的车型/厂商，一律记录进 _unresolved_notes 并给出已采用的近似处理方式，不藏在字典里假装确定。",
+    "model_to_manufacturer_note": "model_to_manufacturer：按车型名精确匹配，强制覆盖数据源给的厂商(manufacturer)字段，在 model_to_brand/manufacturer_to_brand 解析品牌之前应用。用于修正数据源把某款车型的厂商字段在不同月份之间改来改去（同一厂商名在数据源里其实一直并存、并非改名）导致的『一车型对应多厂商』问题。示例：欧拉好猫在 2024-01~2026-07 共31个月厂商字段一直是『长城新能源』，2026-08 数据源改成了『长城汽车』（而『长城汽车』和『长城新能源』两个厂商在数据源里一直并存，不是改名），经用户拍板按『长城新能源』的31个月历史一致性归回，故加此条强制覆盖。以后再遇到同类车型挑窝，把『车型名: 应归属的厂商名』加进这张表即可，不需要改代码。"
+  },
+  "model_to_manufacturer": {
+    "欧拉好猫": "长城新能源"
   },
   "manufacturer_to_brand": {
     "DS汽车": "DS",
@@ -307,7 +311,8 @@ DEFAULT_MAPPING_JSON = r'''
     "羿": "羿",
     "羿驰05": "羿",
     "羿驰01": "羿",
-    "羿驰05S": "羿"
+    "羿驰05S": "羿",
+    "欧拉好猫": "欧拉"
   },
   "_unresolved_notes": [
     {
@@ -812,6 +817,29 @@ def build_ev_set(ev_rows):
     return {r["model"] for r in ev_rows}
 
 
+def resolve_manufacturer(model, manufacturer, mapping):
+    """
+    厂商字段规范化：如果 model 命中 mapping["model_to_manufacturer"]（按车型名精确匹配），
+    返回该表里指定的厂商名，强制覆盖数据源当月给的 manufacturer 字段；否则原样返回
+    传入的 manufacturer，不抛异常（mapping 里没有 model_to_manufacturer 这个键、或者该
+    车型不在表里，都按未命中处理）。
+
+    用于修正数据源把某款车型的厂商字段在不同月份之间改来改去（车型挑窝——同一个车型
+    在数据源里改挂到另一个厂商名下，但两个厂商名本身在数据源里一直并存，不是改名）
+    导致的『同一 (body_type, model) 对应多个厂商』问题：build.py 里有一条断言要求同一
+    车型只能属于一个厂商，规范化必须在这一步就把厂商字段统一，而不是留给下游去猜。
+
+    必须在 resolve_brand_with_source 之前调用——先规范化 manufacturer，再拿规范化后的
+    manufacturer 去解析 brand，否则品牌仍会用错的厂商名去解析。
+
+    纯函数，不发请求，方便离线单测。
+    """
+    model_manufacturer_map = mapping.get("model_to_manufacturer") or {}
+    if model in model_manufacturer_map:
+        return model_manufacturer_map[model]
+    return manufacturer
+
+
 def resolve_brand_with_source(model, manufacturer, mapping):
     """
     品牌解析优先级（和另一个代理产出的字典契约一致）：
@@ -843,7 +871,10 @@ def label_rows(style_rows, body_type_map, ev_set, mapping, year, month):
     以主榜 (style_rows) 为基准，用「车型名」左连接打上 body_type / brand / energy_type 标签。
     真正不在任何 body 榜单里的车型，body_type 填「其他」（不留空，避免前端图表出现无名分类）。
     body_type_map 传进来的时候已经是最终类别（轿车/MPV/SUV/运动汽车），不是原始 body 分类名。
-    brand 按 resolve_brand_with_source 的优先级解析，同样绝不为空。
+    manufacturer 先经过 resolve_manufacturer 规范化（按 model_to_manufacturer 强制覆盖数据源
+    给的厂商字段），再拿规范化后的 manufacturer 去解析 brand——顺序不能反，否则 model_to_manufacturer
+    覆盖了厂商也没用，品牌还是会按旧厂商名解析。brand 按 resolve_brand_with_source 的优先级解析，
+    同样绝不为空。
     这是一个纯函数（不发请求），方便离线单测。
     返回 (out_rows, other_count) —— other_count 是被填成「其他」的行数。
     """
@@ -851,7 +882,7 @@ def label_rows(style_rows, body_type_map, ev_set, mapping, year, month):
     out_rows = []
     for r in style_rows:
         model = r["model"]
-        manufacturer = r["manufacturer"]
+        manufacturer = resolve_manufacturer(model, r["manufacturer"], mapping)
         body_type = body_type_map.get(model, "其他")
         if body_type == "其他":
             other_count += 1
@@ -994,6 +1025,42 @@ def normalize_body_type_by_model(rows):
     changes.sort(key=lambda c: c["model"])
 
     return normalized, changes
+
+
+def normalize_legacy_manufacturer_column(rows, mapping):
+    """
+    对存量行做原地规范化：数据源偶尔会把某个车型的厂商字段挪到另一个厂商名下（车型
+    挑窝——两个厂商名本身在数据源里一直并存，不是改名），导致同一个车型在不同月份
+    的 manufacturer 取值不一致，触发 build.py 里"同一车型只能属于一个厂商"的断言。
+
+    按 mapping["model_to_manufacturer"]（车型名 -> 应归属的厂商名，精确匹配）把命中的
+    车型在存量数据里的 manufacturer 统一改写；未命中的车型原样不动。
+
+    manufacturer 改了之后，brand 必须跟着重新解析一次（brand 的解析依赖 manufacturer，
+    参见 resolve_brand_with_source），否则会留着一个用旧厂商名解出来的、现在已经错误
+    的 brand——所以这里对被改写的行直接重新调用 resolve_brand 覆盖 brand，不留给
+    normalize_legacy_brand_column（它只补全缺失的 brand，不会覆盖已有但错误的 brand）。
+
+    幂等：第二次跑的时候 manufacturer 已经是规范化后的值，条件不命中，直接原样返回。
+    不修改传入的 dict（返回新的列表+新的行 dict），避免意外的原地副作用。
+
+    纯函数，不发请求，方便离线单测。返回 (normalized_rows, changed_count)。
+    """
+    model_manufacturer_map = mapping.get("model_to_manufacturer") or {}
+    normalized = []
+    changed = 0
+    for r in rows:
+        model = r.get("model")
+        target = model_manufacturer_map.get(model)
+        if target is not None and r.get("manufacturer") != target:
+            new_r = dict(r)
+            new_r["manufacturer"] = target
+            new_r["brand"] = resolve_brand(model, target, mapping)
+            normalized.append(new_r)
+            changed += 1
+        else:
+            normalized.append(r)
+    return normalized, changed
 
 
 def normalize_legacy_brand_column(rows, mapping):
@@ -1291,6 +1358,8 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
         lines.append("- 本次重抓覆盖的月份: (无)")
     legacy_n = report.get("legacy_normalized_count", 0)
     lines.append(f"- 存量数据规范化：将 {legacy_n} 行「两厢车/三厢车」合并为「轿车」")
+    legacy_manufacturer_n = report.get("legacy_manufacturer_normalized_count", 0)
+    lines.append(f"- 存量厂商规范化：按 model_to_manufacturer 改写了 {legacy_manufacturer_n} 行的厂商字段")
     legacy_brand_n = report.get("legacy_brand_backfilled_count", 0)
     lines.append(f"- 存量品牌补列：为 {legacy_brand_n} 行补上了 brand 列")
     lines.append("")
@@ -1629,6 +1698,7 @@ def main():
         "body_type_conflicts": [],
         "cross_category_models": {},
         "legacy_normalized_count": 0,
+        "legacy_manufacturer_normalized_count": 0,
         "legacy_brand_backfilled_count": 0,
         "body_type_unified_changes": [],
         "body_type_unified_model_count": 0,
@@ -1663,6 +1733,13 @@ def main():
     report["legacy_normalized_count"] = legacy_normalized_count
     if legacy_normalized_count:
         log(f"存量数据规范化: 将 {legacy_normalized_count} 行「两厢车/三厢车」合并为「轿车」")
+
+    # 存量厂商规范化：数据源偶尔把某个车型的厂商字段挪到另一个（并存的）厂商名下，
+    # 按 mapping["model_to_manufacturer"] 原地改写，改动的行同时重新解析 brand。
+    # 同样幂等，不需要用户 force_refresh 重跑。
+    existing_rows, legacy_manufacturer_normalized_count = normalize_legacy_manufacturer_column(existing_rows, mapping)
+    report["legacy_manufacturer_normalized_count"] = legacy_manufacturer_normalized_count
+    log(f"存量厂商规范化：按 model_to_manufacturer 改写了 {legacy_manufacturer_normalized_count} 行的厂商字段")
 
     # 存量数据补 brand 列：旧版本 sales.csv 根本没有这一列，用当前字典原地补上。
     # 同样幂等，不需要用户 force_refresh 重跑。

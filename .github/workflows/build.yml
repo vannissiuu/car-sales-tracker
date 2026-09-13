@@ -20,18 +20,26 @@ jobs:
     # 只在手动触发，或者 sync 工作流本次运行成功时才构建——
     # sync 失败/中止时不要拿残缺或过期的 data/sales.csv 去覆盖线上看板。
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
-    # 就算脚本内部出了没兜住的异常，也不要让整个 job 显示失败——
-    # 后面的 commit/upload 步骤仍然要有机会跑，尽量拿到部分产出
-    continue-on-error: true
+    # 这里曾经有一句 job 级的 continue-on-error: true，2026-09 去掉了。
+    # 当时的理由是"后面的 commit/upload 步骤仍然要有机会跑"——但那件事是由步骤上的
+    # if: always() 保证的，跟 continue-on-error 无关。job 级的 continue-on-error 唯一的
+    # 作用就是把失败的 job 在界面上染成绿色。它造成过一次真实事故：build.py 因为
+    # 「一车型对应两厂商」主动中止、看板整整停更，而 Actions 上一片绿，没人知道。
+    # 现在的口径：这个 job 绿，当且仅当看板真的用当前数据重建并成功发布了。
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # workflow_run 触发默认 checkout 的是默认分支最新提交，不一定是触发本次运行的
-          # 那个 sync 提交。显式指定 head_sha，确保拿到的是 sync 刚提交完 data/sales.csv
-          # 之后的那个 commit；workflow_dispatch 手动触发时 workflow_run 上下文不存在，
-          # 回退到 github.ref（手动运行时选择的分支/引用）。
-          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          # 2026-09 修正的真 bug：这里原本写的是
+          #     ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+          # 并注释说"确保拿到的是 sync 刚提交完 data/sales.csv 之后的那个 commit"。
+          # 这句话是错的——workflow_run.head_sha 是触发方那次运行**开跑时**的 SHA，
+          # 不是它跑完之后产出的提交。sync 先在 A 上开跑、再提交出 B，build 却去 checkout A，
+          # 于是每次 sync 真的抓到新数据时，build 都拿不到那批数据、用旧数据重建看板，
+          # 只把时间戳改新——看板永远慢一个月，而且时间戳还在撒谎。
+          # 正确做法：checkout 分支最新提交（此时已经包含 sync 的数据提交）。
+          # workflow_dispatch 手动触发时 workflow_run 上下文不存在，回退到 github.ref。
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -42,10 +50,39 @@ jobs:
       # 不再需要在这里用 heredoc 把源码写出来；要改构建逻辑，直接改 src/build.py 即可。
       - name: Run build script
         # build.py 内部对 ECharts 获取失败等情况已有多级回退（本地缓存 -> npm pack ->
-        # CDN 直连 -> 最后回退成 <script src=CDN> 标签），这里再加一层 continue-on-error
-        # 保险，确保就算构建整体失败，后面的 commit/upload 步骤也仍有机会执行、暴露问题。
-        continue-on-error: true
+        # CDN 直连 -> 最后回退成 <script src=CDN> 标签）。
+        # 这里原本有一句 continue-on-error: true，2026-09 去掉了——它把 build.py 的主动
+        # 中止（例如「数据假设被打破: 同一车型对应两个厂商」）吞成了成功。
+        # 构建失败就该是红的；下面的 upload 步骤有 if: always()，产物照样能拿到。
         run: python3 src/build.py
+
+      # 2026-09 新增的硬线：不让标签说谎。
+      # 比对 data/sales.csv 的最大月份和刚构建出来的 docs/index.html 里写的「数据覆盖 … 至 X年Y月」，
+      # 对不上就直接失败、并且不提交——宁可看板停在旧版本，也不要发布一个"时间戳是今天、
+      # 数据是上个月"的产物。这道校验同时能挡住上面那类"拿旧提交构建"的问题。
+      - name: Verify dashboard matches data
+        run: |
+          python3 - <<'PY'
+          import csv, re, sys
+          rows = list(csv.DictReader(open("data/sales.csv", encoding="utf-8")))
+          if not rows:
+              sys.exit("data/sales.csv 是空的")
+          dy, dm = max((int(r["year"]), int(r["month"])) for r in rows)
+          html = open("docs/index.html", encoding="utf-8").read()
+          m = re.search(r"数据覆盖\s*(\d{4})年(\d{1,2})月\s*至\s*(\d{4})年(\d{1,2})月", html)
+          if not m:
+              sys.exit("在 docs/index.html 里找不到「数据覆盖 … 至 …」，无法校验，按失败处理")
+          hy, hm = int(m.group(3)), int(m.group(4))
+          print(f"data/sales.csv 最大月份 = {dy}-{dm:02d}")
+          print(f"docs/index.html 覆盖到 = {hy}-{hm:02d}")
+          if (hy, hm) != (dy, dm):
+              sys.exit(
+                  f"!! 产物与数据不一致：数据有 {dy}-{dm:02d}，但看板只到 {hy}-{hm:02d}。\n"
+                  f"!! 常见原因：build.py 中途中止（看上一步日志），或 checkout 到了不含最新数据的提交。\n"
+                  f"!! 本次不提交，线上看板保持原样。"
+              )
+          print("校验通过：看板覆盖范围与数据一致")
+          PY
 
       - name: Commit dashboard back to repo
         # 两类失败在这里被显式处理：
@@ -62,10 +99,11 @@ jobs:
         #    失败就 fetch + rebase 到远端最新再试，最多 3 次，间隔递增。
         #    注意不能用 `git pull --rebase`：detached HEAD 下它没有上游分支可跟。
         #
-        # 三次都失败时打印醒目的失败信息（不再静默），但步骤本身仍然 continue-on-error
-        # —— 构建产物已经进 artifact 了，不该因为一次推送竞争让整个 job 显示失败。
-        if: always()
-        continue-on-error: true
+        # 三次都失败时打印醒目的失败信息并 exit 1。2026-09 起这一步不再 continue-on-error：
+        # 推不上去就等于没发布，必须红。构建产物由下面 if: always() 的 upload 步骤保底。
+        # 去掉了原来的 if: always() 和 continue-on-error ——
+        # 构建失败或一致性校验没过时，绝不把产物提交上去（默认的 success() 条件正合适）；
+        # push 失败也要红，不能再静默。产物仍由下面 if: always() 的 upload 步骤保底。
         env:
           # workflow_run 触发时取触发方那次运行所在的分支；手动触发时取本次运行选的分支。
           TARGET_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
