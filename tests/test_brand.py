@@ -10,6 +10,8 @@
   5. model_to_manufacturer: 车型挑窝时厂商字段的强制覆盖，以及"先规范化厂商、
      再解析品牌"的应用顺序；存量厂商规范化 normalize_legacy_manufacturer_column
      的原地改写 + 联动重新解析 brand + 幂等
+  8. normalize_brand_column: 把 brand 当成每次运行都从 mapping.json 重新推导的派生列，
+     命中改写、不命中不动、幂等、不污染传入的 dict
 全部基于 sync_script.py 里实际会跑的函数，不发任何网络请求。
 """
 
@@ -191,6 +193,47 @@ def main():
     run7b, changed7b = S.normalize_legacy_manufacturer_column(run7a, mapping_5)
     check(f"第2次跑不再改任何行 (已经规范化过了)，changed7b=0，实际: {changed7b}", changed7b == 0)
     check("两次跑完结果完全一致 (幂等)", run7a == run7b)
+
+    print()
+    print("=== 断言 8: normalize_brand_column —— 每次运行都从 mapping.json 重新推导 brand ===")
+    # mapping.json 是品牌归属的唯一事实来源：用户在 GitHub 网页上编辑它调整品牌归属后，
+    # 已经入库、已经有 brand 的存量行也必须跟着变——这正是 normalize_legacy_brand_column
+    # (只补空值) 做不到、必须靠 normalize_brand_column (全量重解析) 来补的缺口。
+    mapping_8 = {
+        "manufacturer_to_brand": {"长城汽车": "长城汽车", "上汽大众": "大众"},
+        "model_to_brand": {"长城H10": "长城", "欧拉5 EV": "欧拉", "魏牌 V8X": "魏牌"},
+    }
+    legacy_rows_mixed_brand = [
+        # 命中：mapping.json 刚补了这条 model_to_brand，存量行的 brand 还是旧的哨兵值，要被改写
+        make_row(2026, 8, "长城H10", "长城汽车", brand="长城汽车", body_type="SUV"),
+        make_row(2026, 8, "欧拉5 EV", "长城汽车", brand="长城汽车", body_type="轿车"),
+        make_row(2026, 8, "魏牌 V8X", "长城汽车", brand="长城汽车", body_type="SUV"),
+        # 不命中：解析结果和已存的 brand 一致，不该被动
+        make_row(2024, 1, "朗逸", "上汽大众", brand="大众", body_type="轿车"),
+        # 不命中：不在 model_to_brand 里，manufacturer_to_brand 兜底值本来就等于已存的 brand
+        make_row(2024, 1, "长城炮", "长城汽车", brand="长城汽车", body_type="SUV"),
+    ]
+    run8a, changed8a = S.normalize_brand_column(legacy_rows_mixed_brand, mapping_8)
+    check(f"命中的 3 行(长城H10/欧拉5 EV/魏牌 V8X)被改写，其余 2 行不动，changed8a=3，实际: {changed8a}",
+          changed8a == 3)
+
+    by_model_8 = {r["model"]: r["brand"] for r in run8a}
+    check("长城H10 -> brand 改写为'长城'", by_model_8["长城H10"] == "长城")
+    check("欧拉5 EV -> brand 改写为'欧拉'", by_model_8["欧拉5 EV"] == "欧拉")
+    check("魏牌 V8X -> brand 改写为'魏牌'", by_model_8["魏牌 V8X"] == "魏牌")
+    check("朗逸(未命中，解析结果本来就和已存brand一致) -> brand 原样是'大众'", by_model_8["朗逸"] == "大众")
+    check("长城炮(未命中，兜底值本来就和已存brand一致) -> brand 原样是'长城汽车'",
+          by_model_8["长城炮"] == "长城汽车")
+
+    check("原始输入 legacy_rows_mixed_brand 没有被原地修改 (纯函数，不产生副作用)",
+          legacy_rows_mixed_brand[0]["brand"] == "长城汽车"
+          and legacy_rows_mixed_brand[1]["brand"] == "长城汽车"
+          and legacy_rows_mixed_brand[2]["brand"] == "长城汽车")
+
+    run8b, changed8b = S.normalize_brand_column(run8a, mapping_8)
+    check(f"第2次跑不再改任何行 (brand 已经是按当前 mapping 解析出来的结果)，changed8b=0，实际: {changed8b}",
+          changed8b == 0)
+    check("两次跑完结果完全一致 (幂等)", run8a == run8b)
 
     print()
     print("=== 断言 4: 自举 —— mapping.json 不存在时会被创建；已存在时绝不被覆盖 ===")

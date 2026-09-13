@@ -250,6 +250,9 @@ DEFAULT_MAPPING_JSON = r'''
     "魏牌 V9X": "魏牌",
     "魏牌 摩卡新能源": "魏牌",
     "魏牌 拿铁DHT-PHEV": "魏牌",
+    "长城H10": "长城",
+    "欧拉5 EV": "欧拉",
+    "魏牌 V8X": "魏牌",
     "蔚来ES8": "蔚来",
     "蔚来ES6": "蔚来",
     "蔚来ET5T": "蔚来",
@@ -1087,6 +1090,48 @@ def normalize_legacy_brand_column(rows, mapping):
     return normalized, changed
 
 
+def normalize_brand_column(rows, mapping):
+    """
+    把 brand 当成一个每次运行都从 mapping.json 重新推导的派生列，而不是"只在缺失时补一次"
+    的存量列——这是 README 里"直接在 GitHub 网页上编辑 data/mapping.json，下次同步自动
+    生效"这句承诺能成立的前提。
+
+    背景：normalize_legacy_brand_column 只给 brand 为空的行补值，已经有 brand 的行永远
+    不会被重新解析。而月份抓取是幂等的（抓过的月份不会重抓），所以用户在 GitHub 网页上
+    编辑 mapping.json 调整品牌归属后，已经入库的历史行不会跟着变，除非做一次全量
+    force_refresh（要把数据源整个重爬一遍）。这个函数就是用来补上这个缺口的：对每一行都
+    重新按当前 mapping 解析一次 brand，不管这一行原来有没有 brand。
+
+    和 normalize_legacy_brand_column 的分工：
+      - normalize_legacy_brand_column：处理"这一行压根没有 brand 这个 key"（老版本
+        sales.csv 没有 brand 列），只补空值，不碰已有的 brand。
+      - normalize_brand_column（这个函数）：处理"这一行有 brand，但 mapping.json 已经
+        改了，这个 brand 需要跟着更新"，对每一行都重新解析并在结果不同的时候覆盖。
+    两者不是互斥关系，而是必须在 main() 里依次都跑一遍：先补空值，再全量重解析。
+
+    对每一行用 resolve_brand(model, manufacturer, mapping) 重新解析 brand；解析结果与
+    该行已存的 brand 不同时覆盖写入并计数，相同则原样保留该行（不新建 dict）。
+
+    幂等：第二次跑的时候所有行的 brand 都已经是按当前 mapping 解析出来的结果，条件不
+    命中，changed_count 为 0。不修改传入的 dict（返回新的列表+新的行 dict），避免意外
+    的原地副作用。
+
+    纯函数，不发请求，方便离线单测。返回 (normalized_rows, changed_count)。
+    """
+    normalized = []
+    changed = 0
+    for r in rows:
+        resolved = resolve_brand(r.get("model", ""), r.get("manufacturer", ""), mapping)
+        if resolved != r.get("brand"):
+            new_r = dict(r)
+            new_r["brand"] = resolved
+            normalized.append(new_r)
+            changed += 1
+        else:
+            normalized.append(r)
+    return normalized, changed
+
+
 def load_or_bootstrap_mapping():
     """
     读取品牌映射字典 data/mapping.json。
@@ -1362,6 +1407,8 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
     lines.append(f"- 存量厂商规范化：按 model_to_manufacturer 改写了 {legacy_manufacturer_n} 行的厂商字段")
     legacy_brand_n = report.get("legacy_brand_backfilled_count", 0)
     lines.append(f"- 存量品牌补列：为 {legacy_brand_n} 行补上了 brand 列")
+    brand_reresolved_n = report.get("brand_reresolved_count", 0)
+    lines.append(f"- 品牌重解析：按 mapping.json 改写了 {brand_reresolved_n} 行的 brand")
     lines.append("")
 
     lines.append("## 品牌映射\n")
@@ -1700,6 +1747,7 @@ def main():
         "legacy_normalized_count": 0,
         "legacy_manufacturer_normalized_count": 0,
         "legacy_brand_backfilled_count": 0,
+        "brand_reresolved_count": 0,
         "body_type_unified_changes": [],
         "body_type_unified_model_count": 0,
         "body_type_unified_row_count": 0,
@@ -1747,6 +1795,14 @@ def main():
     report["legacy_brand_backfilled_count"] = legacy_brand_backfilled_count
     if legacy_brand_backfilled_count:
         log(f"存量数据补列: 为 {legacy_brand_backfilled_count} 行补上了 brand 列")
+
+    # 存量品牌重解析：mapping.json 是品牌归属的唯一事实来源，brand 是从它每次运行都
+    # 重新推导的派生列——不这样做的话，用户在 GitHub 网页上编辑 mapping.json 调整品牌
+    # 归属后，已经入库的历史行不会跟着变，README 里"编辑 mapping.json 下次同步自动
+    # 生效"这句承诺就是假的。同样幂等，不需要用户 force_refresh 重跑。
+    existing_rows, brand_reresolved_count = normalize_brand_column(existing_rows, mapping)
+    report["brand_reresolved_count"] = brand_reresolved_count
+    log(f"存量品牌重解析：按 mapping.json 改写了 {brand_reresolved_count} 行的 brand")
 
     effective_months_done = compute_effective_months_done(months_done, force_refresh)
     all_targets = [
