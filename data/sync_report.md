@@ -1,23 +1,24 @@
 # 同步报告
 
-- 运行时间 (UTC): 2026-09-13T13:30:21.918683+00:00 ~ 2026-09-13T13:30:21.968726+00:00
-- 触发方式: push
-- GITHUB_RUN_ID: 34760007513
+- 运行时间 (UTC): 2026-09-13T13:51:19.030144+00:00 ~ 2026-09-13T13:51:19.084674+00:00
+- 触发方式: workflow_dispatch
+- GITHUB_RUN_ID: 34760978985
 - 耗时: 0 秒
-- max_months 本次生效值: 未设置/空 (push 触发或未传参) -> 保守默认只跑 1 个月
-- force_refresh 本次生效值: False (未设置/空 (push 触发或未传参) -> 默认不重抓)
+- max_months 本次生效值: MAX_MONTHS=1 -> 本次最多跑 1 个月
+- force_refresh 本次生效值: False (FORCE_REFRESH='false' 不在 true/1/yes 之列 -> 保守按 False（不重抓）处理)
 - 是否被拦截: 否
 - 累计总行数 (sales.csv): 19429
 - 累计厂商数 (manufacturers.txt): 117
 - 本次重抓覆盖的月份: (无)
 - 存量数据规范化：将 0 行「两厢车/三厢车」合并为「轿车」
-- 存量厂商规范化：按 model_to_manufacturer 改写了 1 行的厂商字段
+- 存量厂商规范化：按 model_to_manufacturer 改写了 0 行的厂商字段
 - 存量品牌补列：为 0 行补上了 brand 列
+- 品牌重解析：按 mapping.json 改写了 3 行的 brand
 
 ## 品牌映射
 
-- 命中 model_to_brand: 1994 行
-- 命中 manufacturer_to_brand: 17435 行
+- 命中 model_to_brand: 1997 行
+- 命中 manufacturer_to_brand: 17432 行
 - 回退为厂商原值: 0 行
 
 - 合并后品牌总数: 122
