@@ -26,7 +26,7 @@ import re
 import sys
 import time
 import traceback
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 BASE = "https://xl.16888.com"
 
@@ -81,6 +81,7 @@ SALES_CSV = os.path.join(DATA_DIR, "sales.csv")
 MANUFACTURERS_TXT = os.path.join(DATA_DIR, "manufacturers.txt")
 REPORT_MD = os.path.join(DATA_DIR, "sync_report.md")
 MAPPING_JSON_PATH = os.path.join(DATA_DIR, "mapping.json")
+PRICES_JSON = os.path.join(DATA_DIR, "prices.json")
 
 CSV_FIELDS = ["year", "month", "manufacturer", "brand", "model", "body_type", "energy_type", "sales"]
 
@@ -435,6 +436,43 @@ def extract_body_type_name(html_text):
     return None
 
 
+
+def _parse_price_range(raw):
+    """
+    解析「售价（万元）」这一列的原始字符串，比如 "6.48 - 9.48" / "19.98" / "0.00 - 0.00"。
+    返回 (price_lo, price_hi)：
+      - 两个数字都能解析、且不全为 0 -> (lo, hi)（float）。
+      - 只有一个数字（比如单一价格 "19.98"）-> lo = hi = 该数字。
+      - 任一端小于等于 0（含 "0.00 - 0.00"，代表当前停产/无在售价格）-> (None, None)。
+        只有一端是 0 的情况在实测的三个月份里一次都没出现过，但真出现了也只能当
+        残缺数据丢掉：0 会把哑铃图的一端拉到坐标原点，画出一个假的价位区间。
+      - 任何解析失败（空值、非数字、NaN、列不存在）-> (None, None)，绝不抛异常。
+    这一列存的是车型的"当前"售价，与所属月份无关，调用方（parse_style_like_table）
+    按此口径把它挂到每一行上。
+    """
+    if raw is None:
+        return None, None
+    text = str(raw).strip()
+    if not text or text.lower() == "nan":
+        return None, None
+    parts = [p.strip() for p in text.split("-") if p.strip() != ""]
+    if not parts:
+        return None, None
+    try:
+        nums = [float(p) for p in parts[:2]]
+    except (ValueError, TypeError):
+        return None, None
+    if any(n != n for n in nums):  # NaN 不等于自身
+        return None, None
+    if len(nums) == 1:
+        lo = hi = nums[0]
+    else:
+        lo, hi = nums[0], nums[1]
+    if lo <= 0 or hi <= 0:
+        return None, None
+    return lo, hi
+
+
 def parse_style_like_table(html_text):
     """
     解析「主榜 / body-N / ev」这类页面的表格。
@@ -465,6 +503,11 @@ def parse_style_like_table(html_text):
         log(f"  !! 表格列名不符合预期，实际列名: {list(df.columns)}")
         return []
 
+    # 售价列名固定是"售价（万元）"，但不把它放进上面的 expected 硬校验里：万一数据源
+    # 哪天悄悄把这列改名/去掉，也不该让销量数据的解析整体失败——找不到就把 price_col
+    # 设成 None，所有行的价格自然都是 None，其余字段照常产出。
+    price_col = "售价（万元）" if "售价（万元）" in df.columns else None
+
     rows = []
     for _, r in df.iterrows():
         try:
@@ -476,11 +519,20 @@ def parse_style_like_table(html_text):
             continue
         if not model or model.lower() == "nan":
             continue
+        if price_col is not None:
+            try:
+                price_lo, price_hi = _parse_price_range(r[price_col])
+            except Exception:
+                price_lo, price_hi = None, None
+        else:
+            price_lo, price_hi = None, None
         rows.append({
             "rank": rank,
             "model": model,
             "manufacturer": manufacturer,
             "sales": sales,
+            "price_lo": price_lo,
+            "price_hi": price_hi,
         })
     return rows
 
@@ -796,6 +848,12 @@ def sync_month(session, year, month, report, body_names_cache, mapping):
     style_rows, ok, _page1_html, _probe = fetch_full_listing(session, style_tpl, report, f"{yyyymm} 主榜")
     if not ok or not style_rows:
         raise MonthAbortedException(f"{yyyymm} 主榜抓取失败或为空")
+
+    # 售价是车型级、与所抓月份无关的"当前"属性：只要主榜本身抓成功，就把这批
+    # (model, price_lo, price_hi) 收进 report，供 main() 最后累积式合并进
+    # data/prices.json。即使这个月后面 body/ev 环节失败导致整月被 MonthAbortedException
+    # 放弃，主榜已经抓到的价格依然真实有效，没有理由跟着陪葬。
+    report.setdefault("price_style_rows", []).extend(style_rows)
 
     body_lists = []  # [(body_id, body_name, rows), ...] —— 仅本月成功探测到、有数据的分类
     this_month_probe = []  # 本月所有 body-1..8 的探测记录（含失败/不存在的），供对账用
@@ -1458,6 +1516,123 @@ def months_from_2024_01_to_last_complete_month(now=None):
     return months
 
 
+
+# ---------------------------------------------------------------------------
+# 价位表 data/prices.json：累积式合并（绝不能被某一次抓取的结果整体覆盖）
+# ---------------------------------------------------------------------------
+
+def today_cn_date():
+    """
+    返回 UTC+8（北京时间）的今天日期，格式 YYYY-MM-DD。prices.json 里的
+    updated_at / asof 都用这个口径，不用运行机器的本地时区、也不用 UTC，避免
+    同一个自然日在不同时区下产出不一致的日期字符串。
+    """
+    return datetime.now(timezone(timedelta(hours=8))).date().isoformat()
+
+
+def load_prices_file(path=None):
+    """
+    读取 data/prices.json。文件不存在，或者存在但内容损坏/不是预期结构，都当成
+    空表起步（{"models": {}}）——绝不能因为这一步的意外状况打断整个同步流程，
+    更不能因为"读不出来"就误判成"没有任何车型有价格"从而在写回时抹掉旧数据
+    （写回走的是 merge_price_updates，以 existing_models 为基础增量合并，不是
+    覆盖，所以这里返回空表只影响"这次没读到的旧价格暂时不可见"，不会真的丢数据，
+    除非旧文件本身已经损坏）。
+    """
+    path = path or PRICES_JSON
+    if not os.path.exists(path):
+        return {"models": {}}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as e:
+        log(f"!! 读取 {path} 失败，本次当空表处理: {e}")
+        return {"models": {}}
+    if not isinstance(data, dict):
+        return {"models": {}}
+    models = data.get("models")
+    if not isinstance(models, dict):
+        models = {}
+    return {"models": models}
+
+
+def merge_price_updates(existing_models, price_rows, asof):
+    """
+    把本次解析到的 (model, price_lo, price_hi) 累积式合并进 existing_models
+    （不原地改，返回一份新 dict）。核心规则：
+      - 本次拿到真实价格（price_lo/price_hi 都不是 None）-> 无条件覆盖该车型的
+        条目，asof 设为 asof。
+      - 本次是"无价格"（price_lo/price_hi 都是 None）：
+          - 该车型目前还没有过真实价格（不存在，或者存的就是 null）-> 写入/刷新
+            null 条目，asof 设为 asof（代表"确认到这一天为止仍然没有售价"）。
+          - 该车型已经有真实价格 -> 保持原样，连 asof 都不碰。数据源的已知缺陷是
+            "同一款车某次抓取可能整个从榜单上消失"，绝不能让这种缺席被解读成
+            "价格没了"。
+      - 本次完全没出现的车型：不在 price_rows 里，这个函数只遍历 price_rows，
+        天然原样保留 existing_models 里的其余条目，不删不改。
+    同一个 model 在 price_rows 里出现多次（同一次运行抓了好几个月，每个月主榜都
+    带着同一批"当前"售价）时，按遇到顺序不断覆盖即可——同一次运行里同一个车型的
+    价格理应相同。
+    asof 的含义是"这个价格是哪一天开始被记录到的"，**不是**"最后一次确认的日期"：
+    价格没变的车型这次不会被重写，asof 保持原值。这样每月同步产生的 diff 里只剩
+    真正调价的车型，调价本身成了可读的信号；否则每月都会把全部 600 多行的 asof
+    刷一遍，真正的变化淹没在噪声里。
+    返回 (merged_models, added_count, changed_count)：
+      - added_count：本次新增的车型（之前 existing_models 里完全没有这个 key）。
+      - changed_count：本次价格确实发生了变化的车型（真实价格与旧值不同 / null
+        被真实价格覆盖）。价格没变、或"已有真实价格但本次解析不到价格因而保持
+        原样"的情况，都不计入。
+    """
+    merged = dict(existing_models)
+    added = 0
+    changed = 0
+    for row in price_rows:
+        model = row.get("model")
+        if not model:
+            continue
+        lo = row.get("price_lo")
+        hi = row.get("price_hi")
+        prev = merged.get(model)
+        has_real_price = lo is not None and hi is not None
+        if has_real_price:
+            if prev is not None and prev.get("lo") == lo and prev.get("hi") == hi:
+                continue  # 价格没变：原样不动，asof 也不刷新，保持 diff 干净
+            merged[model] = {"lo": lo, "hi": hi, "asof": asof}
+            if prev is None:
+                added += 1
+            else:
+                changed += 1
+        else:
+            prev_has_real_price = (
+                prev is not None and prev.get("lo") is not None and prev.get("hi") is not None
+            )
+            if prev_has_real_price:
+                continue  # 数据源这次没给价，不代表价格没了，见上面的说明
+            if prev is not None:
+                continue  # 之前就记着"无售价"，重复确认一次不产生任何改动
+            merged[model] = {"lo": None, "hi": None, "asof": asof}
+            added += 1
+    return merged, added, changed
+
+
+def write_prices_file(models, asof, path=None):
+    """
+    原子写 data/prices.json：先写临时文件，再 os.replace 到目标路径，避免写到一半
+    被中断、或被并发读到半份文件。json.dump 用 ensure_ascii=False（中文车型名不
+    转义成 \\uXXXX，diff 里能直接看懂）+ indent=1 + sort_keys=True（车型名按固定
+    顺序排列，diff 稳定，不会因为字典遍历顺序不同而整份炸开）。
+    """
+    path = path or PRICES_JSON
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    payload = {"updated_at": asof, "models": models}
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=1, sort_keys=True)
+        f.write("\n")
+    os.replace(tmp_path, path)
+    log(f"写入 {path} ({len(models)} 款车型)")
+
+
 def write_outputs(all_rows, report, mapping):
     os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -1545,6 +1720,12 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
     lines.append(f"- 存量品牌补列：为 {legacy_brand_n} 行补上了 brand 列")
     brand_reresolved_n = report.get("brand_reresolved_count", 0)
     lines.append(f"- 品牌重解析：按 mapping.json 改写了 {brand_reresolved_n} 行的 brand")
+    price_report = report.get("price_report", {})
+    lines.append(
+        f"- 价格表：共 {price_report.get('with_price', 0)} 款车型有售价，"
+        f"{price_report.get('without_price', 0)} 款确认无售价（停产/数据源未给）；"
+        f"本次新增 {price_report.get('added', 0)} 款、调价 {price_report.get('changed', 0)} 款。"
+    )
     lines.append("")
 
     lines.append("## 品牌映射\n")
@@ -1939,6 +2120,7 @@ def main():
         # 不瞎猜。
         "trigger_event": os.environ.get("TRIGGER_EVENT", "未知（本地/离线运行）"),
         "github_run_id": os.environ.get("GITHUB_RUN_ID", "未知（本地/离线运行）"),
+        "price_style_rows": [],
     }
 
     max_months, max_months_desc = parse_max_months(os.environ.get("MAX_MONTHS"))
@@ -2025,6 +2207,29 @@ def main():
     report["body_names"] = body_names_cache
     report["finished_at"] = datetime.now(timezone.utc).isoformat()
     report["elapsed_seconds"] = time.time() - start_time
+
+    # 价位表 data/prices.json：累积式合并，不能被本次抓取的结果整体覆盖（数据源的
+    # 已知缺陷是同一款车某次抓取可能整个从榜单上消失，见模块顶部背景说明）。这一步
+    # 每次运行都做，哪怕本次一个新月份都没抓到（price_style_rows 为空列表）——
+    # updated_at 照常刷新，同步报告里的覆盖率那一行也照常输出，不静默跳过。
+    price_asof = today_cn_date()
+    existing_prices = load_prices_file()
+    merged_prices, price_added, price_changed = merge_price_updates(
+        existing_prices["models"], report.get("price_style_rows", []), price_asof
+    )
+    write_prices_file(merged_prices, price_asof)
+    price_with_value = sum(1 for v in merged_prices.values() if v.get("lo") is not None)
+    price_without_value = len(merged_prices) - price_with_value
+    report["price_report"] = {
+        "with_price": price_with_value,
+        "without_price": price_without_value,
+        "added": price_added,
+        "changed": price_changed,
+    }
+    log(
+        f"价格表合并完成: 共 {price_with_value} 款有售价, {price_without_value} 款确认无售价, "
+        f"本次新增 {price_added} 款, 调价 {price_changed} 款"
+    )
 
     # synced_this_run 是"本次真正成功产出了数据的月份"——只有这些月份的旧数据会被替换，
     # 本次没碰到、或者碰到了但失败/放弃/被拦截的月份，一律保留原样，见 merge_existing_and_new。

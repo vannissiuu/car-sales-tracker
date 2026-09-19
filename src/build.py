@@ -56,6 +56,12 @@ NEWS_PATH = os.environ.get("NEWS_JSON") or _first_existing(
     os.path.join(REPO_ROOT, "data", "news.json"),
     os.path.join(REPO_ROOT, "news.json"),
 )
+# 售价表：可选，不存在或解析失败时优雅降级为空表（绝不让 build 失败），
+# 结构与 sync 脚本产出的 data/prices.json 一致：{"updated_at": ..., "models": {name: {"lo","hi","asof"}}}。
+PRICES_PATH = os.environ.get("PRICES_JSON") or _first_existing(
+    os.path.join("data", "prices.json"),
+    os.path.join(REPO_ROOT, "data", "prices.json"),
+)
 
 # 实时动态检索接口地址（可选）。留空 "" 时：看板不显示"查最新"按钮，
 # 只展示 news.json 预生成的快照，不发任何实时请求、不报错、不显示坏掉的按钮。
@@ -324,6 +330,42 @@ def load_news():
 
 
 # ---------------------------------------------------------------------------
+# 3b. 售价表（可选，不存在/解析失败时降级为空表，不让 build 失败）
+# ---------------------------------------------------------------------------
+def load_prices():
+    """读取 data/prices.json，返回原始结构 {"updated_at":..., "models": {...}}。
+    文件不存在或解析失败时都返回空表，绝不抛出异常中断构建。"""
+    if os.path.isfile(PRICES_PATH):
+        try:
+            with open(PRICES_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if not isinstance(data, dict) or "models" not in data:
+                raise ValueError("缺少 models 字段")
+            return data
+        except Exception as e:
+            print(f"  警告: prices.json 存在但解析失败，忽略，价位地图将无数据: {e}", file=sys.stderr)
+            return {"updated_at": None, "models": {}}
+    print("  prices.json 不存在，价位地图将无数据（不影响其余功能）")
+    return {"updated_at": None, "models": {}}
+
+
+def build_price_payload(prices_raw):
+    """把 load_prices() 的原始结构压缩成前端注入用的紧凑结构：
+    {"updatedAt": <str|None>, "models": {name: [lo, hi]}}——只保留有售价（lo/hi 均非 null）的
+    车型，asof 不注入（HTML 体积敏感，前端不需要逐车型的更新日期）。"""
+    models_raw = prices_raw.get("models") or {}
+    models = {}
+    for name, v in models_raw.items():
+        if not isinstance(v, dict):
+            continue
+        lo, hi = v.get("lo"), v.get("hi")
+        if lo is None or hi is None:
+            continue
+        models[name] = [lo, hi]
+    return {"updatedAt": prices_raw.get("updated_at"), "models": models}
+
+
+# ---------------------------------------------------------------------------
 # 4. 主流程
 # ---------------------------------------------------------------------------
 def main():
@@ -344,9 +386,15 @@ def main():
     news = load_news()
     print(f"  news.json {'存在，' + str(len(news)) + ' 个对象有动态' if news else '不存在，使用占位'}")
 
+    print("加载 prices.json（可选，价位地图用）...")
+    prices_raw = load_prices()
+    price_payload = build_price_payload(prices_raw)
+    print(f"  售价表 {len(price_payload['models'])} 款车型有售价数据")
+
     data_json = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
     news_json = json.dumps(news, ensure_ascii=False, separators=(",", ":"))
     meta_json = json.dumps(meta, ensure_ascii=False, separators=(",", ":"))
+    price_json = json.dumps(price_payload, ensure_ascii=False, separators=(",", ":"))
 
     dynamics_api_base = (DYNAMICS_API_BASE or "").strip()
     dynamics_api_base_json = json.dumps(dynamics_api_base, ensure_ascii=False)
@@ -371,6 +419,7 @@ def main():
     html = html.replace("@@DATA_JSON@@", data_json)
     html = html.replace("@@NEWS_JSON@@", news_json)
     html = html.replace("@@META_JSON@@", meta_json)
+    html = html.replace("@@PRICE_JSON@@", price_json)
     html = html.replace("@@DYNAMICS_API_BASE_JSON@@", dynamics_api_base_json)
     html = html.replace(
         "@@COVERAGE_TEXT@@",
@@ -585,6 +634,7 @@ select.bodytype-select{
   border-radius:7px;padding:5px 10px;font-size:12.5px;cursor:pointer;
 }
 .small-btn:hover{color:var(--text-primary);border-color:var(--text-muted);}
+.small-btn.disabled{cursor:not-allowed;opacity:.45;pointer-events:none;}
 .btn-pair{display:flex;gap:8px;}
 .small-btn.primary{
   background:var(--chip-bg-active);color:var(--chip-fg-active);border-color:var(--chip-bg-active);font-weight:700;
@@ -864,11 +914,16 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
     <div class="chart-panel">
       <div class="chart-toolbar">
         <div class="chart-title" id="chartTitle"></div>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="small-btn" id="downloadCsvBtn" type="button" style="display:none;">下载 CSV</button>
+          <button class="small-btn" id="priceMapBtn" type="button">价位地图</button>
           <button class="small-btn" id="viewModeBtn" type="button">按年对比</button>
           <button class="small-btn" id="tableToggleBtn" type="button">切换为表格视图</button>
         </div>
+      </div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;margin:-2px 2px 0 0;">
+        <div class="chip-disabled-hint" id="priceMapDisabledHint" style="display:none;">仅在车型粒度下可用</div>
+        <div class="chip-disabled-hint" id="viewModeDisabledHintPM" style="display:none;">价位地图下不可用</div>
       </div>
       <div class="year-legend" id="yearLegend"></div>
       <div class="chart-stage">
@@ -903,6 +958,13 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
     最新年份的柱顶为虚线开口，表示年度尚未结束，<b>本工具不做任何全年预测</b>。
     某对象某年无销量时不画柱，留空位。默认展示前 10 个对象，可在右侧列表自行增补。
   </div>
+  <div class="footnote" id="footnotePrice" style="display:none;">
+    价位地图：售价区间取自数据源的「售价（万元）」列，是该车型的<b>当前</b>售价，与所选年份无关——
+    看 2024 年的榜单，图上画的仍是这些车今天的价位。数据源只保留当前在售价格，停产车型的这一列会归零，
+    因此这类车无法给出价位。价位轴为便于比较不从零起点。
+  </div>
+  <div class="dyn-error" id="priceNoDataNote" style="display:none;"></div>
+  <div class="dyn-error" id="priceOutRangeNote" style="display:none;"></div>
 
   <details class="about-block card" id="aboutBlock">
     <summary>关于数据 —— 车型 / 厂商 / 品牌 三层口径说明</summary>
@@ -963,6 +1025,7 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
 var RAW = @@DATA_JSON@@;
 var NEWS = @@NEWS_JSON@@;
 var META = @@META_JSON@@;
+var PRICES = @@PRICE_JSON@@;
 var DYNAMICS_API_BASE = @@DYNAMICS_API_BASE_JSON@@;
 
 var PALETTE = {
@@ -1008,6 +1071,8 @@ var YEARS = META.years.slice().sort();
 var state = {
   year: YEARS[YEARS.length-1],
   viewMode: 'month',      // month | year —— 按月累计(YTD折线) | 按年对比(分组柱)
+  priceMap: false,        // 价位地图（横向哑铃图，展示当前图上车型的售价区间）是否开启；
+                           // 仅在 gran==='model' 时可用，与 viewMode==='year' 互斥（见 syncControlStates）
   gran: 'manu',           // manu | brand | model | energy
   bodyType: -1,            // index into RAW.bodyTypes, or -1 = 全部车体类型 (used when gran==='model')
   owner: 'all',            // 'all' | 'manu:<厂商名>' | 'brand:<品牌名>'，仅 gran==='model' 时生效，用于按归属筛选车型池
@@ -1524,6 +1589,7 @@ function resetAll(){
   state.owner       = 'all';
   state.energy      = 'all';
   state.stacked     = false;
+  state.priceMap    = false;
   state.searchTerm  = '';
   state.hoverKey    = null;
   state.tableView   = false;
@@ -1563,7 +1629,21 @@ document.getElementById('tableToggleBtn').addEventListener('click', function(){
 document.getElementById('downloadCsvBtn').addEventListener('click', function(){
   downloadCsv(lastUniverse);
 });
+document.getElementById('priceMapBtn').addEventListener('click', function(){
+  // 双重防线：按钮在非车型粒度下已经是 disabled（pointer-events:none），这里再挡一道。
+  if(state.gran !== 'model') return;
+  state.priceMap = !state.priceMap;
+  // 价位地图只画"当前一套价格"，跟"按年对比"（跨年份比销量）互斥：打开价位地图时
+  // 如果正停在年视图，把它切回月视图；按钮文案统一交给 syncControlStates() 维护。
+  if(state.priceMap && state.viewMode === 'year'){
+    state.viewMode = 'month';
+  }
+  syncControlStates();
+  renderAll();
+});
 document.getElementById('viewModeBtn').addEventListener('click', function(){
+  // 价位地图下"按年对比"按钮被禁用（同上，pointer-events:none 已挡掉点击），这里再挡一道。
+  if(state.priceMap) return;
   // 视图切换：不清空已勾选对象（两个视图共享 state.shown），不修改 state.year，
   // 不重置粒度/车体类型/归属/能源筛选——这些筛选照常生效，且跟切视图无关。
   state.viewMode = state.viewMode==='year' ? 'month' : 'year';
@@ -1591,6 +1671,12 @@ function renderYearLegend(){
 }
 function syncControlStates(){
   var yearDisabled = state.viewMode==='year';
+  // 价位地图仅在车型粒度下可用；粒度被切走时必须强制关闭，否则会停在一个非法状态
+  // （价位地图开着，但当前粒度根本不支持它）。
+  var pmDisabled = state.gran !== 'model';
+  if(pmDisabled && state.priceMap){
+    state.priceMap = false;
+  }
   renderYearLegend();
   document.querySelectorAll('#yearChips .chip').forEach(function(c){
     c.classList.toggle('active', String(state.year)===c.getAttribute('data-year'));
@@ -1602,6 +1688,17 @@ function syncControlStates(){
   if(stackedHint) stackedHint.style.display = yearDisabled ? '' : 'none';
   var vmBtn = document.getElementById('viewModeBtn');
   if(vmBtn) vmBtn.textContent = yearDisabled ? '按月累计' : '按年对比';
+  // 价位地图和按年对比互斥：价位地图开着时，按年对比按钮禁用（提示见 viewModeDisabledHintPM）。
+  if(vmBtn) vmBtn.classList.toggle('disabled', state.priceMap);
+  var vmHintPM = document.getElementById('viewModeDisabledHintPM');
+  if(vmHintPM) vmHintPM.style.display = state.priceMap ? '' : 'none';
+  var pmBtn = document.getElementById('priceMapBtn');
+  if(pmBtn){
+    pmBtn.classList.toggle('disabled', pmDisabled);
+    pmBtn.textContent = state.priceMap ? '返回销量走势' : '价位地图';
+  }
+  var pmHint = document.getElementById('priceMapDisabledHint');
+  if(pmHint) pmHint.style.display = pmDisabled ? '' : 'none';
   // 修正8：年视图的默认展示上限是 10 不是 20，按钮文案必须跟着实际行为走，
   // 否则点了「重置为 Top 20」却只出现 10 个对象，是标签说谎。
   var rsBtn = document.getElementById('resetBtn');
@@ -1609,8 +1706,10 @@ function syncControlStates(){
   // 修正8：脚注整段只描述折线图，年视图下每一句都不成立，按视图切换。
   var fnM = document.getElementById('footnoteMonth');
   var fnY = document.getElementById('footnoteYear');
-  if(fnM) fnM.style.display = yearDisabled ? 'none' : '';
-  if(fnY) fnY.style.display = yearDisabled ? '' : 'none';
+  var fnP = document.getElementById('footnotePrice');
+  if(fnM) fnM.style.display = (yearDisabled || state.priceMap) ? 'none' : '';
+  if(fnY) fnY.style.display = (yearDisabled && !state.priceMap) ? '' : 'none';
+  if(fnP) fnP.style.display = state.priceMap ? '' : 'none';
   document.querySelectorAll('#granChips .chip').forEach(function(c){
     c.classList.toggle('active', c.getAttribute('data-gran')===state.gran);
   });
@@ -1848,13 +1947,313 @@ function updateEmptyHint(){
     card.textContent = '已清除全部勾选，请从右侧列表勾选要对比的对象';
   }
 }
+/* ---------------- 价位地图：数据准备 ---------------- */
+// 只取当前图上实际展示的车型（跟折线图口径完全一致：universe.entities ∩ lastShownKeys），
+// 保持 entities 原有的 ytd 降序，不重新排序、不用全量 entities——价位地图要跟折线图
+// 展示的是同一批对象，不是另起一个"全部车型"的口径。
+function buildPriceRows(universe){
+  var shown = universe.entities.filter(function(e){ return lastShownKeys.has(e.key); });
+  var rows = [], noPrice = [];
+  shown.forEach(function(e){
+    var p = PRICES.models[e.name];
+    var own = modelOwnership(e.name); // {manuName, brandName} | null；取不到就留空串，不报错
+    var manufacturer = own ? own.manuName : '';
+    if(p){
+      rows.push({name:e.name, key:e.key, lo:p[0], hi:p[1], sales:e.ytd, manufacturer:manufacturer});
+    } else {
+      noPrice.push({name:e.name, key:e.key, sales:e.ytd, manufacturer:manufacturer});
+    }
+  });
+  return {rows:rows, noPrice:noPrice};
+}
+function formatPrice(v){
+  if(v==null) return '—';
+  // 售价保留原始精度（通常 2 位小数），不像 formatNum() 那样取整——取整会把 6.48 万这种
+  // 常见售价抹成 6 万，价位地图的核心就是这几毛钱的差异，不能丢。
+  return v.toLocaleString('zh-CN', {maximumFractionDigits:2});
+}
+
+/* ---------------- 价位地图：横向哑铃图 ----------------
+   纵轴＝车型（category，从上往下按销量降序），横轴＝价位（value，单位万元）。
+   极端值（比主群高一个量级的车，如红旗金葵花国礼 718-758 万）不参与坐标轴 min/max 计算，
+   否则其余车会被压成一条线——用四分位距识别，被移出的车改画箭头+真实数值，不画哑铃。
+   画法：单个 custom series + renderItem，参考 makeYearRenderItem() 的布局写法（同一套坐标系手法）。
+   悬浮框选用 trigger:'axis'（配合 category 纵轴 + axisPointer:'shadow'）：ECharts 对"值轴+类目轴"
+   的组合会自动把类目轴当成索引轴，鼠标扫到该类目对应的整条横向色带（不只是图形本体）就会触发，
+   这样"整行任意位置都能弹出悬浮框"不用额外画命中区；点击（用于跳转到抽屉）走的是 series 自身的
+   图形命中检测，所以下面额外给每行画了一个跨满整个绘图区宽度的透明矩形当命中区，保证点击同样是
+   整行触发，不止点在线段/圆点/箭头文字上才有反应。 */
+function priceQuantile(sorted, p){
+  var i = (sorted.length - 1) * p, lo = Math.floor(i), hi = Math.ceil(i);
+  return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+}
+function pickPriceUnit(range, maxTicks){
+  var us = [1,2,5,10,20,50,100,200,500];
+  var cap = maxTicks || 14;
+  for (var i=0;i<us.length;i++) if (range / us[i] <= cap) return us[i];
+  return 1000;
+}
+var priceMapRows = null; // 供 chart.on('click') 反查行数据（跟 yearChartRows 同一套做法）
+function renderChartPriceMap(universe){
+  updateEmptyHint();
+  var built = buildPriceRows(universe);
+  var rows = built.rows;
+  var textColor = cssVar('--text-secondary');
+  var mutedColor = cssVar('--text-muted');
+  var gridColor = cssVar('--grid');
+  var surface = cssVar('--surface-1');
+  var seriesColor = cssVar('--series-1');
+  var warnColor = cssVar('--warning-fg'); // 警示色：超出坐标范围的行，箭头+车型名都用它
+
+  // 图下方的"缺价车型"提示，跟随本次渲染一起刷新（N=0 时不显示这一行）
+  var noPriceEl = document.getElementById('priceNoDataNote');
+  if(noPriceEl){
+    if(built.noPrice.length > 0){
+      var names = built.noPrice.map(function(r){ return r.name; }).join('、');
+      noPriceEl.textContent = '本次筛选中有 ' + built.noPrice.length + ' 款车型无售价数据，未在图上呈现：' + names;
+      noPriceEl.style.display = '';
+    } else {
+      noPriceEl.style.display = 'none';
+    }
+  }
+
+  // 当前图上车型全部没有售价数据（比如筛的这批全是停产车）时，画一个空坐标系，不报错。
+  if(rows.length === 0){
+    priceMapRows = [];
+    document.getElementById('chart').style.height = '160px';
+    chart.resize();
+    chart.setOption({
+      backgroundColor:'transparent',
+      xAxis:{type:'value', min:0, max:10, axisLabel:{formatter:function(v){return v+'万';}}},
+      yAxis:{type:'category', data:[]},
+      series:[]
+    }, true);
+    var outEl0 = document.getElementById('priceOutRangeNote');
+    if(outEl0) outEl0.style.display = 'none';
+    return;
+  }
+
+  // 四分位距裁剪：hi 值比主群高出一大截的车不参与坐标轴范围计算。
+  var inRange = rows, outRange = [];
+  if (rows.length >= 5){
+    var his = rows.map(function(r){return r.hi;}).sort(function(a,b){return a-b;});
+    var q1 = priceQuantile(his, 0.25), q3 = priceQuantile(his, 0.75);
+    var fence = q3 + 1.5 * (q3 - q1);
+    inRange = rows.filter(function(r){return r.hi <= fence;});
+    outRange = rows.filter(function(r){return r.hi > fence;});
+    if (inRange.length < 3){ inRange = rows; outRange = []; } // 兜底：裁到没剩几个就不裁
+  }
+
+  var outRangeEl = document.getElementById('priceOutRangeNote');
+  if(outRangeEl){
+    if(outRange.length > 0){
+      var parts = outRange.map(function(r){
+        return r.name + ' ' + formatPrice(r.lo) + '–' + formatPrice(r.hi) + '万（累计销量 ' + formatNum(r.sales) + '）';
+      });
+      outRangeEl.textContent = outRange.length + ' 款超出坐标范围，未按比例绘制（图上用箭头标出真实价位）：' + parts.join('，');
+      outRangeEl.style.display = '';
+    } else {
+      outRangeEl.style.display = 'none';
+    }
+  }
+
+  // 行高 26px，容器高度随车型数变化；退出该模式时 renderChartMonth/renderChartYear 会恢复默认高度。
+  var rowH = 26;
+  var chartH = rows.length * rowH + 60;
+  document.getElementById('chart').style.height = chartH + 'px';
+  chart.resize();
+
+  // 纵轴：从上往下按销量降序——ECharts category 轴的类目默认从下往上排列，这里直接把
+  // rows（已是 ytd 降序）反过来，让"销量最高"的排在数组末尾、也就是轴上最靠上的位置，
+  // 比用 inverse:true 更直观：renderItem 按 catIndex 定位时不用再多算一层翻转。
+  var catRows = rows.slice().reverse();
+  var cats = catRows.map(function(r){ return r.name; });
+
+  var dataMin = Math.min.apply(null, inRange.map(function(r){return r.lo;}));
+  var dataMax = Math.max.apply(null, inRange.map(function(r){return r.hi;}));
+  var span = Math.max(dataMax - dataMin, 1);
+  // 左侧车型名栏的宽度：宽屏用 140px（够放「红旗金葵花国耀」这种 7 字名），窄屏按整图宽度
+  // 的 30% 收窄并截断名字。12px 的中文字符按约 12px 估宽，英文/数字按约 6.7px。
+  var chartPxW = chart.getWidth() || 900;
+  var priceLabelBoxW = chartPxW < 620 ? Math.max(58, Math.round(chartPxW * 0.30)) : 140;
+  function priceLabelFit(name){
+    var budget = priceLabelBoxW - 14; // 留出与轴线之间的间距
+    var w = 0, out = '';
+    for (var i = 0; i < name.length; i++){
+      var ch = name.charAt(i);
+      var cw = /[\x00-\xff]/.test(ch) ? 6.7 : 12;
+      if (w + cw > budget){ return out + '…'; }
+      w += cw; out += ch;
+    }
+    return out;
+  }
+
+  // 刻度单位只由数据跨度决定，不跟屏幕宽度走：手机上如果为了少放几个标签就把单位从 5 万
+  // 抬到 20 万，坐标轴会被撑到 0–80 万，车全挤在左边三分之一——那是拿"轴好看"换"数据看不清"。
+  // 窄屏上标签挤不下的问题交给 axisLabel.hideOverlap，它只丢标签，不动网格线和轴范围。
+  var unit = pickPriceUnit(span * 1.25, 14);
+  var xMin = Math.max(0, Math.floor((dataMin - span*0.08) / unit) * unit);
+  var xMax = Math.ceil((dataMax + span*0.08) / unit) * unit;
+  var arrowX = xMax - (xMax - xMin) * 0.04; // 箭头落在绘图区右端内侧一点点
+
+  var outKeySet = {};
+  outRange.forEach(function(r){ outKeySet[r.key] = true; });
+
+  var rowsForRender = catRows.map(function(r, idx){
+    return {
+      key:r.key, name:r.name, lo:r.lo, hi:r.hi, sales:r.sales, manufacturer:r.manufacturer,
+      catIndex: idx, outOfRange: !!outKeySet[r.key]
+    };
+  });
+  priceMapRows = rowsForRender;
+
+  function renderItem(params, api){
+    var d = rowsForRender[params.dataIndex];
+    if(!d) return {type:'group', children:[]};
+
+    // 整行命中区：跨满绘图区全宽的透明矩形，保证点击（跳转抽屉）不止落在线段/圆点/箭头文字上
+    // 才有反应——跟悬浮框（trigger:'axis'，见上方大注释）一起，做到"扫到行内任意位置都有反应"。
+    var bandHeight = api.size([0,1])[1];
+    var leftPt = api.coord([xMin, d.catIndex]);
+    var rightPt = api.coord([xMax, d.catIndex]);
+    var cy = leftPt[1];
+    var children = [{
+      type:'rect',
+      shape:{x:Math.min(leftPt[0],rightPt[0]), y:cy-bandHeight/2, width:Math.abs(rightPt[0]-leftPt[0]), height:bandHeight},
+      style:{fill:'rgba(0,0,0,0)'}
+    }];
+
+    if(d.outOfRange){
+      var arrowPt = api.coord([arrowX, d.catIndex]);
+      children.push({
+        type:'text',
+        style:{
+          text: '→ ' + formatPrice(d.lo) + '–' + formatPrice(d.hi),
+          x: arrowPt[0], y: arrowPt[1], textAlign:'right', textVerticalAlign:'middle',
+          fontSize:11, fontWeight:600, fill: warnColor
+        }
+      });
+      return {type:'group', children:children};
+    }
+
+    var loPt = api.coord([d.lo, d.catIndex]);
+    var hiPt = api.coord([d.hi, d.catIndex]);
+    var y = loPt[1];
+
+    if(d.lo === d.hi){
+      // 单一价：只画一个实心点，右侧 11px 处写"单一价"
+      children.push({
+        type:'circle',
+        shape:{cx:hiPt[0], cy:y, r:5},
+        style:{fill:seriesColor, stroke:surface, lineWidth:2}
+      });
+      children.push({
+        type:'text',
+        style:{text:'单一价', x:hiPt[0]+11, y:y, textVerticalAlign:'middle', fontSize:9, fill:mutedColor}
+      });
+      return {type:'group', children:children};
+    }
+
+    children.push({
+      type:'line',
+      shape:{x1:loPt[0], y1:y, x2:hiPt[0], y2:y},
+      style:{stroke:seriesColor, lineWidth:2, lineCap:'round'}
+    });
+    // lo 端：空心点
+    children.push({
+      type:'circle',
+      shape:{cx:loPt[0], cy:y, r:4.5},
+      style:{fill:surface, stroke:seriesColor, lineWidth:2}
+    });
+    // hi 端：实心点 + surface 色描边——不是装饰，是两点靠得很近时用来分辨 lo/hi 端的手段。
+    children.push({
+      type:'circle',
+      shape:{cx:hiPt[0], cy:y, r:5},
+      style:{fill:seriesColor, stroke:surface, lineWidth:2}
+    });
+    return {type:'group', children:children};
+  }
+
+  // y 轴标签逐行设色：超出坐标范围的行，车型名也要同步变成警示色（箭头在行尾、名字在行首
+  // 隔得远，光靠箭头容易看漏，见需求）。用 rich 给每一行单独定义一个 style key。
+  var rich = {};
+  rowsForRender.forEach(function(d, idx){
+    rich['r'+idx] = {color: d.outOfRange ? warnColor : textColor, fontSize:12};
+  });
+
+
+  var option = {
+    backgroundColor:'transparent',
+    animationDuration:280,
+    textStyle:{color:textColor, fontFamily:'inherit'},
+    // 左侧标签栏在窄屏上必须收窄，否则 140px 会吃掉手机一半的宽度，哑铃全挤成一团。
+    // 超出可用宽度的车型名截断成「前N字…」，完整名字在悬浮框里能看到。
+    grid:{left:priceLabelBoxW, right: priceLabelBoxW < 140 ? 16 : 30, top:20, bottom:30, containLabel:true},
+    xAxis:{
+      type:'value', min:xMin, max:xMax, interval:unit,
+      // 价位轴允许非零起点：这是明确拍过板的——哑铃图这种连接点图编码的是"位置"不是"长度"，
+      // 跟柱状图必须从零起点（编码的是长度）是相反的规矩，不要因为"看起来不像常规图表"就把它
+      // "顺手修好"改成从零开始，那样大多数车会被压扁成看不出差异的短线段。
+      axisLine:{lineStyle:{color: cssVar('--baseline')}},
+      axisTick:{show:false},
+      splitLine:{lineStyle:{color:gridColor}},
+      axisLabel:{color:mutedColor, fontSize:11.5, hideOverlap:true,
+                 formatter:function(v){return (Math.round(v*100)/100)+'万';}}
+    },
+    yAxis:{
+      type:'category', data:cats,
+      axisLine:{lineStyle:{color: cssVar('--baseline')}},
+      axisTick:{show:false},
+      axisLabel:{
+        fontSize:12,
+        rich: rich,
+        formatter:function(name, idx){ return '{r'+idx+'|'+priceLabelFit(name.replace(/[{}]/g,''))+'}'; }
+      }
+    },
+    tooltip:{
+      trigger:'axis',
+      axisPointer:{type:'shadow'},
+      backgroundColor:surface, borderColor:cssVar('--border'),
+      textStyle:{color:cssVar('--text-primary'), fontSize:12.5},
+      confine:true,
+      formatter:function(params){
+        if(!params || !params.length) return '';
+        var d = rowsForRender[params[0].dataIndex];
+        if(!d) return '';
+        var lines = [d.name];
+        if(d.lo === d.hi){
+          lines.push('售价：' + formatPrice(d.lo) + ' 万（单一价）');
+        } else {
+          lines.push('售价区间：' + formatPrice(d.lo) + '–' + formatPrice(d.hi) + ' 万');
+          lines.push('价差：' + formatPrice(d.hi-d.lo) + ' 万');
+        }
+        lines.push('当期累计销量：' + formatNum(d.sales));
+        lines.push('厂商：' + (d.manufacturer || '—'));
+        if(d.outOfRange) lines.push('<span style="color:'+warnColor+';">超出坐标范围，未按比例绘制</span>');
+        return lines.join('<br/>');
+      }
+    },
+    legend:{show:false},
+    series:[{
+      id:'__priceMapSeries__',
+      type:'custom',
+      renderItem: renderItem,
+      data: rowsForRender.map(function(_,i){ return i; }),
+      z:2
+    }]
+  };
+  chart.setOption(option, true);
+}
+
 // 总入口：按月视图走既有折线逻辑；按年视图走全新的自定义 series 分组柱逻辑（形态已用
 // /tmp/yearview-mock/index.html 验证过，这里搬运其 renderItem 布局算法，不重新设计）。
 function renderChart(universe){
+  if(state.priceMap){ renderChartPriceMap(universe); return; }
   if(state.viewMode==='year'){ renderChartYear(universe); return; }
   renderChartMonth(universe);
 }
 function renderChartMonth(universe){
+  document.getElementById('chart').style.height = ''; // 退出价位地图模式时恢复默认高度（见 renderChartPriceMap）
   var built = buildSeriesMonth(universe);
   updateEmptyHint();
   var isDark = currentTheme()==='dark';
@@ -2027,6 +2426,7 @@ function makeYearRenderItem(rows, yMax, textColor, refColor){
   };
 }
 function renderChartYear(universe){
+  document.getElementById('chart').style.height = ''; // 同上，恢复默认高度
   updateEmptyHint();
   var textColor = cssVar('--text-secondary');
   var mutedColor = cssVar('--text-muted');
@@ -2129,6 +2529,14 @@ function renderChartYear(universe){
 }
 
 chart.on('click', function(params){
+  if(state.priceMap){
+    // 单个 custom series 自绘哑铃图，同年视图一样靠 dataIndex 反查行数据。
+    if(!priceMapRows) return;
+    var pmRow = priceMapRows[params.dataIndex];
+    if(!pmRow) return;
+    openDrawer(pmRow.key, pmRow.name);
+    return;
+  }
   if(state.viewMode==='year'){
     // 年视图是单个 custom series（分组柱由 renderItem 自行绘制），没有按对象拆分的
     // 多个 series，只能靠 dataIndex 反查行数据；rows 由 renderChartYear 存进 yearChartRows。
@@ -2144,7 +2552,10 @@ chart.on('click', function(params){
 chart.on('mouseover', {seriesIndex:'all'}, function(params){
   // 年视图的分组柱是单个 custom series，params.seriesId 在各柱之间不区分对象，
   // 走这条线联动图例高亮反而会全体图例一起变暗——年视图不接这套折线高亮机制。
-  if(state.viewMode==='year') return;
+  // 价位地图同理：也是单个 custom series（id 固定是 '__priceMapSeries__'，不对应任何
+  // 图例 key），一旦接了这条线，hoverKey 会变成一个图例里谁都匹配不上的 id，导致鼠标一放
+  // 到价位地图上，右侧图例反而整体变暗——同样不接。
+  if(state.viewMode==='year' || state.priceMap) return;
   if(params.seriesId) highlightKey(params.seriesId);
 });
 chart.getZr().on('globalout', function(){ highlightKey(null); hideCompTooltip(); });
@@ -2376,8 +2787,44 @@ function buildTableRowsMonth(universe){
 }
 
 function renderTable(universe){
+  if(state.priceMap){ renderTablePriceMap(universe); return; }
   if(state.viewMode==='year'){ renderTableYear(universe); return; }
   renderTableMonth(universe);
+}
+// 表格/CSV 共用：车型 / 售价下限 / 售价上限 / 价差 / 当年累计销量 / 厂商；缺价车型也要进表
+// （价格列写"—"，跟图上"省略不画"不是一回事——表格要求是完整列表）。直接按 universe.entities
+// 的 ytd 降序 ∩ 当前展示集合取，不经过 buildPriceRows() 的 rows/noPrice 拆分，避免还要
+// 重新拼接顺序。
+function buildTableRowsPriceMap(universe){
+  var shown = universe.entities.filter(function(e){ return lastShownKeys.has(e.key); });
+  return shown.map(function(e){
+    var p = PRICES.models[e.name];
+    var own = modelOwnership(e.name);
+    return {
+      name: e.name,
+      lo: p ? p[0] : null,
+      hi: p ? p[1] : null,
+      diff: p ? (p[1]-p[0]) : null,
+      sales: e.ytd,
+      manufacturer: own ? own.manuName : ''
+    };
+  });
+}
+function renderTablePriceMap(universe){
+  var el = document.getElementById('tableview');
+  var rows = buildTableRowsPriceMap(universe);
+  var html = '<table class="datatable"><thead><tr><th>车型</th><th>售价下限(万元)</th>' +
+    '<th>售价上限(万元)</th><th>价差(万元)</th><th>当年累计销量</th><th>厂商</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    html += '<tr><td>'+escapeHtml(r.name)+'</td>' +
+      '<td>'+(r.lo==null?'—':formatPrice(r.lo))+'</td>' +
+      '<td>'+(r.hi==null?'—':formatPrice(r.hi))+'</td>' +
+      '<td>'+(r.diff==null?'—':formatPrice(r.diff))+'</td>' +
+      '<td>'+formatNum(r.sales)+'</td>' +
+      '<td>'+escapeHtml(r.manufacturer||'—')+'</td></tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
 }
 function renderTableMonth(universe){
   var el = document.getElementById('tableview');
@@ -2464,6 +2911,7 @@ function csvEscape(s){
   return s;
 }
 function downloadCsv(universe){
+  if(state.priceMap){ downloadCsvPriceMap(universe); return; }
   if(state.viewMode==='year'){ downloadCsvYear(universe); return; }
   downloadCsvMonth(universe);
 }
@@ -2512,6 +2960,30 @@ function downloadCsvYear(universe){
   });
   var yearsTag = YEARS[0] + '-' + YEARS[YEARS.length-1];
   var fname = '汽车销量_按年对比_' + yearsTag + '_' + csvFileNameScopeParts().join('_') + '_' + energyLabel() + '.csv';
+  triggerCsvDownload(fname, lines);
+}
+function downloadCsvPriceMap(universe){
+  if(!universe) return;
+  // 价差是相减算出来的，直接写进 CSV 会带上 5.599999999999998 这种浮点尾巴，
+  // 看着像数据有问题。统一按两位小数收口，跟售价本身的精度一致。
+  function round2(v){ return Math.round(v * 100) / 100; }
+  var rows = buildTableRowsPriceMap(universe);
+  var header = ['车型','售价下限(万元)','售价上限(万元)','价差(万元)','当年累计销量','厂商'];
+  // 沿用月度/年度两个导出函数已经定下的格式：表头就是第1行，不加口径注释行（那样会破坏
+  // Excel 的筛选/数据透视表），口径信息放进文件名里。
+  var lines = [header.map(csvEscape).join(',')];
+  rows.forEach(function(r){
+    var line = [
+      r.name,
+      r.lo==null ? '' : round2(r.lo),
+      r.hi==null ? '' : round2(r.hi),
+      r.diff==null ? '' : round2(r.diff),
+      Math.round(r.sales),
+      r.manufacturer||''
+    ];
+    lines.push(line.map(csvEscape).join(','));
+  });
+  var fname = '汽车销量_价位地图_' + state.year + '_' + csvFileNameScopeParts().join('_') + '_' + energyLabel() + '.csv';
   triggerCsvDownload(fname, lines);
 }
 
@@ -3377,7 +3849,12 @@ function renderAll(){
   // 能源类型粒度下标题不拼 energyLabel()（能源筛选被禁用、与图上两条线的口径无关），
   // 改用 energyScopeLabel() 拼归属/车体类型；没有限定时自然省略，跟 model 粒度标题的拼接风格一致。
   var titleTail = state.gran==='energy' ? energyScopeLabel() : (ownerLabel() + ' · ' + energyLabel());
-  if(state.viewMode==='year'){
+  if(state.priceMap){
+    // 价位地图强制 gran==='model'（按钮禁用态保证），granLabel() 已经带车体类型后缀，
+    // titleTail 已经带归属 + 能源后缀，跟月视图标题拼法保持一致，只换最后一段的措辞。
+    document.getElementById('chartTitle').textContent =
+      state.year + '年 · ' + granLabel() + titleTail + ' · 车型售价区间（按当年累计销量降序）';
+  } else if(state.viewMode==='year'){
     // capMonth===12（最新年份也完整）时不再有"同期"概念，标题里的同期说明一并去掉。
     var periodNote = u.capMonth===12 ? '' : ('（最新年份 '+u.latestYear+' 同期至 '+u.capMonth+' 月）');
     document.getElementById('chartTitle').textContent =
