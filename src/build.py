@@ -2252,8 +2252,20 @@ function renderChart(universe){
   if(state.viewMode==='year'){ renderChartYear(universe); return; }
   renderChartMonth(universe);
 }
+/* 价位地图会给 #chart 设一个行内 height（高度随车型数变化）。退出该模式时光把行内样式清掉
+   还不够：ECharts 实例的画布尺寸是它自己缓存的，只有 resize() 才会重新量容器。少了这一步，
+   容器已经变回 CSS 的默认高度，画布却还停在价位地图那个高度上——车型少的厂商尤其明显，
+   复位之后折线图会缩成一条窄图。所以这里清完必须紧跟一次 resize，且只在真的清掉了东西时才做，
+   避免每次重绘都白白 resize 一遍。 */
+function restoreChartHeight(){
+  var el = document.getElementById('chart');
+  if(el && el.style.height){
+    el.style.height = '';
+    chart.resize();
+  }
+}
 function renderChartMonth(universe){
-  document.getElementById('chart').style.height = ''; // 退出价位地图模式时恢复默认高度（见 renderChartPriceMap）
+  restoreChartHeight(); // 退出价位地图模式时恢复默认高度（见 renderChartPriceMap）
   var built = buildSeriesMonth(universe);
   updateEmptyHint();
   var isDark = currentTheme()==='dark';
@@ -2426,7 +2438,7 @@ function makeYearRenderItem(rows, yMax, textColor, refColor){
   };
 }
 function renderChartYear(universe){
-  document.getElementById('chart').style.height = ''; // 同上，恢复默认高度
+  restoreChartHeight(); // 同上，恢复默认高度
   updateEmptyHint();
   var textColor = cssVar('--text-secondary');
   var mutedColor = cssVar('--text-muted');
