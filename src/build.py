@@ -697,6 +697,17 @@ table.datatable thead th{color:var(--text-muted);font-weight:600;position:sticky
 .year-legend-swatch{width:12px;height:12px;border-radius:3px;flex:none;}
 
 .footnote{font-size:11.5px;color:var(--text-muted);line-height:1.7;padding:14px 6px 0;}
+.seg-controls-row{display:flex;gap:20px;flex-wrap:wrap;align-items:center;padding:2px 8px 8px;}
+.seg-ctrl-item{display:flex;align-items:center;gap:8px;}
+.seg-ctrl-label{font-size:11.5px;color:var(--text-muted);}
+.seg-ctrl-sep{color:var(--text-muted);font-size:12px;}
+.seg-metrics-row{display:flex;gap:14px;flex-wrap:wrap;align-items:stretch;padding:2px 8px 12px;}
+.seg-metric-tile{flex:1;min-width:110px;background:var(--page-plane);border:1px solid var(--border);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;justify-content:center;gap:4px;}
+.seg-metric-tile .lbl{font-size:11px;color:var(--text-muted);}
+.seg-metric-tile .val{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text-primary);}
+.seg-metric-big{flex:1.4;min-width:150px;}
+.seg-metric-big .val{font-size:48px;line-height:1;}
+.seg-drill-wrap{margin-left:auto;display:flex;align-items:center;}
 
 .caliber-badge{
   display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
@@ -917,13 +928,79 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="small-btn" id="downloadCsvBtn" type="button" style="display:none;">下载 CSV</button>
           <button class="small-btn" id="priceMapBtn" type="button">价位地图</button>
+          <button class="small-btn" id="segMarketBtn" type="button">细分市场</button>
           <button class="small-btn" id="viewModeBtn" type="button">按年对比</button>
           <button class="small-btn" id="tableToggleBtn" type="button">切换为表格视图</button>
         </div>
       </div>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:flex-end;margin:-2px 2px 0 0;">
         <div class="chip-disabled-hint" id="priceMapDisabledHint" style="display:none;">仅在车型粒度下可用</div>
-        <div class="chip-disabled-hint" id="viewModeDisabledHintPM" style="display:none;">价位地图下不可用</div>
+        <div class="chip-disabled-hint" id="segMarketDisabledHint" style="display:none;">仅在车型粒度下可用</div>
+        <div class="chip-disabled-hint" id="viewModeDisabledHintPM" style="display:none;">价位地图视图下不可用</div>
+        <div class="chip-disabled-hint" id="viewModeDisabledHintSeg" style="display:none;">细分市场视图下不可用</div>
+      </div>
+      <div class="seg-controls-row" id="segControlsRow" style="display:none;">
+        <div class="seg-ctrl-item">
+          <span class="seg-ctrl-label">价位区间（按起售价）</span>
+          <select class="bodytype-select" id="segLoSelect">
+            <option value="">不限</option>
+            <option value="0">0万</option>
+            <option value="5">5万</option>
+            <option value="10">10万</option>
+            <option value="15">15万</option>
+            <option value="20">20万</option>
+            <option value="25">25万</option>
+            <option value="30">30万</option>
+            <option value="35">35万</option>
+            <option value="40">40万</option>
+            <option value="50">50万</option>
+            <option value="60">60万</option>
+          </select>
+          <span class="seg-ctrl-sep">–</span>
+          <select class="bodytype-select" id="segHiSelect">
+            <option value="">不限</option>
+            <option value="5">5万</option>
+            <option value="10">10万</option>
+            <option value="15">15万</option>
+            <option value="20">20万</option>
+            <option value="25">25万</option>
+            <option value="30">30万</option>
+            <option value="35">35万</option>
+            <option value="40">40万</option>
+            <option value="50">50万</option>
+            <option value="60">60万</option>
+            <option value="9999">60万以上</option>
+          </select>
+        </div>
+        <div class="seg-ctrl-item">
+          <span class="seg-ctrl-label">榜单长度</span>
+          <div class="chip-row" id="segTopChips">
+            <div class="chip" data-top="10">Top 10</div>
+            <div class="chip" data-top="20">Top 20</div>
+          </div>
+        </div>
+        <div class="chip-disabled-hint" id="segPriceDisabledHint" style="display:none;"></div>
+      </div>
+      <div class="seg-metrics-row" id="segMetricsRow" style="display:none;">
+        <div class="seg-metric-tile seg-metric-big">
+          <div class="val" id="segMetricCount">0</div>
+          <div class="lbl">款车型在这个范围里有销量</div>
+        </div>
+        <div class="seg-metric-tile">
+          <div class="lbl">前5名占比 CR5</div>
+          <div class="val" id="segMetricCR5">—</div>
+        </div>
+        <div class="seg-metric-tile">
+          <div class="lbl">前10名占比 CR10</div>
+          <div class="val" id="segMetricCR10">—</div>
+        </div>
+        <div class="seg-metric-tile">
+          <div class="lbl">合计销量</div>
+          <div class="val" id="segMetricTotal">0 辆</div>
+        </div>
+        <div class="seg-drill-wrap">
+          <button class="small-btn primary" id="segDrillBtn" type="button" style="display:none;">查看这批车的走势 →</button>
+        </div>
       </div>
       <div class="year-legend" id="yearLegend"></div>
       <div class="chart-stage">
@@ -963,8 +1040,11 @@ table.mtable th:first-child,table.mtable td:first-child{text-align:left;}
     看 2024 年的榜单，图上画的仍是这些车今天的价位。数据源只保留当前在售价格，停产车型的这一列会归零，
     因此这类车无法给出价位。价位轴为便于比较不从零起点。
   </div>
+  <div class="footnote" id="footnoteSeg" style="display:none;"></div>
   <div class="dyn-error" id="priceNoDataNote" style="display:none;"></div>
   <div class="dyn-error" id="priceOutRangeNote" style="display:none;"></div>
+  <div class="dyn-error" id="segNoPriceNote" style="display:none;"></div>
+  <div class="dyn-error" id="segOwnerWarnNote" style="display:none;"></div>
 
   <details class="about-block card" id="aboutBlock">
     <summary>关于数据 —— 车型 / 厂商 / 品牌 三层口径说明</summary>
@@ -1073,6 +1153,11 @@ var state = {
   viewMode: 'month',      // month | year —— 按月累计(YTD折线) | 按年对比(分组柱)
   priceMap: false,        // 价位地图（横向哑铃图，展示当前图上车型的售价区间）是否开启；
                            // 仅在 gran==='model' 时可用，与 viewMode==='year' 互斥（见 syncControlStates）
+  segMarket: false,       // 细分市场（横向条形榜，展示当前范围内全部车型按销量排名）是否开启；
+                           // 仅在 gran==='model' 时可用，与 priceMap 互斥（见 syncControlStates）
+  segLo: null,             // 细分市场价位下界（万元，按起售价），null=不限
+  segHi: null,             // 细分市场价位上界（万元，按起售价），null=不限；9999 表示"60万以上"（正无穷哨兵）
+  segTop: 10,              // 细分市场榜单长度：10 或 20
   gran: 'manu',           // manu | brand | model | energy
   bodyType: -1,            // index into RAW.bodyTypes, or -1 = 全部车体类型 (used when gran==='model')
   owner: 'all',            // 'all' | 'manu:<厂商名>' | 'brand:<品牌名>'，仅 gran==='model' 时生效，用于按归属筛选车型池
@@ -1088,6 +1173,19 @@ var state = {
   shownIsFallback: false  // 当前 lastShownKeys 是否是 computeShownKeys() 临时回落出的 Top20（未写入 state.shown）；
                            // 用户一旦做出会改变选择的操作，必须先 materializeShown() 把它固化进 state.shown
 };
+
+// 细分市场脚注：静态口径说明，只依赖 PRICES/YEARS，不随 state 变化，初始化一次即可
+// （是否显示由 syncControlStates() 控制，见 footnoteSeg 的 display 切换）。
+(function(){
+  var fnSeg = document.getElementById('footnoteSeg');
+  if(fnSeg){
+    var latestY = YEARS[YEARS.length-1];
+    fnSeg.innerHTML = '细分市场：价位按<b>起售价</b>归段，一款车只进一个价位区间，区间左闭右开（含下界、不含上界），' +
+      '"60万以上"表示无上限。售价取自数据源当前值（更新于 ' + (PRICES.updatedAt || '未知日期') + '），与所选年份无关——' +
+      '因此价位条件仅在最新年份（' + latestY + '年）下可用，切到其它年份会自动禁用并回到"不限"。' +
+      '车型数 / CR5 / CR10 统计的是当前筛选范围内全部有销量的车型，与右侧图例的勾选状态无关。';
+  }
+})();
 
 /* ---------------- 数据访问辅助 ---------------- */
 function ymIndex(year, month){ return (year-2024)*12 + (month-1); }
@@ -1543,6 +1641,22 @@ ownerSelect.addEventListener('change', function(){
   // 修正2：同上，不再 resetToTop20()，交由 renderAll() 里的回退逻辑处理。
   renderAll();
 });
+document.getElementById('segLoSelect').addEventListener('change', function(e){
+  state.segLo = e.target.value === '' ? null : Number(e.target.value);
+  syncControlStates();
+  renderAll();
+});
+document.getElementById('segHiSelect').addEventListener('change', function(e){
+  state.segHi = e.target.value === '' ? null : Number(e.target.value);
+  syncControlStates();
+  renderAll();
+});
+document.querySelectorAll('#segTopChips .chip').forEach(function(c){
+  c.addEventListener('click', function(){
+    state.segTop = parseInt(c.getAttribute('data-top'),10);
+    renderAll();
+  });
+});
 document.getElementById('modeSwitch').addEventListener('click', function(){
   // 年视图下堆积面积开关被禁用（跟"比高矮"的目的冲突），CSS 上已经 pointer-events:none
   // 挡掉了点击，这里再加一道防线。
@@ -1590,6 +1704,10 @@ function resetAll(){
   state.energy      = 'all';
   state.stacked     = false;
   state.priceMap    = false;
+  state.segMarket   = false;
+  state.segLo       = null;
+  state.segHi       = null;
+  state.segTop      = 10;
   state.searchTerm  = '';
   state.hoverKey    = null;
   state.tableView   = false;
@@ -1630,20 +1748,50 @@ document.getElementById('downloadCsvBtn').addEventListener('click', function(){
   downloadCsv(lastUniverse);
 });
 document.getElementById('priceMapBtn').addEventListener('click', function(){
-  // 双重防线：按钮在非车型粒度下已经是 disabled（pointer-events:none），这里再挡一道。
-  if(state.gran !== 'model') return;
+  // 双重防线：按钮在非车型粒度下、或细分市场视图开启时已经是 disabled（pointer-events:none），这里再挡一道。
+  if(state.gran !== 'model' || state.segMarket) return;
   state.priceMap = !state.priceMap;
   // 价位地图只画"当前一套价格"，跟"按年对比"（跨年份比销量）互斥：打开价位地图时
   // 如果正停在年视图，把它切回月视图；按钮文案统一交给 syncControlStates() 维护。
   if(state.priceMap && state.viewMode === 'year'){
     state.viewMode = 'month';
   }
+  // 价位地图和细分市场互斥（见 segMarketBtn 的对称写法），这里防御性地再断言一次。
+  if(state.priceMap) state.segMarket = false;
+  syncControlStates();
+  renderAll();
+});
+document.getElementById('segMarketBtn').addEventListener('click', function(){
+  // 双重防线：按钮在非车型粒度下、或价位地图开启时已经是 disabled（pointer-events:none），这里再挡一道。
+  if(state.gran !== 'model' || state.priceMap) return;
+  state.segMarket = !state.segMarket;
+  // 细分市场跟"价位地图""按年对比"都互斥：打开细分市场时强制切回月视图、关闭价位地图，
+  // 按钮文案/置灰统一交给 syncControlStates() 维护。
+  if(state.segMarket){
+    state.priceMap = false;
+    state.viewMode = 'month';
+  }
+  syncControlStates();
+  renderAll();
+});
+document.getElementById('segDrillBtn').addEventListener('click', function(){
+  // 参考抽屉里 buildDrillDownBtn()（"查看这些车型的走势"）的同一套写法：
+  // 把当前榜单（Top10/Top20，不是全部）固化进 state.shown，退出细分市场视图，
+  // 其余筛选条件（年份/车体/归属/能源/粒度）原样保留。
+  if(!lastUniverse) return;
+  var built = buildSegRows(lastUniverse);
+  var topRows = built.rows.slice(0, state.segTop);
+  if(topRows.length === 0) return;
+  state.shown = new Set(topRows.map(function(e){ return e.key; }));
+  state.userClearedAll = false;
+  state.shownIsFallback = false;
+  state.segMarket = false;
   syncControlStates();
   renderAll();
 });
 document.getElementById('viewModeBtn').addEventListener('click', function(){
-  // 价位地图下"按年对比"按钮被禁用（同上，pointer-events:none 已挡掉点击），这里再挡一道。
-  if(state.priceMap) return;
+  // 价位地图/细分市场下"按年对比"按钮被禁用（同上，pointer-events:none 已挡掉点击），这里再挡一道。
+  if(state.priceMap || state.segMarket) return;
   // 视图切换：不清空已勾选对象（两个视图共享 state.shown），不修改 state.year，
   // 不重置粒度/车体类型/归属/能源筛选——这些筛选照常生效，且跟切视图无关。
   state.viewMode = state.viewMode==='year' ? 'month' : 'year';
@@ -1677,6 +1825,18 @@ function syncControlStates(){
   if(pmDisabled && state.priceMap){
     state.priceMap = false;
   }
+  // 细分市场同价位地图一样仅在车型粒度下可用；粒度被切走时必须强制关闭。
+  var segGranDisabled = state.gran !== 'model';
+  if(segGranDisabled && state.segMarket){
+    state.segMarket = false;
+  }
+  // 价位条件仅最新年份可用：售价是数据源的"当前值"，拿今天的价去划分历史年份的细分市场
+  // 会系统性失真（比如今年降过价的车型，用今天的低价套去年的销量，会把它错误地划进更低价位段）。
+  var latestYearForSeg = YEARS[YEARS.length-1];
+  var segYearOk = state.year === latestYearForSeg;
+  if(!segYearOk && (state.segLo!==null || state.segHi!==null)){
+    state.segLo = null; state.segHi = null;
+  }
   renderYearLegend();
   document.querySelectorAll('#yearChips .chip').forEach(function(c){
     c.classList.toggle('active', String(state.year)===c.getAttribute('data-year'));
@@ -1688,17 +1848,67 @@ function syncControlStates(){
   if(stackedHint) stackedHint.style.display = yearDisabled ? '' : 'none';
   var vmBtn = document.getElementById('viewModeBtn');
   if(vmBtn) vmBtn.textContent = yearDisabled ? '按月累计' : '按年对比';
-  // 价位地图和按年对比互斥：价位地图开着时，按年对比按钮禁用（提示见 viewModeDisabledHintPM）。
-  if(vmBtn) vmBtn.classList.toggle('disabled', state.priceMap);
+  // 价位地图/细分市场和按年对比互斥：任一开着时，按年对比按钮禁用（提示分别见下面两个 hint）。
+  if(vmBtn) vmBtn.classList.toggle('disabled', state.priceMap || state.segMarket);
   var vmHintPM = document.getElementById('viewModeDisabledHintPM');
   if(vmHintPM) vmHintPM.style.display = state.priceMap ? '' : 'none';
+  var vmHintSeg = document.getElementById('viewModeDisabledHintSeg');
+  if(vmHintSeg) vmHintSeg.style.display = state.segMarket ? '' : 'none';
   var pmBtn = document.getElementById('priceMapBtn');
   if(pmBtn){
-    pmBtn.classList.toggle('disabled', pmDisabled);
+    pmBtn.classList.toggle('disabled', pmDisabled || state.segMarket);
     pmBtn.textContent = state.priceMap ? '返回销量走势' : '价位地图';
   }
   var pmHint = document.getElementById('priceMapDisabledHint');
-  if(pmHint) pmHint.style.display = pmDisabled ? '' : 'none';
+  if(pmHint){
+    if(pmDisabled){ pmHint.textContent = '仅在车型粒度下可用'; pmHint.style.display = ''; }
+    else if(state.segMarket){ pmHint.textContent = '细分市场视图下不可用'; pmHint.style.display = ''; }
+    else { pmHint.style.display = 'none'; }
+  }
+  var segBtn = document.getElementById('segMarketBtn');
+  if(segBtn){
+    segBtn.classList.toggle('disabled', segGranDisabled || state.priceMap);
+    segBtn.textContent = state.segMarket ? '返回销量走势' : '细分市场';
+  }
+  var segHint = document.getElementById('segMarketDisabledHint');
+  if(segHint){
+    if(segGranDisabled){ segHint.textContent = '仅在车型粒度下可用'; segHint.style.display = ''; }
+    else if(state.priceMap){ segHint.textContent = '价位地图视图下不可用'; segHint.style.display = ''; }
+    else { segHint.style.display = 'none'; }
+  }
+  // 四个禁用提示里经常出现两条一模一样的文案并排（例如开着细分市场时，"价位地图"和
+  // "按年对比"被禁用的原因都是"细分市场视图下不可用"）。同一句话连写两遍不会让人更明白，
+  // 只会让人以为是两个不同的问题。这里按 DOM 顺序去重：同样的文案只留第一条。
+  (function dedupeDisabledHints(){
+    var ids = ['priceMapDisabledHint','segMarketDisabledHint','viewModeDisabledHintPM','viewModeDisabledHintSeg'];
+    var seen = {};
+    ids.forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el || el.style.display === 'none') return;
+      var txt = el.textContent.trim();
+      if(seen[txt]){ el.style.display = 'none'; return; }
+      seen[txt] = true;
+    });
+  })();
+
+  // 细分市场专属控件：价位区间两个 select + 榜单长度 chip，只在细分市场视图下显示；
+  // 价位区间在非最新年份下必须禁用并强制回到"不限"（见上方 segYearOk 的计算与复位）。
+  var segControlsRow = document.getElementById('segControlsRow');
+  if(segControlsRow) segControlsRow.style.display = state.segMarket ? '' : 'none';
+  var segMetricsRow = document.getElementById('segMetricsRow');
+  if(segMetricsRow) segMetricsRow.style.display = state.segMarket ? '' : 'none';
+  var segLoSel = document.getElementById('segLoSelect');
+  var segHiSel = document.getElementById('segHiSelect');
+  if(segLoSel){ segLoSel.disabled = !segYearOk; segLoSel.value = state.segLo==null ? '' : String(state.segLo); }
+  if(segHiSel){ segHiSel.disabled = !segYearOk; segHiSel.value = state.segHi==null ? '' : String(state.segHi); }
+  var segPriceHint = document.getElementById('segPriceDisabledHint');
+  if(segPriceHint){
+    segPriceHint.style.display = segYearOk ? 'none' : '';
+    segPriceHint.textContent = '价位条件仅最新年份（' + latestYearForSeg + '）可用';
+  }
+  document.querySelectorAll('#segTopChips .chip').forEach(function(c){
+    c.classList.toggle('active', String(state.segTop)===c.getAttribute('data-top'));
+  });
   // 修正8：年视图的默认展示上限是 10 不是 20，按钮文案必须跟着实际行为走，
   // 否则点了「重置为 Top 20」却只出现 10 个对象，是标签说谎。
   var rsBtn = document.getElementById('resetBtn');
@@ -1707,9 +1917,11 @@ function syncControlStates(){
   var fnM = document.getElementById('footnoteMonth');
   var fnY = document.getElementById('footnoteYear');
   var fnP = document.getElementById('footnotePrice');
-  if(fnM) fnM.style.display = (yearDisabled || state.priceMap) ? 'none' : '';
-  if(fnY) fnY.style.display = (yearDisabled && !state.priceMap) ? '' : 'none';
+  var fnSeg = document.getElementById('footnoteSeg');
+  if(fnM) fnM.style.display = (yearDisabled || state.priceMap || state.segMarket) ? 'none' : '';
+  if(fnY) fnY.style.display = (yearDisabled && !state.priceMap && !state.segMarket) ? '' : 'none';
   if(fnP) fnP.style.display = state.priceMap ? '' : 'none';
+  if(fnSeg) fnSeg.style.display = state.segMarket ? '' : 'none';
   document.querySelectorAll('#granChips .chip').forEach(function(c){
     c.classList.toggle('active', c.getAttribute('data-gran')===state.gran);
   });
@@ -2245,9 +2457,237 @@ function renderChartPriceMap(universe){
   chart.setOption(option, true);
 }
 
+/* ---------------- 细分市场：数据准备 ----------------
+   跟价位地图刻意不同的一点：这里取 universe.entities 全量（已经过 computeUniverse()/currentDim()/
+   filteredModelIndices()/monthlyValue() 应用过车体类型·归属·能源三项筛选——车型粒度下 currentDim()
+   直接用 filteredModelIndices()，monthlyValue() 对非 energy 粒度会按 state.energy 取 f/e，逐一核对过，
+   这里不重复实现一遍），只过滤 ytd<=0，不再取交集 lastShownKeys——细分市场数的是"这个范围里有多少
+   款车"，不是"用户在图例上勾了几款"，跟折线图/价位地图的"当前展示对象"是两个不同的口径。 */
+function buildSegRows(universe){
+  var all = universe.entities.filter(function(e){ return e.ytd > 0; });
+  var priceOn = (state.segLo !== null || state.segHi !== null);
+  var rows, dropped = [];
+  if(!priceOn){
+    // 价位条件没启用：不按价位筛，无售价的车型也照常计入——条件本来就没打开，
+    // 不该因为"查不到价"就把车从统计里拿掉。
+    rows = all.slice();
+  } else {
+    var lo = state.segLo===null ? -Infinity : state.segLo;
+    var hi = (state.segHi===null || state.segHi>=9999) ? Infinity : state.segHi;
+    rows = [];
+    all.forEach(function(e){
+      var p = PRICES.models[e.name];
+      if(!p){ dropped.push(e); return; }
+      var startPrice = p[0]; // 起售价，PRICES.models[name] = [起售价, 最高价]
+      // 左闭右开：lo <= 起售价 < hi
+      if(startPrice >= lo && startPrice < hi) rows.push(e);
+    });
+  }
+  rows = rows.slice().sort(function(a,b){ return b.ytd - a.ytd; });
+  var total = 0;
+  rows.forEach(function(e){ total += e.ytd; });
+  function topSum(n){
+    var s = 0;
+    for(var i=0;i<Math.min(n,rows.length);i++) s += rows[i].ytd;
+    return s;
+  }
+  var cr5 = total>0 ? topSum(5)/total*100 : null;
+  var cr10 = total>0 ? topSum(10)/total*100 : null;
+  return {rows:rows, total:total, cr5:cr5, cr10:cr10, dropped:dropped, priceOn:priceOn};
+}
+// 图下方两条提示：无售价被排除的车型（仅价位条件启用时出现）、归属限定警告（owner!=='all' 时必须出现，
+// 否则用户会把"某厂商在这个价位段有N款车"误读成"这个细分市场只有N个竞争者"——不能省）。
+function updateSegNotes(built){
+  var noPriceEl = document.getElementById('segNoPriceNote');
+  if(noPriceEl){
+    if(built.priceOn && built.dropped.length > 0){
+      var names = built.dropped.map(function(e){ return e.name; });
+      var shownNames = names.slice(0,6).join('、');
+      var suffix = names.length > 6 ? ' 等' : '';
+      noPriceEl.textContent = built.dropped.length + ' 款车型因为没有售价数据，未计入本次筛选：' + shownNames + suffix;
+      noPriceEl.style.display = '';
+    } else {
+      noPriceEl.style.display = 'none';
+    }
+  }
+  var ownerEl = document.getElementById('segOwnerWarnNote');
+  if(ownerEl){
+    var raw = ownerRawName();
+    if(raw){
+      ownerEl.textContent = '当前限定在「' + raw.name + (raw.isBrand ? '（品牌）' : '') +
+        '」内，上面的车型数是它在这个细分市场投放的款数，不是整个市场的竞争者数量。';
+      ownerEl.style.display = '';
+    } else {
+      ownerEl.style.display = 'none';
+    }
+  }
+}
+
+/* ---------------- 细分市场：横向条形榜 ----------------
+   纵轴＝车型（category，从上往下按销量降序，做法跟价位地图一样：数组 reverse 而不是用 inverse），
+   横轴＝累计销量（value，跟价位地图相反——这里画的是柱状"长度"，必须从零起点，否则长度失去意义；
+   价位地图画的是哑铃"位置"，那里才允许非零起点，两者规矩不同，不要搞混）。 */
+var segMarketRows = null; // 供 chart.on('click') 反查行数据（跟 priceMapRows / yearChartRows 同一套做法）
+function renderChartSegMarket(universe){
+  restoreChartHeight(); // 退出其它模式设的行内高度先清掉，本函数自己再按行数设一遍
+  // 这个覆盖层是给"折线图清空勾选"用的（依赖 lastShownKeys）；细分市场不用 lastShownKeys 决定
+  // 展示内容，两者口径不是一回事，不能借用，否则可能在细分市场有数据时也盖一层无关提示上去。
+  var emptyHintEl = document.getElementById('chartEmptyHint');
+  if(emptyHintEl) emptyHintEl.style.display = 'none';
+
+  var built = buildSegRows(universe);
+  updateSegNotes(built);
+
+  document.getElementById('segMetricCount').textContent = String(built.rows.length);
+  document.getElementById('segMetricCR5').textContent = built.total>0 ? built.cr5.toFixed(1)+'%' : '—';
+  document.getElementById('segMetricCR10').textContent = built.total>0 ? built.cr10.toFixed(1)+'%' : '—';
+  document.getElementById('segMetricTotal').textContent = formatNum(built.total) + ' 辆';
+
+  var drillBtn = document.getElementById('segDrillBtn');
+
+  if(built.rows.length === 0){
+    segMarketRows = [];
+    if(drillBtn) drillBtn.style.display = 'none';
+    document.getElementById('chart').style.height = '220px';
+    chart.resize();
+    chart.setOption({
+      backgroundColor:'transparent',
+      xAxis:{show:false}, yAxis:{show:false}, series:[],
+      graphic:[{
+        type:'text', left:'center', top:'middle',
+        style:{
+          text:'当前条件下没有车型——换一个价位区间或放宽车体/能源试试',
+          fontSize:13, fill: cssVar('--text-muted')
+        }
+      }]
+    }, true);
+    return;
+  }
+
+  if(drillBtn) drillBtn.style.display = '';
+
+  var topRows = built.rows.slice(0, state.segTop);
+  var textColor = cssVar('--text-secondary');
+  var mutedColor = cssVar('--text-muted');
+  var gridColor = cssVar('--grid');
+  var seriesColor = cssVar('--series-1');
+
+  // 从上往下按销量降序：跟价位地图同一手法，把已经是 ytd 降序的数组整体反过来，
+  // 让销量最高的排在数组末尾、也就是类目轴上最靠上的位置。
+  var catRows = topRows.slice().reverse();
+  var rowH = 30;
+  var chartH = catRows.length * rowH + 60;
+  document.getElementById('chart').style.height = chartH + 'px';
+  chart.resize();
+
+  // 左侧标签栏宽度跟着图表实际宽度走：宽屏 150px 够放"哈弗猛龙新能源"这类长名，
+  // 手机上只有三百来像素，150px 会吃掉一半宽度，柱子全挤成一小截。窄屏收窄到 32%
+  // 并把超长的车型名/厂商名截断成「前N字…」，完整名字在悬浮框里能看到。
+  // （价位地图里已经有同一套做法，这里保持一致。）
+  var segChartPxW = chart.getWidth() || 900;
+  var segNarrow = segChartPxW < 620;
+  var segLabelBoxW = segNarrow ? Math.max(70, Math.round(segChartPxW * 0.32)) : 150;
+  function segFitLabel(text, fs){
+    var budget = segLabelBoxW - 12;
+    var w = 0, out = '';
+    for (var i = 0; i < text.length; i++){
+      var ch = text.charAt(i);
+      var cw = /[\x00-\xff]/.test(ch) ? fs*0.56 : fs*1.0;
+      if (w + cw > budget){ return out + '…'; }
+      w += cw; out += ch;
+    }
+    return out;
+  }
+
+  var rich = {};
+  var rowsForRender = catRows.map(function(e, idx){
+    var own = modelOwnership(e.name);
+    var manufacturer = own ? own.manuName : '';
+    rich['n'+idx] = {color:textColor, fontSize:12.5, lineHeight:15};
+    rich['m'+idx] = {color:mutedColor, fontSize:10.5, lineHeight:13};
+    var p = PRICES.models[e.name];
+    return {
+      key:e.key, name:e.name, sales:e.ytd, manufacturer:manufacturer,
+      startPrice: p ? p[0] : null, catIndex:idx
+    };
+  });
+  segMarketRows = rowsForRender;
+
+  var catNames = rowsForRender.map(function(r){ return r.name; });
+  var xMaxRaw = topRows.length ? topRows[0].ytd : 1; // topRows 已按 ytd 降序，第一名就是最大值
+  var xMax = (xMaxRaw * 1.12) || 1;
+
+  var option = {
+    backgroundColor:'transparent',
+    animationDuration:280,
+    textStyle:{color:textColor, fontFamily:'inherit'},
+    grid:{left:segLabelBoxW, right: segNarrow ? 52 : 70, top:16, bottom:20, containLabel:true},
+    xAxis:{
+      // 柱状图编码的是"长度"，必须归零起点——跟价位地图的哑铃图（编码"位置"、允许非零起点）
+      // 正好相反，这里显式写 min:0，别因为"看起来该跟价位地图一致"就顺手改掉。
+      type:'value', min:0, max:xMax,
+      axisLine:{lineStyle:{color: cssVar('--baseline')}},
+      axisTick:{show:false},
+      splitLine:{lineStyle:{color:gridColor}},
+      // hideOverlap：窄屏上刻度标签会糊成一片（实测出现过"5万01152025万"），交给 ECharts
+      // 自动丢掉放不下的那些——只丢标签，不动网格线和轴范围。
+      axisLabel:{color:mutedColor, fontSize:11.5, hideOverlap:true,
+                 formatter:function(v){return formatCompact(v);}}
+    },
+    yAxis:{
+      type:'category', data:catNames,
+      axisLine:{lineStyle:{color: cssVar('--baseline')}},
+      axisTick:{show:false},
+      axisLabel:{
+        fontSize:12.5, rich:rich,
+        formatter:function(name, idx){
+          var d = rowsForRender[idx];
+          var manu = (d && d.manufacturer) || '—';
+          return '{n'+idx+'|'+segFitLabel(name, 12.5)+'}\n{m'+idx+'|'+segFitLabel(manu, 10.5)+'}';
+        }
+      }
+    },
+    tooltip:{
+      trigger:'axis',
+      axisPointer:{type:'shadow'},
+      backgroundColor: cssVar('--surface-1'), borderColor:cssVar('--border'),
+      textStyle:{color:cssVar('--text-primary'), fontSize:12.5},
+      confine:true,
+      formatter:function(params){
+        if(!params || !params.length) return '';
+        var d = rowsForRender[params[0].dataIndex];
+        if(!d) return '';
+        var share = built.total>0 ? (d.sales/built.total*100).toFixed(1)+'%' : '—';
+        var priceText = d.startPrice==null ? '无数据' : (formatPrice(d.startPrice)+' 万起');
+        return [
+          d.name,
+          '厂商：'+(d.manufacturer||'—'),
+          '累计销量：'+formatNum(d.sales),
+          '本细分市场份额：'+share,
+          '起售价：'+priceText
+        ].join('<br/>');
+      }
+    },
+    legend:{show:false},
+    series:[{
+      id:'__segMarketSeries__',
+      type:'bar',
+      data: rowsForRender.map(function(r){ return r.sales; }),
+      barMaxWidth:24,
+      itemStyle:{color:seriesColor, borderRadius:[0,4,4,0]}, // 数据端（右侧）圆角，基线端（左侧）方角
+      label:{
+        show:true, position:'right', color:textColor, fontSize:11.5,
+        formatter:function(p){ return formatNum(p.value); }
+      }
+    }]
+  };
+  chart.setOption(option, true);
+}
+
 // 总入口：按月视图走既有折线逻辑；按年视图走全新的自定义 series 分组柱逻辑（形态已用
 // /tmp/yearview-mock/index.html 验证过，这里搬运其 renderItem 布局算法，不重新设计）。
 function renderChart(universe){
+  if(state.segMarket){ renderChartSegMarket(universe); return; }
   if(state.priceMap){ renderChartPriceMap(universe); return; }
   if(state.viewMode==='year'){ renderChartYear(universe); return; }
   renderChartMonth(universe);
@@ -2541,6 +2981,14 @@ function renderChartYear(universe){
 }
 
 chart.on('click', function(params){
+  if(state.segMarket){
+    // 单个横向条形 series，同价位地图一样靠 dataIndex 反查行数据。
+    if(!segMarketRows) return;
+    var segRow = segMarketRows[params.dataIndex];
+    if(!segRow) return;
+    openDrawer(segRow.key, segRow.name);
+    return;
+  }
   if(state.priceMap){
     // 单个 custom series 自绘哑铃图，同年视图一样靠 dataIndex 反查行数据。
     if(!priceMapRows) return;
@@ -2567,7 +3015,7 @@ chart.on('mouseover', {seriesIndex:'all'}, function(params){
   // 价位地图同理：也是单个 custom series（id 固定是 '__priceMapSeries__'，不对应任何
   // 图例 key），一旦接了这条线，hoverKey 会变成一个图例里谁都匹配不上的 id，导致鼠标一放
   // 到价位地图上，右侧图例反而整体变暗——同样不接。
-  if(state.viewMode==='year' || state.priceMap) return;
+  if(state.viewMode==='year' || state.priceMap || state.segMarket) return;
   if(params.seriesId) highlightKey(params.seriesId);
 });
 chart.getZr().on('globalout', function(){ highlightKey(null); hideCompTooltip(); });
@@ -2799,6 +3247,7 @@ function buildTableRowsMonth(universe){
 }
 
 function renderTable(universe){
+  if(state.segMarket){ renderTableSegMarket(universe); return; }
   if(state.priceMap){ renderTablePriceMap(universe); return; }
   if(state.viewMode==='year'){ renderTableYear(universe); return; }
   renderTableMonth(universe);
@@ -2923,6 +3372,7 @@ function csvEscape(s){
   return s;
 }
 function downloadCsv(universe){
+  if(state.segMarket){ downloadCsvSegMarket(universe); return; }
   if(state.priceMap){ downloadCsvPriceMap(universe); return; }
   if(state.viewMode==='year'){ downloadCsvYear(universe); return; }
   downloadCsvMonth(universe);
@@ -2996,6 +3446,64 @@ function downloadCsvPriceMap(universe){
     lines.push(line.map(csvEscape).join(','));
   });
   var fname = '汽车销量_价位地图_' + state.year + '_' + csvFileNameScopeParts().join('_') + '_' + energyLabel() + '.csv';
+  triggerCsvDownload(fname, lines);
+}
+
+// 表格/CSV 共用：排名 / 车型 / 厂商 / 起售价 / 当年累计销量 / 本细分市场份额；沿用 buildSegRows()
+// 的价位/范围口径，但表格要求出全部车型（不像图那样受 Top10/Top20 版面限制）。
+function buildTableRowsSegMarket(universe){
+  var built = buildSegRows(universe);
+  var rows = built.rows.map(function(e, idx){
+    var own = modelOwnership(e.name);
+    var p = PRICES.models[e.name];
+    var share = built.total>0 ? (e.ytd/built.total*100) : null;
+    return {
+      rank: idx+1, name:e.name, manufacturer: own?own.manuName:'',
+      startPrice: p ? p[0] : null, sales:e.ytd, share:share
+    };
+  });
+  return {rows:rows, built:built};
+}
+function renderTableSegMarket(universe){
+  var el = document.getElementById('tableview');
+  var out = buildTableRowsSegMarket(universe);
+  var html = '<table class="datatable"><thead><tr><th>排名</th><th>车型</th><th>厂商</th>' +
+    '<th>起售价(万元)</th><th>累计销量</th><th>本细分市场份额(%)</th></tr></thead><tbody>';
+  out.rows.forEach(function(r){
+    html += '<tr><td>#'+r.rank+'</td><td>'+escapeHtml(r.name)+'</td><td>'+escapeHtml(r.manufacturer||'—')+'</td>' +
+      '<td>'+(r.startPrice==null?'—':formatPrice(r.startPrice))+'</td>' +
+      '<td>'+formatNum(r.sales)+'</td>' +
+      '<td>'+(r.share==null?'—':r.share.toFixed(1))+'</td></tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+function segPriceRangeLabel(){
+  if(state.segLo===null && state.segHi===null) return '不限价位';
+  var loText = state.segLo===null ? '不限' : (state.segLo+'万');
+  var hiText = (state.segHi===null) ? '不限' : (state.segHi>=9999 ? '以上' : (state.segHi+'万'));
+  return loText + '-' + hiText;
+}
+function downloadCsvSegMarket(universe){
+  if(!universe) return;
+  // 份额/售价是算出来的，直接写进 CSV 会带浮点尾巴，统一按两位小数收口
+  // （价位地图的价差列已经踩过这个坑，见 downloadCsvPriceMap 里的 round2）。
+  function round2(v){ return Math.round(v * 100) / 100; }
+  var out = buildTableRowsSegMarket(universe);
+  var header = ['排名','车型','厂商','起售价(万元)','累计销量','本细分市场份额(%)'];
+  // 沿用月度/年度/价位地图三个导出函数已经定下的格式：表头就是第1行，不加口径注释行，
+  // 口径信息放进文件名里。
+  var lines = [header.map(csvEscape).join(',')];
+  out.rows.forEach(function(r){
+    var line = [
+      r.rank, r.name, r.manufacturer||'',
+      r.startPrice==null ? '' : round2(r.startPrice),
+      Math.round(r.sales),
+      r.share==null ? '' : round2(r.share)
+    ];
+    lines.push(line.map(csvEscape).join(','));
+  });
+  var fname = '汽车销量_细分市场_' + state.year + '_' + csvFileNameScopeParts().join('_') + '_' + energyLabel() + '_' + segPriceRangeLabel() + '.csv';
   triggerCsvDownload(fname, lines);
 }
 
@@ -3861,7 +4369,11 @@ function renderAll(){
   // 能源类型粒度下标题不拼 energyLabel()（能源筛选被禁用、与图上两条线的口径无关），
   // 改用 energyScopeLabel() 拼归属/车体类型；没有限定时自然省略，跟 model 粒度标题的拼接风格一致。
   var titleTail = state.gran==='energy' ? energyScopeLabel() : (ownerLabel() + ' · ' + energyLabel());
-  if(state.priceMap){
+  if(state.segMarket){
+    // 细分市场同样强制 gran==='model'，标题拼法跟价位地图一致，只换最后一段的措辞。
+    document.getElementById('chartTitle').textContent =
+      state.year + '年 · ' + granLabel() + titleTail + ' · 细分市场车型排行（按当年累计销量降序）';
+  } else if(state.priceMap){
     // 价位地图强制 gran==='model'（按钮禁用态保证），granLabel() 已经带车体类型后缀，
     // titleTail 已经带归属 + 能源后缀，跟月视图标题拼法保持一致，只换最后一段的措辞。
     document.getElementById('chartTitle').textContent =
