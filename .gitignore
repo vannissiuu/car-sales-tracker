@@ -1,0 +1,11 @@
+# build.py 下载并缓存的 echarts 等前端依赖，构建产物已经把它们内联进 docs/index.html，
+# 不需要进仓
+vendor/
+
+# Python 字节码缓存
+__pycache__/
+*.pyc
+
+# 本地临时产物
+screenshots/
+*.tmp

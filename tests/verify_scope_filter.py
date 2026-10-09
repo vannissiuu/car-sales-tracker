@@ -2710,6 +2710,24 @@ def last_cum_value(data):
     return v
 
 
+def energy_line_matches(actual, expected):
+    """
+    能源粒度下某条线（燃油 / 新能源）的实测 YTD 是否与 Oracle 期望相符。
+
+    看板会把"当前范围内全程零销量"的对象从对象池里剔除（刻意行为，另有专门用例覆盖），
+    所以期望值恰好为 0 时，图上压根没有这条线才是正确结果，读出来会是 None。
+    期望值非 0 却读不到这条线，照旧判 FAIL —— 这一条绝不能放宽，否则真的"线丢了"会被放过去。
+
+    为什么 2026-10 起需要这个分支：比亚迪 2022 年就已停产燃油车，看板上它的"燃油"线本来
+    就该不存在。N4/N6 之前能过，是因为"大唐"被数据源的新能源分榜漏收、默认错标成了燃油，
+    凭空给比亚迪造出 14,908 辆燃油销量。那条错标修掉之后比亚迪燃油合计归零，线随之消失 ——
+    是用例的断言太严，不是看板坏了。
+    """
+    if expected == 0:
+        return actual is None or abs(actual) < 1.0
+    return actual is not None and abs(actual - expected) < 1.0
+
+
 def find_series(series, name):
     if not isinstance(series, list):
         return None
@@ -2792,8 +2810,8 @@ def run_group_N(page, shots_dir, oracle):
         expect_fuel = oracle.energy_gran_ytd(2026, "fuel")
         expect_ev = oracle.energy_gran_ytd(2026, "ev")
         shot(page, shots_dir, "N2_energy_national_2026")
-        ok = (fuel_val is not None and ev_val is not None
-              and abs(fuel_val - expect_fuel) < 1.0 and abs(ev_val - expect_ev) < 1.0)
+        ok = (energy_line_matches(fuel_val, expect_fuel)
+              and energy_line_matches(ev_val, expect_ev))
         R.record("N2", "全国数值正确(2026)：燃油/新能源YTD跟Oracle独立复算相等",
                  "PASS" if ok else "FAIL",
                  expected=f"燃油={expect_fuel}，新能源={expect_ev}",
@@ -2818,9 +2836,8 @@ def run_group_N(page, shots_dir, oracle):
             ev_val = last_cum_value(ev_s["data"]) if ev_s else None
             results[yr] = {"实际燃油": fuel_val, "实际新能源": ev_val,
                             "期望燃油": expect_fuel, "期望新能源": expect_ev}
-            if fuel_val is None or ev_val is None:
-                ok_all = False
-            elif abs(fuel_val - expect_fuel) >= 1.0 or abs(ev_val - expect_ev) >= 1.0:
+            if not (energy_line_matches(fuel_val, expect_fuel)
+                    and energy_line_matches(ev_val, expect_ev)):
                 ok_all = False
         _setup_energy(page, owner="all", body_type="-1", year=2026)  # 恢复，避免影响后续用例
         shot(page, shots_dir, "N3_energy_cross_year")
@@ -2845,8 +2862,8 @@ def run_group_N(page, shots_dir, oracle):
         expect_fuel = oracle.energy_gran_ytd(2026, "fuel", manu_name=MANU)
         expect_ev = oracle.energy_gran_ytd(2026, "ev", manu_name=MANU)
         shot(page, shots_dir, "N4_energy_owner_filter")
-        ok = (fuel_val is not None and ev_val is not None
-              and abs(fuel_val - expect_fuel) < 1.0 and abs(ev_val - expect_ev) < 1.0)
+        ok = (energy_line_matches(fuel_val, expect_fuel)
+              and energy_line_matches(ev_val, expect_ev))
         R.record("N4", f"归属筛选生效：能源粒度+归属=manu:{MANU}，两条线YTD跟Oracle相等",
                  "PASS" if ok else "FAIL",
                  expected=f"燃油={expect_fuel}，新能源={expect_ev}",
@@ -2877,8 +2894,8 @@ def run_group_N(page, shots_dir, oracle):
         expect_fuel = oracle.energy_gran_ytd(2026, "fuel", body_type_idx=bt_idx)
         expect_ev = oracle.energy_gran_ytd(2026, "ev", body_type_idx=bt_idx)
         shot(page, shots_dir, "N5_energy_bodytype_filter")
-        ok = (fuel_val is not None and ev_val is not None
-              and abs(fuel_val - expect_fuel) < 1.0 and abs(ev_val - expect_ev) < 1.0)
+        ok = (energy_line_matches(fuel_val, expect_fuel)
+              and energy_line_matches(ev_val, expect_ev))
         R.record("N5", "车体类型筛选生效：能源粒度+SUV，两条线YTD跟Oracle相等",
                  "PASS" if ok else "FAIL",
                  expected=f"燃油={expect_fuel}，新能源={expect_ev}",
@@ -2916,8 +2933,8 @@ def run_group_N(page, shots_dir, oracle):
         expect_ev_bt_only = oracle.energy_gran_ytd(2026, "ev", body_type_idx=bt_idx)
         is_real_intersection = (expect_ev < expect_ev_owner_only and expect_ev < expect_ev_bt_only)
         shot(page, shots_dir, "N6_energy_combo_filter")
-        ok = (fuel_val is not None and ev_val is not None
-              and abs(fuel_val - expect_fuel) < 1.0 and abs(ev_val - expect_ev) < 1.0
+        ok = (energy_line_matches(fuel_val, expect_fuel)
+              and energy_line_matches(ev_val, expect_ev)
               and is_real_intersection)
         R.record("N6", f"筛选叠加：能源粒度+归属={MANU}+车体类型=SUV 是交集而非互相覆盖",
                  "PASS" if ok else "FAIL",

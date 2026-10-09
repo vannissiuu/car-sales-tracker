@@ -15,6 +15,8 @@ P1 数据管道：从车主之家 xl.16888.com 抓取 2024-01 至今的乘用车
   - body_type 的分类名称（比如 body-5 到底叫"SUV"还是别的）是从页面 <title> 里现取的，
     不是硬编码猜的；body-1..8 里任何一个 404 / 没有结果就跳过该分类。
   - energy_type 严格二元：车型出现在 ev 榜单里 -> 新能源，否则 -> 燃油。不做任何按名字的推断。
+    唯一的例外是 mapping.json 里人工拍板的 model_to_energy 覆盖表（见 resolve_energy）——那是人工
+    裁定，不是自动推断；按名字/品牌推断出来的结果只用于「疑点告警」，从不改写 energy_type。
 """
 
 import base64
@@ -84,6 +86,32 @@ MAPPING_JSON_PATH = os.path.join(DATA_DIR, "mapping.json")
 PRICES_JSON = os.path.join(DATA_DIR, "prices.json")
 
 CSV_FIELDS = ["year", "month", "manufacturer", "brand", "model", "body_type", "energy_type", "sales"]
+
+# energy_type 的合法取值。model_to_energy 覆盖表里不在这个集合里的值一律被忽略（见 resolve_energy）。
+ENERGY_VALUES = ("燃油", "新能源")
+
+# 只造新能源车的品牌：这些品牌下任何一行被标成「燃油」都是数据源新能源分榜漏收，不是真的燃油车
+NEV_ONLY_BRANDS = frozenset({
+    "比亚迪","特斯拉","蔚来","乐道","萤火虫","理想","小鹏","埃安","极氪","零跑","哪吒","小米",
+    "腾势","方程豹","仰望","智己","极狐","岚图","阿维塔","深蓝","昊铂","问界","智界","享界","尊界","尚界",
+    "欧拉","飞凡","科莱威","启源","银河","几何","枫叶","合创","高合","极越","创维","远航","睿蓝","赛力斯",
+    "钇为","易至","羿","东风纳米","奕派","猛士","极石","iCAR",
+})
+
+# 车型名里的新能源标记，用于疑点告警（只告警，从不改写 energy_type）。
+# 几个经验教训，都是实测出来的，别"优化"掉：
+#   - EV 两侧的字母边界断言，是为了排除「风行T5 EVO」「EVOS」——这两款实测确实是燃油车，标「燃油」是对的。
+#   - 必须有 ID\.：上汽大众「ID.ERA 5S」是插混，但品牌是「大众」（不在 NEV_ONLY_BRANDS 里）、
+#     名字里也不含 EV，只靠前两条规则一个都抓不到它，是实际漏报过的案例。ID. 序列全是新能源。
+#   - EQ 后面必须跟大写字母（奔驰 EQA/EQB/EQE/EQS），e-tron / iX 同理，都是品牌专用的新能源命名。
+#   - 故意不加裸的 i+数字：「荣威i5」「荣威i6」「荣威iMAX8」都是实打实的燃油车（i5 还有 16.5 万辆），
+#     加了会造成大规模误报。
+#   - 故意不加裸的 HEV：不插电的油电混动按本项目口径算「燃油」，不是新能源。PHEV 才算。
+NEV_NAME_PATTERN = re.compile(
+    r"(?<![A-Za-z])EV(?![A-Za-z])|PHEV|REEV|EREV|DM-i|DM-p"
+    r"|ID\.|(?:^|[^A-Za-z])EQ[A-Z]|e-tron|(?<![A-Za-z])iX"
+    r"|纯电|增程|新能源"
+)
 
 # ===== MAPPING_JSON_BEGIN =====
 # 厂商/车型 -> 品牌 映射字典（定稿版，117 家厂商全覆盖 + 87 条车型级覆盖，见下方 _meta）。
@@ -1063,6 +1091,28 @@ def resolve_brand(model, manufacturer, mapping):
     return brand
 
 
+def resolve_energy(model, ev_set, mapping):
+    """
+    决定一个车型的 energy_type（「燃油」或「新能源」）。
+
+    优先级：
+      1. mapping["model_to_energy"][model]（人工裁定覆盖表，按车型名精确匹配）——命中且取值
+         合法时直接采用，可以把「在新能源分榜里」改成燃油，也可以把「不在分榜里」改成新能源。
+      2. 默认规则：车型出现在数据源新能源分榜 (ev_set) 里 -> 新能源，否则 -> 燃油。
+
+    覆盖值必须是 ENERGY_VALUES（「燃油」/「新能源」）之一；其它任何值（拼写错误如「纯电」、
+    空串、None、数字……）一律忽略并退回默认规则，绝不会把非法值写进 CSV——mapping.json 里
+    打错一个字，不该污染整个 energy_type 列。
+
+    覆盖表是人工拍板，不是按名字的自动推断，所以不违反「不做按名字推断」的设计。
+    纯函数，不发请求，方便离线单测。
+    """
+    override = (mapping.get("model_to_energy") or {}).get(model)
+    if override in ENERGY_VALUES:
+        return override
+    return "新能源" if model in ev_set else "燃油"
+
+
 def label_rows(style_rows, body_type_map, ev_set, mapping, year, month):
     """
     以主榜 (style_rows) 为基准，用「车型名」左连接打上 body_type / brand / energy_type 标签。
@@ -1083,7 +1133,7 @@ def label_rows(style_rows, body_type_map, ev_set, mapping, year, month):
         body_type = body_type_map.get(model, "其他")
         if body_type == "其他":
             other_count += 1
-        energy_type = "新能源" if model in ev_set else "燃油"
+        energy_type = resolve_energy(model, ev_set, mapping)
         brand = resolve_brand(model, manufacturer, mapping)
         out_rows.append({
             "year": year,
@@ -1324,6 +1374,110 @@ def normalize_brand_column(rows, mapping):
         else:
             normalized.append(r)
     return normalized, changed
+
+
+def normalize_energy_column(rows, mapping):
+    """
+    对存量行做规范化：把 mapping["model_to_energy"] 里人工裁定过的车型，在存量数据里的
+    energy_type 统一改写成裁定值。这样用户在 mapping.json 里新增/修改一条裁定后，已经入库
+    的历史行下次同步就会跟着变，不需要做一次全量 force_refresh。
+
+    只改写 model 命中覆盖表、且当前 energy_type 与裁定值不同的行；其余行原样返回（同一个
+    dict 对象，不新建）。裁定值不在 ENERGY_VALUES 里的条目被忽略，和 resolve_energy 一致。
+
+    为什么只能改写覆盖表里的车型、不能像 normalize_brand_column 那样对每一行重新推导：
+    brand 完全由 (model, manufacturer, mapping) 决定，这些输入每一行都带着或在仓库里，离线
+    就能重算；而非覆盖车型的 energy_type 取决于 ev_set（当月数据源「新能源分榜」里的车型名
+    集合），ev_set 是按月从数据源抓的、没有持久化在仓库里，离线无法重建。对非覆盖车型重新推导
+    只能把它们全部当成「不在 ev_set」而误改回燃油，所以这些行只能信任抓取当时写下的值。
+
+    幂等：第二次跑的时候命中的行 energy_type 已经等于裁定值，条件不命中，changed_count 为 0。
+    不修改传入的 dict（返回新的列表+新的行 dict），避免意外的原地副作用。
+
+    纯函数，不发请求，方便离线单测。返回 (normalized_rows, changed_count)。
+    """
+    overrides = mapping.get("model_to_energy") or {}
+    normalized = []
+    changed = 0
+    for r in rows:
+        target = overrides.get(r.get("model"))
+        if target in ENERGY_VALUES and r.get("energy_type") != target:
+            new_r = dict(r)
+            new_r["energy_type"] = target
+            normalized.append(new_r)
+            changed += 1
+        else:
+            normalized.append(r)
+    return normalized, changed
+
+
+def detect_suspect_energy_labels(rows, mapping):
+    """
+    找出「很可能被错标成燃油」的车型，用于同步报告里的常驻疑点告警。这只是告警，从不改写
+    energy_type（改写只能通过人工填写 model_to_energy 覆盖表）。
+
+    背景：新上市车型往往要过几个月才被数据源加进新能源分榜，期间默认落到「燃油」，而且这个
+    错标不会自愈。
+
+    命中条件（逐行判断，全部满足）：
+      - energy_type == "燃油"；
+      - model 不在 mapping["model_to_energy"] 里——覆盖表同时就是「已人工裁定」清单，出现在
+        里面的车型一律不报，不管裁定成「新能源」还是「燃油」；
+      - 品牌在 NEV_ONLY_BRANDS 里（reason「品牌为纯新能源品牌」），否则车型名匹配
+        NEV_NAME_PATTERN（reason「车型名含新能源标记」）。
+
+    为什么必须支持把车型裁定成「燃油」：存在品牌是纯新能源品牌、但车型确实是燃油车的情况。
+    实例：「睿蓝汽车X3 PRO」实测是真燃油车（1.5L 汽油机、无电机），但品牌「睿蓝」在
+    NEV_ONLY_BRANDS 里，会被反复误报；在 model_to_energy 里把它写成「燃油」（no-op 覆盖）
+    就能让它退出告警。同理 NEV_NAME_PATTERN 对 EV 加了字母边界断言，是为了不误报
+    「风行T5 EVO」「EVOS」（也是真燃油车）。
+
+    按 model 聚合跨月数据，返回按累计销量降序的列表，每项：
+      brand、model、sales（累计）、months（月数）、first / last（首月/末月，"YYYY-MM"）、reason。
+    同一车型多行（跨月）里 brand/reason 取该车型最早命中的那一行。
+
+    纯函数，不发请求。
+    """
+    overrides = mapping.get("model_to_energy") or {}
+    agg = {}
+    for r in rows:
+        if r.get("energy_type") != "燃油":
+            continue
+        model = r.get("model", "")
+        if model in overrides:
+            continue
+        brand = r.get("brand", "")
+        if brand in NEV_ONLY_BRANDS:
+            reason = "品牌为纯新能源品牌"
+        elif NEV_NAME_PATTERN.search(model):
+            reason = "车型名含新能源标记"
+        else:
+            continue
+        ym = (r["year"], r["month"])
+        a = agg.get(model)
+        if a is None:
+            a = agg[model] = {"brand": brand, "model": model, "sales": 0, "yms": set(),
+                              "first": ym, "last": ym, "reason": reason, "_first_ym": ym}
+        elif ym < a["_first_ym"]:
+            a["brand"], a["reason"], a["_first_ym"] = brand, reason, ym
+        a["sales"] += r["sales"]
+        a["yms"].add(ym)
+        a["first"] = min(a["first"], ym)
+        a["last"] = max(a["last"], ym)
+    result = [
+        {
+            "brand": a["brand"],
+            "model": a["model"],
+            "sales": a["sales"],
+            "months": len(a["yms"]),
+            "first": f"{a['first'][0]}-{a['first'][1]:02d}",
+            "last": f"{a['last'][0]}-{a['last'][1]:02d}",
+            "reason": a["reason"],
+        }
+        for a in agg.values()
+    ]
+    result.sort(key=lambda x: (-x["sales"], x["model"]))
+    return result
 
 
 def load_or_bootstrap_mapping():
@@ -1652,6 +1806,8 @@ def write_outputs(all_rows, report, mapping):
 
     coverage = compute_body_type_coverage(all_rows_sorted)
     brand_stats = compute_brand_stats(all_rows_sorted, mapping)
+    # 能源标注疑点：必须基于最终定稿、即将写盘的行（存量覆盖 + 新抓月份 + 归一都已完成）。
+    report["suspect_energy_labels"] = detect_suspect_energy_labels(all_rows_sorted, mapping)
     write_report(report, len(all_rows_sorted), len(manufacturers), coverage, brand_stats)
 
 
@@ -1818,6 +1974,27 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
                 lines.append(f"- {s}")
             if coverage.get("unmatched_total_distinct") is None:
                 lines.append("- ...（还有更多，此列表截断到 30 个）")
+    lines.append("")
+
+    lines.append("## 能源标注疑点\n")
+    suspects = report.get("suspect_energy_labels") or []
+    if suspects:
+        lines.append("| 品牌 | 车型 | 累计销量 | 月数 | 区间 | 疑点原因 |")
+        lines.append("|---|---|---:|---:|---|---|")
+        for s in suspects:
+            lines.append(
+                f"| {s['brand']} | {s['model']} | {s['sales']} | {s['months']} | "
+                f"{s['first']} ~ {s['last']} | {s['reason']} |"
+            )
+    else:
+        lines.append("（无）")
+    lines.append("")
+    lines.append(
+        "说明：上表是被标成「燃油」、但品牌是纯新能源品牌或车型名带新能源标记的车型，多半是数据源新能源分榜"
+        "漏收了新上市车型。请逐个确认：确认是纯电/插混/增程的，在 `data/mapping.json` 的 `model_to_energy` "
+        "里写成 `新能源`；确认本来就是燃油车的，写成 `燃油`。写进去之后下次同步就不再出现在这一节里"
+        "（存量行的 energy_type 也会被自动改写，不需要 force_refresh）。"
+    )
     lines.append("")
 
     quality_gate_reasons = []
@@ -2168,6 +2345,15 @@ def main():
     existing_rows, brand_reresolved_count = normalize_brand_column(existing_rows, mapping)
     report["brand_reresolved_count"] = brand_reresolved_count
     log(f"存量品牌重解析：按 mapping.json 改写了 {brand_reresolved_count} 行的 brand")
+
+    # 存量能源覆盖：mapping["model_to_energy"] 是人工裁定的 energy_type 覆盖表（数据源新能源
+    # 分榜漏收新上市车型时，人工把它们裁定成「新能源」；确认是燃油车的写「燃油」）。新抓的月份
+    # 在 label_rows 里已经走 resolve_energy，这里负责把同一份裁定应用到已入库的历史行。
+    # 只改写覆盖表命中的车型（其余车型的 energy_type 依赖按月抓取的 ev_set，离线无法重建，
+    # 见 normalize_energy_column）。同样幂等，不需要用户 force_refresh 重跑。
+    existing_rows, energy_overridden_count = normalize_energy_column(existing_rows, mapping)
+    report["energy_overridden_count"] = energy_overridden_count
+    log(f"存量能源覆盖：按 model_to_energy 改写了 {energy_overridden_count} 行的 energy_type")
 
     effective_months_done = compute_effective_months_done(months_done, force_refresh)
     all_targets = [
