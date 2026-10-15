@@ -7,12 +7,12 @@
 分两部分：
   PART A. 用真实 HTML 样本跑一遍完整流水线（读表 -> build_body_type_map -> label_rows -> 写CSV）。
   PART B. 针对这次 bug 修复（厂商名写法不一致导致关联键失效）专门构造的合成场景，
-          直接单测 build_body_type_map / label_rows / reconcile_categories 三个纯函数：
+          直接单测 build_body_type_map / label_rows / reconcile_categories_final 三个纯函数：
             1. 同一车型在主榜和 body 榜里厂商名写法不同 -> 按车型名关联，应该能匹配上
                （这是本次修复的核心）。
             2. 车型不在任何 body 榜里 -> body_type 应该填"其他"，不是空字符串。
-            3. body 榜单里的车型没有全部出现在本月输出行里 -> reconcile_categories 应该报出对账不平，
-               并列出差异车型。
+            3. body 榜单里的车型没有全部出现在本月输出行里 -> reconcile_categories_final 应该报出
+               硬失败①（missing_from_main），并列出缺席的车型。
 
 PART A 覆盖范围说明（诚实标注，不夸大）：
   - 主榜: 用样本里仅有的第1页 + 第2页 (100/553 行)，模拟"这个月主榜只有2页"的情况。
@@ -191,13 +191,14 @@ def run_part_b():
     # ------------------------------------------------------------------
     # 断言 3：body-1(两厢车) 榜单实际抓到 3 个车型 (A/B/C)，但本月主榜(style_rows)
     # 只包含其中 2 个 (A/B)——车型C 这个月没在主榜出现（数据源自身的不一致，真实可能发生）
-    # -> reconcile_categories 应该报出「轿车」对账不平，并把差异车型 C 列出来。
+    # -> reconcile_categories_final 应该报出硬失败①「榜单车型不在主榜里」(missing_from_main)，
+    # 并把缺席的车型 C 列出来。
     # 关于"declared总条数 vs 实际解析行数"这类分页完整性问题，现在由 body_probe 表格
-    # （fetch_full_listing 内部已有的告警日志）覆盖，不再是 reconcile_categories 的职责——
-    # 这个函数现在只关心"body 榜单实际抓到的车型集合"和"最终输出行"是否对得上。
+    # （fetch_full_listing 内部已有的告警日志）覆盖，不是对账函数的职责——
+    # 对账函数只关心"body 榜单实际抓到的车型集合"和"最终输出行"是否对得上。
     # ------------------------------------------------------------------
     print()
-    print("--- 断言 3: body 榜单里的车型没有全部出现在本月输出行里 -> 对账应触发告警 ---")
+    print("--- 断言 3: body 榜单里的车型没有全部出现在本月输出行里 -> 硬失败①(missing_from_main)应触发 ---")
     body_page_rows_b3 = [
         {"rank": 1, "model": "车型A", "manufacturer": "厂商X", "sales": 100},
         {"rank": 2, "model": "车型B", "manufacturer": "厂商X", "sales": 90},
@@ -214,20 +215,24 @@ def run_part_b():
     ]
     out_rows_b3, other_b3 = S.label_rows(style_rows_b3, body_type_map_b3, set(), EMPTY_BRAND_MAPPING, 2024, 1)
 
-    recon_b3 = S.reconcile_categories(out_rows_b3, body_lists_b3)
+    # 和 sync_month 存进 report["_body_list_models"] 的形状一致：只存车型名集合
+    body_list_models_b3 = {"2024-01": [
+        [bid, rn, sorted({r["model"] for r in rws})] for bid, rn, rws in body_lists_b3
+    ]}
+    recon_b3 = S.reconcile_categories_final(out_rows_b3, body_list_models_b3)[0]
 
     result = recon_b3["results"][0]
     cond3 = (
-        result["final_category"] == "轿车"
-        and result["mismatch"] is True
-        and result["page_side"] == 3  # body-1 榜单实际抓到 A/B/C 三个车型
-        and result["actual"] == 2     # 本月输出里只有 A/B 被标成轿车
-        and result["diff_models"] == ["车型C"]
+        recon_b3["missing_from_main"] == ["车型C"]   # 硬失败①：车型C 在 body 榜单里、不在主榜输出行里
+        and recon_b3["evidence_lost"] == []          # A/B 都有真实类别，没丢分类证据
+        and result["final_category"] == "轿车"
+        and result["page_side"] == 3  # body-1 榜单实际抓到 A/B/C 三个车型（信息性）
+        and result["actual"] == 2     # 本月输出里只有 A/B 被标成轿车（信息性）
     )
     status = "PASS" if cond3 else "FAIL"
-    print(f"[{status}] 轿车对账结果: page_side={result['page_side']}, actual={result['actual']}, "
-          f"mismatch={result['mismatch']}, diff_models={result['diff_models']} "
-          f"(期望 page_side=3, actual=2, mismatch=True, diff_models=['车型C'])")
+    print(f"[{status}] 硬失败①: missing_from_main={recon_b3['missing_from_main']}, "
+          f"evidence_lost={recon_b3['evidence_lost']}, 轿车 page_side={result['page_side']}, "
+          f"actual={result['actual']} (期望 missing_from_main=['车型C'], evidence_lost=[], page_side=3, actual=2)")
     ok = ok and cond3
 
     cond3b = recon_b3["total_check"]["ok"] is True  # 2(轿车)+1(其他)==3行(out_rows里实际有的行数)，应该平

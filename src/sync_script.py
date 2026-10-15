@@ -951,16 +951,17 @@ def sync_month(session, year, month, report, body_names_cache, mapping):
 
     out_rows, unmatched = label_rows(style_rows, body_type_map, ev_set, mapping, year, month)
 
-    recon = reconcile_categories(out_rows, body_lists)
-    report.setdefault("reconciliation", []).append({
-        "year": year, "month": month,
-        "results": recon["results"],
-        "total_check": recon["total_check"],
-    })
+    # 车体类型对账不在这里做：这里的 out_rows 还是跨月回填（normalize_body_type_by_model）之前的
+    # 中间态，拿它对账会被"尚未回填"的假象绊倒。只把本月各 body 榜单的车型名（不存整行，省内存）
+    # 存进 report 的内部键，等 main() 跨月回填完成后由 reconcile_categories_final 统一对账。
+    # 下划线开头 = 内部用，不渲染进 markdown 报告。
+    report.setdefault("_body_list_models", {})[f"{year}-{month:02d}"] = [
+        [body_id, raw_body_name, sorted({r["model"] for r in rows})]
+        for body_id, raw_body_name, rows in body_lists
+    ]
 
     log(f"完成 {yyyymm}: 主榜 {len(style_rows)} 行, 填「其他」{unmatched} 行, "
-        f"新能源 {sum(1 for x in out_rows if x['energy_type']=='新能源')} 行, "
-        f"对账{'通过' if recon['total_check']['ok'] else '不平'}")
+        f"新能源 {sum(1 for x in out_rows if x['energy_type']=='新能源')} 行")
 
     report["months_done"].append({
         "year": year, "month": month,
@@ -1547,64 +1548,144 @@ def compute_brand_stats(all_rows_sorted, mapping):
     }
 
 
-def reconcile_categories(out_rows, body_lists):
+def reconcile_categories_final(rows, body_list_models_by_month):
     """
-    质量守门 v2：用户口径的最终类别数（轿车/MPV/SUV/运动汽车）比原始 body 分类数少——
-    两厢车+三厢车都并进轿车——所以对账基准不能再是"某一个 body 页面声明的共N条"，
-    改成"该最终类别下，所有贡献它的 body 榜单实际解析出的车型名集合的并集大小"（去重），
-    再和 out_rows 里这个类别实际的行数比较。
+    质量守门 v3（取代旧的 reconcile_categories）：在跨月回填（normalize_body_type_by_model）
+    之后，对最终定稿的数据做车体类型对账。
 
-    比如轿车 = 两厢车榜单车型集合 ∪ 三厢车榜单车型集合；两边各自解析出5个车型、
-    重叠2个，对账基准是 8（并集大小），不是 10（简单相加）。
+    为什么换不变式，而不是放宽阈值
+    ------------------------------
+    旧不变式是"某最终类别 C 的页面并集条数(去重) == out_rows 里 body_type == C 的行数"。
+    它在两种完全正常的情况下必然不成立，导致每个真正抓到数据的月份都误报「对账不平」，
+    久了没人再看：
 
-    再做一次总量对账：各类别实际行数之和 + 「其他」行数 == 主榜(out_rows)总行数。
+    1. 优先级裁决。一个车型可以同时出现在多个 body 榜单里，build_body_type_map 按
+       CATEGORY_PRIORITY（SUV > MPV > 轿车 > 运动汽车）只给它一个最终类别。
+       例：2026-09 的「宏光MINIEV」同时在 body-1(两厢车) 和 body-4(运动汽车) 榜里，
+       最终判给「轿车」，于是「运动汽车」并集 3 条、实际标上 2 条，差 1，永远消不掉。
+       「方程S」同时在 body-1(两厢车) 和 body-3(MPV)，最终判给 MPV，让「轿车」差 1。
+    2. 测得太早。旧对账在每月抓取内部调用，看到的是跨月回填之前的中间态；真正发货的是
+       回填之后的数据。例：2026-09 对账时「轿车」198、「其他」24，最终写进 CSV 的是
+       「轿车」199、「其他」22 —— 有 2 款车在对账时还是「其他」，被跨月回填救成了轿车和 SUV。
 
-    返回 (results, total_check)。results 每条:
-      {"final_category", "contributing": [(body_id, raw_name), ...],
-       "page_side": 并集大小, "actual": out_rows里该类别实际行数,
-       "mismatch": bool, "diff_models": [...]}
+    所以这不是把检查放宽了，而是换成真正该守的东西。3 条硬失败 + 1 组信息性输出：
 
-    纯函数，不发请求，方便离线单测（尤其是并集去重这条，是这次改动最容易写错的地方）。
+    硬失败 ①「榜单车型不在主榜里」(missing_from_main)：某 body 榜单里的车型名在该月输出行里
+        压根找不到。捕捉"车型名在不同榜单间对不上"这类数据源变动。
+    硬失败 ②「分类证据丢失」(evidence_lost)：某 body 榜单里的车型在该月输出行里存在，但最终
+        body_type == "其他"。「其他」的语义是"在所有 body 榜单里都没找到"，有证据却落进
+        「其他」是矛盾，说明榜单被截断或 body 编号变义。被优先级裁决/跨月回填改判到另一个
+        真实类别（SUV/MPV/轿车/运动汽车）满足本条，不算失败。
+    硬失败 ③ 总量对账（total_check）：各类别实际行数之和 + 「其他」行数 == 该月输出总行数。
+    信息性（绝不判失败）：每个最终类别给出 page_side（页面并集条数，去重）与 actual
+        （实际标上），另有 reassigned（并集里、但最终去了别的类别的车型）与
+        added_by_backfill（最终是该类别、但不在其并集里的车型）。这是"以后数据源多出一种
+        跨榜方式时能第一时间看到"的窗口，不是错误。
+
+    参数
+    ----
+    rows: 最终定稿的全部行（跨月回填之后），每行至少有 year/month/model/body_type。
+    body_list_models_by_month: {"YYYY-MM": [[body_id, raw_body_name, [model, ...]], ...]}，
+        即 sync_month 存进 report["_body_list_models"] 的那个 dict。对其中每个月份，
+        只取该月的行来算。
+
+    返回 list，每月一项：
+      {"year", "month",
+       "results": [{"final_category", "contributing": [(body_id, raw_name), ...],
+                    "page_side", "actual",
+                    "reassigned": [{"model", "landed_in"}, ...],
+                    "added_by_backfill": [model, ...]}],
+       "total_check": {"matched_sum", "other_count", "total_rows", "ok"},
+       "missing_from_main": [...], "evidence_lost": [{"model", "body_lists": [...]}, ...]}
+    missing_from_main / evidence_lost 排序后最多列 20 个；完整个数在
+    missing_from_main_count / evidence_lost_count（供质量守门文案用）。
+
+    纯函数：不发请求，不修改传入对象。
     """
     from collections import Counter
 
-    actual_counts = Counter(r["body_type"] for r in out_rows)
+    MAX_LISTED = 20
+    known_categories = list(CATEGORY_PRIORITY)
 
-    groups = {}  # final_category -> {"contributing": [...], "models": set()}
-    for body_id, raw_body_name, rows in body_lists:
-        final_category = map_to_final_category(raw_body_name)
-        g = groups.setdefault(final_category, {"contributing": [], "models": set()})
-        g["contributing"].append((body_id, raw_body_name))
-        g["models"].update(r["model"] for r in rows)
+    rows_by_month = {}
+    for r in rows:
+        rows_by_month.setdefault((r["year"], r["month"]), []).append(r)
 
-    results = []
-    for final_category, g in groups.items():
-        page_side = len(g["models"])  # 并集大小，去重后
-        actual = actual_counts.get(final_category, 0)
-        mismatch = page_side != actual
-        diff_models = []
-        if mismatch:
-            output_models = {r["model"] for r in out_rows if r["body_type"] == final_category}
-            diff_models = sorted((g["models"] - output_models) | (output_models - g["models"]))[:20]
-        results.append({
-            "final_category": final_category,
-            "contributing": g["contributing"],
-            "page_side": page_side, "actual": actual,
-            "mismatch": mismatch, "diff_models": diff_models,
+    out = []
+    for ym in sorted(body_list_models_by_month):
+        year, month = (int(x) for x in ym.split("-"))
+        month_rows = rows_by_month.get((year, month), [])
+        actual_counts = Counter(r["body_type"] for r in month_rows)
+
+        # 模型 -> 该月最终 body_type。回填之后同一车型各行应一致；万一不一致（理论上不会），
+        # 优先取真实类别、再按字典序，保证确定性，且"有真实类别"就不算证据丢失。
+        types_by_model = {}
+        for r in month_rows:
+            types_by_model.setdefault(r["model"], set()).add(r["body_type"])
+        landed = {}
+        for model, types in types_by_model.items():
+            real = sorted(t for t in types if t != "其他")
+            landed[model] = real[0] if real else "其他"
+
+        groups = {}  # final_category -> {"contributing": [...], "models": set()}
+        lists_of_model = {}  # model -> ["body-1(两厢车)", ...]
+        for body_id, raw_body_name, models in body_list_models_by_month[ym]:
+            final_category = map_to_final_category(raw_body_name)
+            g = groups.setdefault(final_category, {"contributing": [], "models": set()})
+            g["contributing"].append((body_id, raw_body_name))
+            g["models"].update(models)
+            for m in models:
+                lists_of_model.setdefault(m, []).append(f"body-{body_id}({raw_body_name})")
+
+        results = []
+        # 没有任何 body 榜单贡献、但最终标上了的已知类别（全靠跨月回填补入），也要计入，
+        # 否则总量对账会被它们拉不平。未知类别/空串不计入，让总量对账照旧把它们揪出来。
+        categories = list(groups) + [
+            c for c in known_categories if c not in groups and actual_counts.get(c, 0) > 0
+        ]
+        for final_category in categories:
+            g = groups.get(final_category, {"contributing": [], "models": set()})
+            reassigned = [
+                {"model": m, "landed_in": landed[m]}
+                for m in sorted(g["models"])
+                if m in landed and landed[m] != final_category
+            ]
+            added_by_backfill = sorted(
+                m for m, t in landed.items() if t == final_category and m not in g["models"]
+            )
+            results.append({
+                "final_category": final_category,
+                "contributing": g["contributing"],
+                "page_side": len(g["models"]),  # 并集大小，去重后
+                "actual": actual_counts.get(final_category, 0),
+                "reassigned": reassigned,
+                "added_by_backfill": added_by_backfill,
+            })
+
+        other_count = actual_counts.get("其他", 0)
+        matched_sum = sum(r["actual"] for r in results)
+        total_rows = len(month_rows)
+
+        all_listed = sorted(lists_of_model)
+        missing = [m for m in all_listed if m not in types_by_model]
+        lost = [
+            {"model": m, "body_lists": lists_of_model[m]}
+            for m in all_listed if landed.get(m) == "其他"
+        ]
+
+        out.append({
+            "year": year, "month": month,
+            "results": results,
+            "total_check": {
+                "matched_sum": matched_sum, "other_count": other_count,
+                "total_rows": total_rows, "ok": (matched_sum + other_count) == total_rows,
+            },
+            "missing_from_main": missing[:MAX_LISTED],
+            "missing_from_main_count": len(missing),
+            "evidence_lost": lost[:MAX_LISTED],
+            "evidence_lost_count": len(lost),
         })
-
-    other_count = actual_counts.get("其他", 0)
-    matched_sum = sum(r["actual"] for r in results)
-    total_rows = len(out_rows)
-    total_check_ok = (matched_sum + other_count) == total_rows
-
-    return {
-        "results": results,
-        "total_check": {
-            "matched_sum": matched_sum, "other_count": other_count,
-            "total_rows": total_rows, "ok": total_check_ok,
-        },
-    }
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -2000,11 +2081,16 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
     quality_gate_reasons = []
     if rate is not None and rate < 0.9:
         quality_gate_reasons.append(f"车体类型覆盖率 {rate * 100:.1f}% 低于 90%")
+    # 守门只看 3 条硬失败（榜单车型不在主榜里 / 分类证据丢失 / 总量对账不平）。
+    # 页面并集 vs 实际标上不相等是正常的（优先级裁决 + 跨月回填），只作信息展示，不判失败。
     for _rec in report.get("reconciliation", []):
         _ym = f"{_rec['year']}-{_rec['month']:02d}"
-        for _r in _rec.get("results", []):
-            if _r.get("mismatch"):
-                quality_gate_reasons.append(f"{_ym} {_r['final_category']} 对账不平")
+        _n_missing = _rec.get("missing_from_main_count", len(_rec.get("missing_from_main") or []))
+        if _n_missing:
+            quality_gate_reasons.append(f"{_ym} 有 {_n_missing} 个榜单车型不在主榜里")
+        _n_lost = _rec.get("evidence_lost_count", len(_rec.get("evidence_lost") or []))
+        if _n_lost:
+            quality_gate_reasons.append(f"{_ym} 有 {_n_lost} 个车型分类证据丢失")
         if not _rec.get("total_check", {}).get("ok", True):
             quality_gate_reasons.append(f"{_ym} 总量对账不平")
     if quality_gate_reasons:
@@ -2019,6 +2105,13 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
     lines.append("以后每月自动跑的时候，这是发现数据源变化（比如某个 body 分类的编号/含义变了、"
                   "车型名在不同榜单间对不上）的第一道防线。")
     lines.append("")
+    lines.append(
+        "注意：页面并集条数与实际标上不相等是正常的——同一车型可能同时在多个 body 榜单里，"
+        "按优先级只判给一个类别（优先级裁决），最终 body_type 还会被跨月回填统一改写。"
+        "真正的失败条件是下面三条：① 榜单车型不在主榜里；② 分类证据丢失"
+        "（在 body 榜单里、却最终落进「其他」）；③ 总量对账不平。"
+    )
+    lines.append("")
     reconciliation = report.get("reconciliation", [])
     if not reconciliation:
         lines.append("(本次运行没有成功完成任何一个月份，无对账数据)")
@@ -2028,29 +2121,66 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
             lines.append(f"### {yyyymm_label}\n")
             results = rec["results"]
             if results:
-                lines.append("| 最终类别 | 贡献的 body 榜单 | 页面并集条数(去重) | 实际标上 | 差 | 状态 |")
-                lines.append("|---|---|---|---|---|---|")
-                for r in sorted(results, key=lambda x: x["final_category"]):
-                    contributing_str = "+".join(f"body-{bid}({rn})" for bid, rn in r["contributing"])
-                    diff = r["page_side"] - r["actual"]
-                    status = "❌ 不平" if r["mismatch"] else "✅"
+                lines.append("| 最终类别 | 贡献的 body 榜单 | 页面并集条数(去重) | 实际标上 | 改判 |")
+                lines.append("|---|---|---|---|---|")
+                sorted_results = sorted(results, key=lambda x: x["final_category"])
+                for r in sorted_results:
+                    # 没有任何 body 榜单贡献的类别，是纯靠跨月回填补入的（见
+                    # reconcile_categories_final）。空着一格会让人以为渲染漏了，写明原因。
+                    contributing_str = "+".join(
+                        f"body-{bid}({rn})" for bid, rn in r["contributing"]
+                    ) or "(无，全靠跨月回填)"
+                    n_changed = len(r["reassigned"]) + len(r["added_by_backfill"])
+                    status = f"ℹ️ {n_changed} 项改判" if n_changed else "✅ 一致"
                     lines.append(
                         f"| {r['final_category']} | {contributing_str} | {r['page_side']} | "
-                        f"{r['actual']} | {diff} | {status} |"
+                        f"{r['actual']} | {status} |"
                     )
-                mismatched = [r for r in results if r["mismatch"]]
-                for r in mismatched:
-                    diff = r["page_side"] - r["actual"]
-                    contributing_str = "+".join(f"body-{bid}({rn})" for bid, rn in r["contributing"])
+                for r in sorted_results:
+                    if not (r["reassigned"] or r["added_by_backfill"]):
+                        continue
                     lines.append("")
-                    lines.append(
-                        f"⚠️ **{r['final_category']} 对账不平（{contributing_str}）：页面并集(去重) "
-                        f"{r['page_side']} 条，实际标上 {r['actual']} 条，差 {diff} 条**"
-                    )
-                    if r["diff_models"]:
-                        lines.append(f"差异涉及的车型（最多列 20 个）：{ '、'.join(r['diff_models']) }")
+                    lines.append(f"**{r['final_category']} 的改判明细**（信息性，不是错误；每类最多列 20 个）：")
+                    if r["reassigned"]:
+                        shown = r["reassigned"][:20]
+                        more = len(r["reassigned"]) - len(shown)
+                        lines.append(
+                            "- 在该类别榜单并集里、但最终去了别的类别："
+                            + "、".join(f"{x['model']} → {x['landed_in']}" for x in shown)
+                            + (f" …（另有 {more} 个）" if more else "")
+                        )
+                    if r["added_by_backfill"]:
+                        shown = r["added_by_backfill"][:20]
+                        more = len(r["added_by_backfill"]) - len(shown)
+                        lines.append(
+                            "- 不在该类别榜单并集里、最终却标成该类别："
+                            + "、".join(f"{m}（跨月回填补入）" for m in shown)
+                            + (f" …（另有 {more} 个）" if more else "")
+                        )
             else:
                 lines.append("(本月没有任何成功探测到的 body 分类，无法对账)")
+
+            missing = rec.get("missing_from_main") or []
+            if missing:
+                n = rec.get("missing_from_main_count", len(missing))
+                lines.append("")
+                lines.append(
+                    f"⚠️ **榜单车型不在主榜里：{n} 个 body 榜单里出现的车型，在本月输出行里找不到**"
+                )
+                lines.append(f"涉及的车型（最多列 20 个）：{'、'.join(missing)}")
+
+            lost = rec.get("evidence_lost") or []
+            if lost:
+                n = rec.get("evidence_lost_count", len(lost))
+                lines.append("")
+                lines.append(
+                    f"⚠️ **分类证据丢失：{n} 个车型出现在 body 榜单里，最终 body_type 却是「其他」**"
+                )
+                lines.append(
+                    "涉及的车型（最多列 20 个）：" + "、".join(
+                        f"{x['model']}（{'+'.join(x['body_lists'])}）" for x in lost
+                    )
+                )
 
             tc = rec["total_check"]
             lines.append("")
@@ -2437,6 +2567,13 @@ def main():
             f"车体类型归一: 统一了 {len(body_type_unified_changes)} 个车型的 body_type，"
             f"改写 {report['body_type_unified_row_count']} 行"
         )
+
+    # 车体类型对账必须放在跨月回填之后：真正发货的是回填后的 combined，而不是每月抓取时的
+    # 中间态（那时有些车型还是「其他」，要等跨月统一裁决才被救成真实类别）。对中间态对账
+    # 只会得到必然的假失败。所以每月抓取里只存榜单车型名，这里拿定稿数据统一对账。
+    report["reconciliation"] = reconcile_categories_final(
+        combined, report.get("_body_list_models") or {}
+    )
 
     write_outputs(combined, report, mapping)
 

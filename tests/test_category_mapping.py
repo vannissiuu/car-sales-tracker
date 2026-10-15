@@ -4,7 +4,8 @@
 专项测试：本轮改动的核心——
   1. 两厢车/三厢车 -> 轿车 的分类映射 + 优先级裁决 (SUV > MPV > 轿车 > 运动汽车)
   2. normalize_legacy_body_types 对存量数据的幂等原地规范化
-  3. reconcile_categories 的并集去重对账口径
+  3. reconcile_categories_final 的对账：page_side 仍是并集去重口径；守门只看 3 条硬失败
+     （榜单车型不在主榜里 / 分类证据丢失 / 总量对账），并集≠实际标上不再判失败
   4. fetch_full_listing 的分页完整性校验与修复（销量并列车型排序在两次请求间随机，
      骑在分页边界上时会导致一个车型被重复抓到、另一个车型被挤出窗口）
 
@@ -42,6 +43,11 @@ def make_row(year, month, model, body_type, manufacturer="厂商X", sales=100):
     }
 
 
+def to_models_by_month(ym, body_lists):
+    """复刻 sync_month 存进 report['_body_list_models'] 的形状：只存车型名集合，不存整行。"""
+    return {ym: [[bid, rn, sorted({r["model"] for r in rows})] for bid, rn, rows in body_lists]}
+
+
 def main():
     print("=== 断言 1: 朗逸 同时在 body-1(两厢车) 和 body-2(三厢车) -> 最终 body_type=轿车，对账不产生不平 ===")
     body_lists_1 = [
@@ -56,10 +62,13 @@ def main():
 
     style_rows_1 = [{"rank": 1, "model": "朗逸", "manufacturer": "上汽大众", "sales": 32419}]
     out_rows_1, other_1 = S.label_rows(style_rows_1, body_type_map_1, set(), EMPTY_BRAND_MAPPING, 2024, 1)
-    recon_1 = S.reconcile_categories(out_rows_1, body_lists_1)
+    recon_1 = S.reconcile_categories_final(out_rows_1, to_models_by_month("2024-01", body_lists_1))[0]
     sedan_result = next(r for r in recon_1["results"] if r["final_category"] == "轿车")
-    check("轿车对账: page_side(并集, 朗逸只算1次)=1, actual=1, 不产生不平",
-          sedan_result["page_side"] == 1 and sedan_result["actual"] == 1 and sedan_result["mismatch"] is False)
+    check("轿车对账: page_side(并集, 朗逸只算1次)=1, actual=1, 无改判",
+          sedan_result["page_side"] == 1 and sedan_result["actual"] == 1
+          and sedan_result["reassigned"] == [] and sedan_result["added_by_backfill"] == [])
+    check("无硬失败 (missing_from_main / evidence_lost 为空)",
+          recon_1["missing_from_main"] == [] and recon_1["evidence_lost"] == [])
     check("总量对账通过", recon_1["total_check"]["ok"] is True)
 
     print()
@@ -131,14 +140,17 @@ def main():
     style_rows_5 = [{"rank": i + 1, "model": m, "manufacturer": "厂商X", "sales": 100}
                      for i, m in enumerate(sorted(union_models))]
     out_rows_5, other_5 = S.label_rows(style_rows_5, body_type_map_5, set(), EMPTY_BRAND_MAPPING, 2024, 1)
-    recon_5 = S.reconcile_categories(out_rows_5, body_lists_5)
+    recon_5 = S.reconcile_categories_final(out_rows_5, to_models_by_month("2024-01", body_lists_5))[0]
     sedan_result_5 = next(r for r in recon_5["results"] if r["final_category"] == "轿车")
 
     check(f"轿车对账 page_side (并集去重) == 8，不是 10 (实际: {sedan_result_5['page_side']})",
           sedan_result_5["page_side"] == 8)
     check(f"轿车对账 actual == 8 (本月主榜8个车型全都在) (实际: {sedan_result_5['actual']})",
           sedan_result_5["actual"] == 8)
-    check("并集去重后 page_side == actual，不产生对账不平", sedan_result_5["mismatch"] is False)
+    check("并集去重后 page_side == actual，无改判，无硬失败",
+          sedan_result_5["reassigned"] == [] and sedan_result_5["added_by_backfill"] == []
+          and recon_5["missing_from_main"] == [] and recon_5["evidence_lost"] == []
+          and recon_5["total_check"]["ok"] is True)
 
     print()
     print("=== 断言 6: fetch_full_listing 分页完整性校验 —— 并列漂移导致丢车型 -> 被检测到 -> 重抓补回 ===")
@@ -225,6 +237,146 @@ def main():
         check("留痕记录状态是 'fixed'", entry_6["status"] == "fixed")
         check("留痕记录里补回车型包含菱智新能源", "菱智新能源" in entry_6.get("recovered_models", []))
     check("report['failures'] 里没有新增失败记录 (修复成功，不算失败)", report_6["failures"] == [])
+
+    print()
+    print("=== 断言 7: reconcile_categories_final —— 新对账不变式（3 条硬失败 + 信息性改判明细）===")
+
+    def mk(model):
+        return {"rank": 1, "model": model, "manufacturer": "厂商X", "sales": 100}
+
+    def final_for(year, month, specs, body_lists):
+        """specs: [(model, body_type), ...] 为该月最终定稿行；返回 (rows, models_by_month)。"""
+        rows = [make_row(year, month, m, bt) for m, bt in specs]
+        return rows, to_models_by_month(f"{year}-{month:02d}", body_lists)
+
+    # 7.1 优先级落败者不判失败（复刻 2026-09 宏光MINIEV：body-1 两厢车 + body-4 运动汽车，最终轿车）
+    bl = [
+        (1, "两厢车", [mk("宏光MINIEV"), mk("朗逸")]),
+        (4, "运动汽车", [mk("宏光MINIEV"), mk("Model3"), mk("保时捷911")]),
+    ]
+    rows71, mbm71 = final_for(2026, 9, [
+        ("宏光MINIEV", "轿车"), ("朗逸", "轿车"), ("Model3", "运动汽车"), ("保时捷911", "运动汽车"),
+    ], bl)
+    rec71 = S.reconcile_categories_final(rows71, mbm71)
+    check("7.1 返回 1 个月份，year/month 正确", len(rec71) == 1 and rec71[0]["year"] == 2026 and rec71[0]["month"] == 9)
+    rec71 = rec71[0]
+    sport71 = next(r for r in rec71["results"] if r["final_category"] == "运动汽车")
+    check(f"7.1 运动汽车 page_side(3) 比 actual(2) 多 1 (实际 {sport71['page_side']}/{sport71['actual']})",
+          sport71["page_side"] == 3 and sport71["actual"] == 2)
+    check("7.1 宏光MINIEV 出现在运动汽车的 reassigned 里，landed_in == 轿车",
+          sport71["reassigned"] == [{"model": "宏光MINIEV", "landed_in": "轿车"}])
+    check("7.1 优先级落败不判失败: missing_from_main / evidence_lost 为空, total_check.ok 为真",
+          rec71["missing_from_main"] == [] and rec71["evidence_lost"] == [] and rec71["total_check"]["ok"] is True)
+    sedan71 = next(r for r in rec71["results"] if r["final_category"] == "轿车")
+    check("7.1 轿车 page_side(2)==actual(2)，无改判", sedan71["page_side"] == 2 and sedan71["actual"] == 2
+          and sedan71["reassigned"] == [] and sedan71["added_by_backfill"] == [])
+
+    # 7.2 跨月回填救回者不判失败：本月在 body-1 榜单里，最终已是 SUV，但不在 SUV 榜并集里
+    bl = [(1, "两厢车", [mk("漏网车型")]), (5, "SUV", [mk("长安CS75PLUS")])]
+    rows72, mbm72 = final_for(2026, 9, [("漏网车型", "SUV"), ("长安CS75PLUS", "SUV")], bl)
+    rec72 = S.reconcile_categories_final(rows72, mbm72)[0]
+    suv72 = next(r for r in rec72["results"] if r["final_category"] == "SUV")
+    check("7.2 漏网车型 出现在 SUV 的 added_by_backfill 里", suv72["added_by_backfill"] == ["漏网车型"])
+    check("7.2 SUV page_side=1, actual=2", suv72["page_side"] == 1 and suv72["actual"] == 2)
+    sedan72 = next(r for r in rec72["results"] if r["final_category"] == "轿车")
+    check("7.2 漏网车型 同时出现在轿车的 reassigned 里 (landed_in=SUV)",
+          sedan72["reassigned"] == [{"model": "漏网车型", "landed_in": "SUV"}])
+    check("7.2 回填救回不判失败", rec72["missing_from_main"] == [] and rec72["evidence_lost"] == []
+          and rec72["total_check"]["ok"] is True)
+
+    # 7.3 硬失败 ①：榜单里有 X，该月输出行里没有 X
+    bl = [(5, "SUV", [mk("车型X"), mk("车型A")])]
+    rows73, mbm73 = final_for(2026, 9, [("车型A", "SUV")], bl)
+    rec73 = S.reconcile_categories_final(rows73, mbm73)[0]
+    check("7.3 硬失败①: missing_from_main 含 车型X", rec73["missing_from_main"] == ["车型X"])
+    check("7.3 车型X 不在主榜里，不会同时被算成 reassigned",
+          next(r for r in rec73["results"] if r["final_category"] == "SUV")["reassigned"] == [])
+    check("7.3 车型X 没有行，也不算 evidence_lost", rec73["evidence_lost"] == [])
+
+    # 7.4 硬失败 ②：榜单里有 Y，输出行里有 Y 但 body_type 是「其他」
+    bl = [(1, "两厢车", [mk("车型Y")]), (4, "运动汽车", [mk("车型Y")])]
+    rows74, mbm74 = final_for(2026, 9, [("车型Y", "其他")], bl)
+    rec74 = S.reconcile_categories_final(rows74, mbm74)[0]
+    check("7.4 硬失败②: evidence_lost 含 车型Y，且带上它出现的榜单",
+          rec74["evidence_lost"] == [{"model": "车型Y", "body_lists": ["body-1(两厢车)", "body-4(运动汽车)"]}])
+    check("7.4 车型Y 有行，不在 missing_from_main", rec74["missing_from_main"] == [])
+
+    # 7.5 硬失败 ② 的反例：最终 body_type 是另一个真实类别 -> 不报失败
+    for real in ("SUV", "MPV", "轿车", "运动汽车"):
+        bl = [(1, "两厢车", [mk("车型Z")])]
+        rows75, mbm75 = final_for(2026, 9, [("车型Z", real)], bl)
+        rec75 = S.reconcile_categories_final(rows75, mbm75)[0]
+        check(f"7.5 车型Z 在两厢车榜、最终是真实类别「{real}」-> 不报 evidence_lost / missing",
+              rec75["evidence_lost"] == [] and rec75["missing_from_main"] == []
+              and rec75["total_check"]["ok"] is True)
+
+    # 7.6 总量对账：通过 / 不通过各一条（用不属于任何已知类别的 body_type 制造不平）
+    bl = [(5, "SUV", [mk("车型A")])]
+    rows76a, mbm76 = final_for(2026, 9, [("车型A", "SUV"), ("车型B", "其他")], bl)
+    tc_ok = S.reconcile_categories_final(rows76a, mbm76)[0]["total_check"]
+    check(f"7.6 总量对账通过: 1(SUV)+1(其他)==2 {tc_ok}",
+          tc_ok == {"matched_sum": 1, "other_count": 1, "total_rows": 2, "ok": True})
+    rows76b, _ = final_for(2026, 9, [("车型A", "SUV"), ("车型B", "其他"), ("车型C", "")], bl)
+    tc_bad = S.reconcile_categories_final(rows76b, mbm76)[0]["total_check"]
+    check(f"7.6 总量对账不通过: 1+1 != 3 (有行 body_type 为空串) {tc_bad}",
+          tc_bad == {"matched_sum": 1, "other_count": 1, "total_rows": 3, "ok": False})
+
+    # 7.7 多月份：每月独立算，互不污染
+    bl_a = [(5, "SUV", [mk("车型A")])]
+    bl_b = [(5, "SUV", [mk("车型B")])]
+    rows77 = [
+        make_row(2026, 8, "车型A", "SUV"), make_row(2026, 8, "车型B", "其他"),  # 8月：B 不在8月榜单，不应被查
+        make_row(2026, 9, "车型A", "其他"), make_row(2026, 9, "车型B", "SUV"),  # 9月：A 不在9月榜单
+    ]
+    mbm77 = {}
+    mbm77.update(to_models_by_month("2026-08", bl_a))
+    mbm77.update(to_models_by_month("2026-09", bl_b))
+    rec77 = S.reconcile_categories_final(rows77, mbm77)
+    check("7.7 两个月份，按月份升序", [(r["year"], r["month"]) for r in rec77] == [(2026, 8), (2026, 9)])
+    check("7.7 8月: 无硬失败 (9月的 车型A=其他 不污染8月)",
+          rec77[0]["evidence_lost"] == [] and rec77[0]["missing_from_main"] == []
+          and rec77[0]["total_check"] == {"matched_sum": 1, "other_count": 1, "total_rows": 2, "ok": True})
+    check("7.7 9月: 无硬失败 (8月的 车型B=其他 不污染9月)",
+          rec77[1]["evidence_lost"] == [] and rec77[1]["missing_from_main"] == []
+          and rec77[1]["total_check"]["total_rows"] == 2)
+    rows77b = [make_row(2026, 8, "车型A", "SUV"), make_row(2026, 9, "车型B", "其他")]
+    rec77b = S.reconcile_categories_final(rows77b, mbm77)
+    check("7.7 只有9月的车型B 落进「其他」 -> 只有9月报 evidence_lost",
+          rec77b[0]["evidence_lost"] == []
+          and [x["model"] for x in rec77b[1]["evidence_lost"]] == ["车型B"])
+
+    # 7.8 空输入
+    check("7.8 body_list_models_by_month 为空 dict -> 空 list，不抛异常",
+          S.reconcile_categories_final([make_row(2026, 9, "车型A", "SUV")], {}) == [])
+    check("7.8 rows 与 dict 都为空 -> 空 list", S.reconcile_categories_final([], {}) == [])
+    rec78 = S.reconcile_categories_final([], {"2026-09": [[5, "SUV", ["车型A"]]]})
+    check("7.8 有榜单、无输出行 -> 不抛异常，车型A 报 missing_from_main",
+          len(rec78) == 1 and rec78[0]["missing_from_main"] == ["车型A"])
+
+    # 7.9 纯函数：不修改传入对象
+    import copy
+    bl = [(1, "两厢车", [mk("宏光MINIEV")]), (4, "运动汽车", [mk("宏光MINIEV"), mk("Model3")])]
+    rows79, mbm79 = final_for(2026, 9, [("宏光MINIEV", "轿车"), ("Model3", "其他")], bl)
+    rows79_before, mbm79_before = copy.deepcopy(rows79), copy.deepcopy(mbm79)
+    S.reconcile_categories_final(rows79, mbm79)
+    check("7.9 纯函数: rows / body_list_models_by_month 调用前后完全相同",
+          rows79 == rows79_before and mbm79 == mbm79_before)
+
+    # 7.10 最多列 20 个，完整个数仍可得
+    many = [f"缺失{i:03d}" for i in range(25)]
+    rec710 = S.reconcile_categories_final(
+        [make_row(2026, 9, "车型A", "SUV")],
+        {"2026-09": [[5, "SUV", ["车型A"] + many]]})[0]
+    check("7.10 missing_from_main 排序且最多 20 个，count 为完整个数 25",
+          rec710["missing_from_main"] == sorted(many)[:20] and rec710["missing_from_main_count"] == 25)
+
+    # 7.11 只靠跨月回填才有的类别也要计入总量对账（不能被它拉不平）
+    rec711 = S.reconcile_categories_final(
+        [make_row(2026, 9, "车型A", "MPV")], {"2026-09": [[5, "SUV", ["车型A"]]]})[0]
+    mpv711 = next((r for r in rec711["results"] if r["final_category"] == "MPV"), None)
+    check("7.11 MPV 无贡献榜单、全靠回填: 出现在 results，added_by_backfill=[车型A]，总量平",
+          mpv711 is not None and mpv711["page_side"] == 0 and mpv711["added_by_backfill"] == ["车型A"]
+          and rec711["total_check"]["ok"] is True)
 
     print()
     print("=" * 60)
