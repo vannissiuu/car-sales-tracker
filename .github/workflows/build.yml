@@ -11,6 +11,13 @@ on:
     workflows: ["Sync Car Sales Data (16888)"]
     types: [completed]
 
+# 同一时间只允许一次构建在跑。build.yml 同样会 commit + push（docs/index.html），
+# 同样有两个入口（workflow_run / 手动 dispatch），并行跑会撞同一个非快进失败。
+# 跟同步那边的理由一致，见 probe.yml 里的说明。
+concurrency:
+  group: build-car-sales-dashboard
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
