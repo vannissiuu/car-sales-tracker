@@ -1418,7 +1418,7 @@ def run_group_G(page, shots_dir, oracle):
         page.wait_for_timeout(200)
         opened = open_drawer_by_name(page, "比亚迪")
         if not opened:
-            R.record("G1", "比亚迪2026年同比回归哨兵 == -43.8%", "FAIL",
+            R.record("G1", "比亚迪2026年同比回归哨兵：页面值 == Oracle 独立复算值", "FAIL",
                       detail="打不开'比亚迪'的抽屉（检查是否在当前图例/年份里）")
             return
         tiles = get_drawer_stat_tiles(page)
@@ -1426,7 +1426,7 @@ def run_group_G(page, shots_dir, oracle):
         close_drawer(page)
         tile = find_tile(tiles, "同比")
         if tile is None:
-            R.record("G1", "比亚迪2026年同比回归哨兵 == -43.8%", "FAIL",
+            R.record("G1", "比亚迪2026年同比回归哨兵：页面值 == Oracle 独立复算值", "FAIL",
                       detail=f"drawerStats 里没有含“同比”的 tile。全部 tiles={tiles}")
             return
         val = (tile["val"] or "").strip()
@@ -1434,7 +1434,7 @@ def run_group_G(page, shots_dir, oracle):
         m = re.search(r"-?\d+(\.\d+)?", val)
         actual_num = float(m.group(0)) if m else None
         ok = (actual_num is not None and expected is not None and abs(actual_num - expected) < 0.05)
-        R.record("G1", "比亚迪2026年同比回归哨兵 == -43.8%", "PASS" if ok else "FAIL",
+        R.record("G1", "比亚迪2026年同比回归哨兵：页面值 == Oracle 独立复算值", "PASS" if ok else "FAIL",
                  expected=f"{expected}%（独立复刻口径计算得出）",
                  actual=f"抽屉显示值='{val}'")
     safe_run("G1", "回归哨兵：比亚迪同比口径", g1)
