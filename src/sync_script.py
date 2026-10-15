@@ -1311,6 +1311,79 @@ def normalize_legacy_manufacturer_column(rows, mapping):
     return normalized, changed
 
 
+def auto_follow_manufacturer_renames(rows, mapping):
+    """
+    厂商整体改名自动跟随：数据源每隔几个月会整体废弃一个厂商名，把名下车型一次性挪到
+    新名字下，于是同一个车型在旧月份是旧厂商名、新月份是新厂商名，触发 build.py 里
+    「同一车型只能属于一个厂商」的断言、看板构建硬失败。真实事件两次：
+      - 2026-08/09：「长城新能源」被整体废弃，欧拉好猫/芭蕾猫/闪电猫 挪到「长城汽车」；
+      - 2026-09：「广汽埃安」被整体废弃，7 款在售车型（AION Y/S/RT/i60/V/UT/N60）一次性
+        挪到「埃安」。
+    以前每次都要人工往 model_to_manufacturer 补条目才能恢复；本函数让这一步自动完成，
+    build.py 的断言退化成永不触发的最后一道保险。
+
+    为什么跟随数据源、而不是把车型钉回旧厂商名：旧名已被数据源整体废弃，钉回去只会让
+    这些车型永远与数据源的新数据打架（mapping.json _meta.model_to_manufacturer_note 记着
+    教训：2026-08 曾把欧拉好猫钉回『长城新能源』，全量重抓后发现整个厂商名都没了，
+    前提不成立）。
+
+    规则：找出所有「同一 model 对应多个 manufacturer」的车型；取它最新月份所用的厂商名
+    作为正确值（最新月份有多个厂商名并存时，取该月销量最大的那一行的厂商名；销量相同
+    则取厂商名字典序小者，保证确定性）；把该车型所有行的 manufacturer 改写成它，并对
+    被改写的行重新调用 resolve_brand 覆盖 brand（厂商改了品牌必须跟着重解析，做法同
+    normalize_legacy_manufacturer_column）。
+    mapping["model_to_manufacturer"] 里已有人工裁定的车型一律跳过：人工优先级高于自动跟随。
+
+    返回 (normalized_rows, changes)，changes 每项：
+      {"model", "from": [旧厂商名, ...]（排序）, "to": 新厂商名,
+       "rows_changed": int, "latest_month": "YYYY-MM"}，按 model 排序。
+    幂等：改写后每个车型只剩一个厂商名，第二次跑 changes 为空。
+    纯函数，不发请求，不修改传入的 dict（被改写的行返回新 dict）。
+    """
+    manual = mapping.get("model_to_manufacturer") or {}
+    by_model = {}
+    for r in rows:
+        by_model.setdefault(r.get("model"), []).append(r)
+
+    targets = {}  # model -> (to, from_list, latest_month)
+    for model, mrows in by_model.items():
+        if model in manual:
+            continue
+        manufacturers = {r.get("manufacturer") for r in mrows}
+        if len(manufacturers) < 2:
+            continue
+        latest_ym = max((r["year"], r["month"]) for r in mrows)
+        latest_rows = [r for r in mrows if (r["year"], r["month"]) == latest_ym]
+        best = min(latest_rows, key=lambda r: (-r["sales"], r.get("manufacturer") or ""))
+        to = best.get("manufacturer")
+        targets[model] = (
+            to,
+            sorted(m for m in manufacturers if m != to),
+            f"{latest_ym[0]}-{latest_ym[1]:02d}",
+        )
+
+    normalized = []
+    rows_changed = {}
+    for r in rows:
+        t = targets.get(r.get("model"))
+        if t is not None and r.get("manufacturer") != t[0]:
+            new_r = dict(r)
+            new_r["manufacturer"] = t[0]
+            new_r["brand"] = resolve_brand(r.get("model"), t[0], mapping)
+            normalized.append(new_r)
+            rows_changed[r.get("model")] = rows_changed.get(r.get("model"), 0) + 1
+        else:
+            normalized.append(r)
+
+    changes = [
+        {"model": model, "from": t[1], "to": t[0],
+         "rows_changed": rows_changed.get(model, 0), "latest_month": t[2]}
+        for model, t in targets.items()
+    ]
+    changes.sort(key=lambda c: c["model"])
+    return normalized, changes
+
+
 def normalize_legacy_brand_column(rows, mapping):
     """
     对存量行做原地规范化：老版本 sales.csv 根本没有 brand 这一列，csv.DictReader 读出来的
@@ -1479,6 +1552,72 @@ def detect_suspect_energy_labels(rows, mapping):
     ]
     result.sort(key=lambda x: (-x["sales"], x["model"]))
     return result
+
+
+def detect_sentinel_brand_models(rows, mapping, limit=20):
+    """
+    找出「品牌落在哨兵值上」的车型：厂商是 mapping["sentinel_manufacturers"] 里的一个、
+    而车型名不在 mapping["model_to_brand"] 里——也就是字典没覆盖到的新车型/改名车型，
+    品牌被兜底成了 manufacturer_to_brand[厂商]（对这些厂商而言就是厂商原名）。这只是
+    告警，从不改写 brand（修复方式是人工往 model_to_brand 加一条）。
+
+    为什么 resolve_brand_with_source 返回 "fallback" 的行数抓不到这类问题：哨兵值本身就是
+    manufacturer_to_brand 里的合法条目（见 mapping.json _meta.rules 第 7、8 条），解析
+    来源是 "manufacturer" 而不是 "fallback"，所以 fallback 计数永远是 0，哨兵亮了没人看见。
+    实例：2026-09 的「长城大狗」「魏牌 高山新能源」（数据源改名）和「MG 07」（新车），
+    合计 27,582 辆被悄悄填成了「长城汽车」「上汽集团」。
+
+    为什么用显式名单（sentinel_manufacturers）而不是「brand == manufacturer」这类启发式：
+    实测启发式在 2026-09 会命中 104 个车型，其中绝大多数（比亚迪的元UP/海豚、理想L6、
+    极氪7X、领克10、方程豹钛7 等）品牌名本来就等于厂商名、本来就是对的，完全不可用；
+    显式名单（长城汽车/上汽集团/奇瑞捷豹路虎/蔚来）同月恰好命中 3 款，零误报。名单的来历和
+    刻意排除的厂商见 mapping.json _meta.sentinel_manufacturers_note。mapping 里没有这个键
+    时视为空名单，直接返回空列表。
+
+    按 model 聚合跨月数据，返回按累计销量降序的列表，每项：
+      manufacturer、model、sentinel_brand（= manufacturer_to_brand[厂商]，没有则厂商原名）、
+      sales（累计）、months（月数）、first / last（首月/末月，"YYYY-MM"）。
+    返回 (命中列表, 完整个数) 二元组：列表已截断到 limit（默认 20）项，完整个数是截断前的总数。
+    刻意用元组而不是「带额外属性的 list 子类」：那种对象一旦被 list()/切片/JSON 往返复制一次，
+    额外属性就会静默丢失，守门会据此报出「0 个」而报告表格里却有行——这类不一致极难排查。
+
+    纯函数，不发请求，不修改传入对象。
+    """
+    sentinels = set(mapping.get("sentinel_manufacturers") or [])
+    model_to_brand = mapping.get("model_to_brand") or {}
+    manufacturer_to_brand = mapping.get("manufacturer_to_brand") or {}
+    agg = {}
+    for r in rows:
+        manufacturer = r.get("manufacturer", "")
+        model = r.get("model", "")
+        if manufacturer not in sentinels or model in model_to_brand:
+            continue
+        ym = (r["year"], r["month"])
+        a = agg.get(model)
+        if a is None:
+            a = agg[model] = {"manufacturer": manufacturer, "model": model, "sales": 0,
+                              "yms": set(), "first": ym, "last": ym, "_first_ym": ym}
+        elif ym < a["_first_ym"]:
+            a["manufacturer"], a["_first_ym"] = manufacturer, ym
+        a["sales"] += r["sales"]
+        a["yms"].add(ym)
+        a["first"] = min(a["first"], ym)
+        a["last"] = max(a["last"], ym)
+    full = [
+        {
+            "manufacturer": a["manufacturer"],
+            "model": a["model"],
+            "sentinel_brand": manufacturer_to_brand.get(a["manufacturer"], a["manufacturer"]),
+            "sales": a["sales"],
+            "months": len(a["yms"]),
+            "first": f"{a['first'][0]}-{a['first'][1]:02d}",
+            "last": f"{a['last'][0]}-{a['last'][1]:02d}",
+        }
+        for a in agg.values()
+    ]
+    full.sort(key=lambda x: (-x["sales"], x["model"]))
+    listed = full[:limit] if limit is not None else full
+    return listed, len(full)
 
 
 def load_or_bootstrap_mapping():
@@ -1850,6 +1989,71 @@ def merge_price_updates(existing_models, price_rows, asof):
     return merged, added, changed
 
 
+def detect_price_jumps(existing_models, price_rows, lo_hi_threshold_pct=20.0, abs_threshold_wan=5.0):
+    """
+    找出本次同步里售价区间「跳变」较大的车型，仅供报告里人工抽查（信息性，不计入质量守门）。
+    入参和 merge_price_updates 的前两个参数相同，纯函数，不改传入对象，不改 merge_price_updates
+    的返回签名。
+
+    只比较「旧值和新值都是真实价格」的车型：旧条目缺失 / lo、hi 有 None，或本次这个车型在
+    price_rows 里没有真实价格（lo、hi 任一为 None），都不报。同一车型在 price_rows 里出现
+    多次时取最后一个真实价格，和 merge_price_updates 的覆盖顺序一致。
+
+    对 lo 和 hi 分别判断，任一满足就命中：相对变化 >= lo_hi_threshold_pct（%），
+    或绝对变化 >= abs_threshold_wan（万元）。
+    返回列表，每项 {"model", "old_lo", "old_hi", "new_lo", "new_hi", "reason"}，
+    reason 是人话，如 "上限 43.98 → 32.88（-25.2%）"，lo、hi 都命中时两段用「；」连接。
+    按「最大相对变化」降序（同值按车型名）。
+
+    背景：数据源有时是改了某车系的在售配置范围（比如奥德赛 23.58~43.98 -> 18.48~32.88，
+    上限 -25%），而不是真降价，值得人工抽查。
+    """
+    latest = {}
+    for row in price_rows:
+        model = row.get("model")
+        if not model:
+            continue
+        lo, hi = row.get("price_lo"), row.get("price_hi")
+        if lo is None or hi is None:
+            continue
+        latest[model] = (lo, hi)
+
+    def _rel_pct(old, new):
+        if old == new:
+            return 0.0
+        if old == 0:
+            return float("inf")
+        return (new - old) / abs(old) * 100.0
+
+    jumps = []
+    for model, (new_lo, new_hi) in latest.items():
+        prev = existing_models.get(model)
+        if not prev:
+            continue
+        old_lo, old_hi = prev.get("lo"), prev.get("hi")
+        if old_lo is None or old_hi is None:
+            continue
+        parts = []
+        max_rel = 0.0
+        for label, old, new in (("下限", old_lo, new_lo), ("上限", old_hi, new_hi)):
+            rel = _rel_pct(old, new)
+            # 1e-9 容差：避免 20.000000000000004 这类浮点误差压在阈值边上漏报
+            if abs(rel) >= lo_hi_threshold_pct - 1e-9 or abs(new - old) >= abs_threshold_wan - 1e-9:
+                rel_txt = "新增" if rel == float("inf") else f"{rel:+.1f}%"
+                parts.append(f"{label} {old:.2f} → {new:.2f}（{rel_txt}）")
+                max_rel = max(max_rel, abs(rel))
+        if parts:
+            jumps.append({
+                "model": model, "old_lo": old_lo, "old_hi": old_hi,
+                "new_lo": new_lo, "new_hi": new_hi,
+                "reason": "；".join(parts), "_rel": max_rel,
+            })
+    jumps.sort(key=lambda j: (-j["_rel"], j["model"]))
+    for j in jumps:
+        del j["_rel"]
+    return jumps
+
+
 def write_prices_file(models, asof, path=None):
     """
     原子写 data/prices.json：先写临时文件，再 os.replace 到目标路径，避免写到一半
@@ -1889,6 +2093,9 @@ def write_outputs(all_rows, report, mapping):
     brand_stats = compute_brand_stats(all_rows_sorted, mapping)
     # 能源标注疑点：必须基于最终定稿、即将写盘的行（存量覆盖 + 新抓月份 + 归一都已完成）。
     report["suspect_energy_labels"] = detect_suspect_energy_labels(all_rows_sorted, mapping)
+    # 品牌哨兵命中：同样基于定稿行（品牌已全部解析/重解析完毕）。
+    (report["sentinel_brand_models"],
+     report["sentinel_brand_models_count"]) = detect_sentinel_brand_models(all_rows_sorted, mapping)
     write_report(report, len(all_rows_sorted), len(manufacturers), coverage, brand_stats)
 
 
@@ -2078,6 +2285,69 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
     )
     lines.append("")
 
+    lines.append("## 品牌哨兵命中\n")
+    sentinel_models = report.get("sentinel_brand_models") or []
+    sentinel_total = report.get("sentinel_brand_models_count", len(sentinel_models))
+    if sentinel_models:
+        lines.append("| 厂商 | 车型 | 被填成 | 累计销量 | 月数 | 区间 |")
+        lines.append("|---|---|---|---:|---:|---|")
+        for s in sentinel_models:
+            lines.append(
+                f"| {s['manufacturer']} | {s['model']} | {s['sentinel_brand']} | {s['sales']} | "
+                f"{s['months']} | {s['first']} ~ {s['last']} |"
+            )
+        if sentinel_total > len(sentinel_models):
+            lines.append(f"\n（共 {sentinel_total} 个车型，上表只列前 {len(sentinel_models)} 个）")
+    else:
+        lines.append("（无）")
+    lines.append("")
+    lines.append(
+        "说明：上表是厂商落在「哨兵厂商」名单（`sentinel_manufacturers`）里、但车型名不在 `model_to_brand` 里的车型，"
+        "品牌被兜底填成了厂商原名（多半是数据源给车型改了名，或是新上市车型）。处理方法：在 `data/mapping.json` 的 "
+        "`model_to_brand` 里按车型名加一条指向真实品牌；加完下次同步 `normalize_brand_column` 会自动改写全部历史行，"
+        "不需要 force_refresh。"
+    )
+    lines.append("")
+
+    lines.append("## 厂商改名自动跟随\n")
+    rename_changes = report.get("manufacturer_rename_changes") or []
+    if rename_changes:
+        lines.append("| 车型 | 旧厂商名 | 新厂商名 | 改写行数 | 依据的最新月份 |")
+        lines.append("|---|---|---|---:|---|")
+        for c in rename_changes:
+            lines.append(
+                f"| {c['model']} | {'、'.join(c['from'])} | {c['to']} | {c['rows_changed']} | {c['latest_month']} |"
+            )
+    else:
+        lines.append("（无）")
+    lines.append("")
+    lines.append(
+        "说明：这是数据源整体废弃旧厂商名时的自动跟随（取每个车型最新月份的厂商名，改写其全部历史行并重新解析品牌），"
+        "不是错误，不计入质量守门。如果你认为某个车型应该钉在旧厂商名上，在 `data/mapping.json` 的 "
+        "`model_to_manufacturer` 里写死即可，人工优先级更高。"
+    )
+    lines.append("")
+
+    lines.append("## 售价异动\n")
+    price_jumps = report.get("price_jumps") or []
+    if price_jumps:
+        lines.append("| 车型 | 旧区间（万元） | 新区间（万元） | 变化 |")
+        lines.append("|---|---|---|---|")
+        for j in price_jumps[:20]:
+            lines.append(
+                f"| {j['model']} | {j['old_lo']:.2f} ~ {j['old_hi']:.2f} | "
+                f"{j['new_lo']:.2f} ~ {j['new_hi']:.2f} | {j['reason']} |"
+            )
+        lines.append(f"\n（共 {len(price_jumps)} 个车型，上表最多列 20 个）")
+    else:
+        lines.append("（无）")
+    lines.append("")
+    lines.append(
+        "说明：售价异动不一定是错误，可能是真调价，也可能是数据源改了该车系的在售配置范围；列出来供人工抽查，"
+        "不计入质量守门。"
+    )
+    lines.append("")
+
     quality_gate_reasons = []
     if rate is not None and rate < 0.9:
         quality_gate_reasons.append(f"车体类型覆盖率 {rate * 100:.1f}% 低于 90%")
@@ -2093,11 +2363,15 @@ def write_report(report, total_rows, total_manufacturers, coverage, brand_stats)
             quality_gate_reasons.append(f"{_ym} 有 {_n_lost} 个车型分类证据丢失")
         if not _rec.get("total_check", {}).get("ok", True):
             quality_gate_reasons.append(f"{_ym} 总量对账不平")
+    # 品牌哨兵命中：跨月聚合，所以不带月份前缀。
+    _n_sentinel = report.get("sentinel_brand_models_count", len(report.get("sentinel_brand_models") or []))
+    if _n_sentinel:
+        quality_gate_reasons.append(f"{_n_sentinel} 个车型落在品牌哨兵值上（品牌归类缺字典条目）")
     if quality_gate_reasons:
         lines.append("")
         lines.append(
             f"⚠️ **数据质量守门未通过**：{'；'.join(quality_gate_reasons)}。"
-            "详见下方「车体类型对账」章节，建议人工核实后再信任本次数据。"
+            "详见下方对应章节（车体类型对账 / 品牌哨兵命中），建议人工核实后再信任本次数据。"
         )
         lines.append("")
 
@@ -2533,6 +2807,10 @@ def main():
     merged_prices, price_added, price_changed = merge_price_updates(
         existing_prices["models"], report.get("price_style_rows", []), price_asof
     )
+    # 售价异动（信息性，不计入质量守门）：必须用合并前的 existing_prices 对比。
+    report["price_jumps"] = detect_price_jumps(
+        existing_prices["models"], report.get("price_style_rows", [])
+    )
     write_prices_file(merged_prices, price_asof)
     price_with_value = sum(1 for v in merged_prices.values() if v.get("lo") is not None)
     price_without_value = len(merged_prices) - price_with_value
@@ -2567,6 +2845,17 @@ def main():
             f"车体类型归一: 统一了 {len(body_type_unified_changes)} 个车型的 body_type，"
             f"改写 {report['body_type_unified_row_count']} 行"
         )
+
+    # 厂商改名自动跟随：必须放在 merge 之后，因为要同时看到存量行和本次新抓的行才能发现
+    # 「同一车型在不同月份挂在不同厂商名下」；放在车体类型归一之后、对账/写盘之前。
+    # 它让 build.py 里「同一车型只能属于一个厂商」的断言退化成永不触发的最后一道保险：
+    # 数据源整体废弃一个厂商名时这里自动把全部历史行改写到最新的厂商名（model_to_manufacturer
+    # 里人工裁定过的车型跳过），不再需要人工补条目才能恢复看板构建。幂等。
+    combined, manufacturer_rename_changes = auto_follow_manufacturer_renames(combined, mapping)
+    report["manufacturer_rename_changes"] = manufacturer_rename_changes
+    if manufacturer_rename_changes:
+        log(f"厂商改名自动跟随：{len(manufacturer_rename_changes)} 个车型，改写 "
+            f"{sum(c['rows_changed'] for c in manufacturer_rename_changes)} 行")
 
     # 车体类型对账必须放在跨月回填之后：真正发货的是回填后的 combined，而不是每月抓取时的
     # 中间态（那时有些车型还是「其他」，要等跨月统一裁决才被救成真实类别）。对中间态对账
