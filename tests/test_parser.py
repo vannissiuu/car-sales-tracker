@@ -2,17 +2,19 @@
 # -*- coding: utf-8 -*-
 """
 用真实 HTML 样本离线验证 sync_script.py 的解析逻辑。
-样本文件只读引用自 /tmp/cv3/probe_v3_output/，本脚本不修改它们。
+样本文件只读引用自仓库内 probe_v3_output/，本脚本不修改它们。
 """
 
 import os
 import sys
 import io
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(TESTS_DIR)
+sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 import sync_script as S
 
-SAMPLE_DIR = "/tmp/cv3/probe_v3_output"
+SAMPLE_DIR = os.path.join(REPO_ROOT, "probe_v3_output")
 
 
 def read_sample(name):

@@ -6,16 +6,16 @@ verify_capmonth12_edge.py
 （capMonth===12 时，年度对比视图应该整体退化成"三年都是全年"：
  年份小图例全部写"全年"、参考线全部消失、最新年份柱顶正常封口不再画虚线开口）。
 
-真实数据（覆盖到 2026-07）触发不了这个边界，所以本脚本自己造一份假数据：把
-/tmp/norm/sales.csv 复制一份，给最新年份（2026）补齐 8-12 月（数值取自 7 月同一
+当前仓库的真实数据通常没有覆盖完整的最新年份，触发不了这个边界，所以本脚本自己造一份假数据：把
+仓库 data/sales.csv 复制一份，给最新年份补齐缺失月份至 12 月（数值取自该年最后一个
 (厂商,品牌,车型,车体类型,能源类型) 组合的销量，任意但合理——不改动原始文件），
-再复制一份"干净"的 /tmp/p2-chart（只要 build.py 需要的 build.py/vendor，不含 tests/
+再复制一份"干净"的构建目录（只要 src/build.py/vendor，不含 tests/
 docs/versions/scratchpad/.git 等，避免误改动到真正的产物或被测代码），在这份副本里用
 SALES_CSV 环境变量指向假数据跑 build.py，产物只落在副本自己的 docs/index.html 里，
-绝不会碰到 /tmp/p2-chart/docs/index.html。
+绝不会碰到仓库原有的 docs/index.html。
 
 用法:
-    PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers python3 verify_capmonth12_edge.py
+    python3 tests/verify_capmonth12_edge.py
 
 退出码: 全部 PASS -> 0；存在 FAIL -> 1。
 这个脚本不并入 79+21 条的主套件(verify_scope_filter.py)，独立运行。
@@ -38,13 +38,14 @@ except ImportError:
           "（不要运行 playwright install，浏览器已预装）", file=sys.stderr)
     sys.exit(2)
 
-REPO_SRC = "/tmp/p2-chart"
-REAL_SALES_CSV = "/tmp/norm/sales.csv"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_SRC = os.path.dirname(SCRIPT_DIR)
+REAL_SALES_CSV = os.path.join(REPO_SRC, "data", "sales.csv")
 
 # 只拷贝 build.py 构建时真正需要读的东西：build.py 本身 + vendor/echarts.min.js（离线缓存，
 # 避免联网拉包）。绝不拷贝 docs/（避免任何"看起来像是在操作真实产物"的路径混淆）、
 # tests/（不需要）、.git/（跟构建无关）、versions/scratchpad/screenshots（无关）。
-COPY_ITEMS = ["build.py", "vendor"]
+COPY_ITEMS = ["src/build.py"]
 
 
 class Results:
@@ -111,7 +112,9 @@ def build_fake_csv(src_path, dst_path):
     months_present = sorted(set(int(r["month"]) for r in rows if int(r["year"]) == max_year))
     max_month = max(months_present)
     if max_month >= 12:
-        # 真实数据已经是完整年份了（理论上不会发生，真发生了直接告诉调用方，不要装作成功）
+        # 真实数据已经覆盖到 12 月。仍然写出隔离副本，保证后续构建和页面断言
+        # 走同一条路径，而不是因为没有需要补写的月份而留下不存在的目标文件。
+        shutil.copyfile(src_path, dst_path)
         return len(rows), max_year, []
 
     template_rows = [r for r in rows if int(r["year"]) == max_year and int(r["month"]) == max_month]
@@ -140,17 +143,33 @@ def build_fake_csv(src_path, dst_path):
 # ============================================================
 
 def build_edge_product(fake_csv_path, work_dir):
-    """在 work_dir（一个只含 build.py + vendor/ 的干净副本）里执行
-    `SALES_CSV=<fake_csv_path> python3 build.py`，让它的相对路径 OUT_DIR=docs/ 落在
-    work_dir 自己名下，不会跟 /tmp/p2-chart/docs/index.html 产生任何交集。
-    返回 (ok, message, out_html_path)。"""
+    """在临时 work_dir 里执行 src/build.py，产物落在副本自己的 docs/ 下。"""
     for item in COPY_ITEMS:
         src = os.path.join(REPO_SRC, item)
         dst = os.path.join(work_dir, item)
         if os.path.isdir(src):
             shutil.copytree(src, dst)
         else:
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(src, dst)
+
+    # 公开仓库不跟踪 vendor/echarts.min.js。为避免测试依赖联网，提取当前发布产物中
+    # 已内嵌的 ECharts 到临时副本的 vendor/ 目录，原仓库文件保持不变。
+    vendor_src = os.path.join(REPO_SRC, "vendor")
+    vendor_dst = os.path.join(work_dir, "vendor")
+    if os.path.isdir(vendor_src):
+        shutil.copytree(vendor_src, vendor_dst)
+    else:
+        html_path = os.path.join(REPO_SRC, "docs", "index.html")
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_text = f.read()
+        marker = "/* ECharts (bundled offline at build time) */\n"
+        if marker not in html_text:
+            raise RuntimeError(f"无法从 {html_path} 提取内嵌 ECharts")
+        echarts = html_text.split(marker, 1)[1].split("\n</script>", 1)[0]
+        os.makedirs(vendor_dst, exist_ok=True)
+        with open(os.path.join(vendor_dst, "echarts.min.js"), "w", encoding="utf-8") as f:
+            f.write(echarts)
 
     env = dict(os.environ)
     env["SALES_CSV"] = fake_csv_path
@@ -158,7 +177,7 @@ def build_edge_product(fake_csv_path, work_dir):
     env.pop("NEWS_JSON", None)
 
     proc = subprocess.run(
-        [sys.executable, "build.py"],
+        [sys.executable, "src/build.py"],
         cwd=work_dir, env=env, capture_output=True, text=True, timeout=180,
     )
     out_html = os.path.join(work_dir, "docs", "index.html")
@@ -270,10 +289,14 @@ def main():
                       detail=f"找不到真实数据 {REAL_SALES_CSV}")
             return
         total_rows, extended_year, missing_months = build_fake_csv(REAL_SALES_CSV, fake_csv_path)
-        ok = (os.path.isfile(fake_csv_path) and missing_months == [8, 9, 10, 11, 12])
-        R.record("EDGE1", "造假CSV：把最新年份(2026)补齐到12月(用7月同组合销量续写8-12月)",
+        with open(REAL_SALES_CSV, encoding="utf-8") as f:
+            source_rows = list(csv.DictReader(f))
+        max_source_month = max(int(r["month"]) for r in source_rows if int(r["year"]) == extended_year)
+        expected_missing = list(range(max_source_month + 1, 13))
+        ok = (os.path.isfile(fake_csv_path) and missing_months == expected_missing)
+        R.record("EDGE1", "造假CSV：把最新年份补齐到12月",
                  "PASS" if ok else "FAIL",
-                 expected="最新年份缺失月份=[8,9,10,11,12]，成功写出假CSV",
+                 expected=f"最新年份缺失月份={expected_missing}，成功写出假CSV",
                  actual=f"最新年份={extended_year}，补齐月份={missing_months}，"
                         f"假CSV总行数={total_rows}，文件存在={os.path.isfile(fake_csv_path)}")
     safe_run("EDGE1", "造假CSV", step1)
@@ -285,15 +308,15 @@ def main():
 
     # ---- 步骤2：在干净副本里构建 ----
     out_html = None
+    source_html_path = os.path.join(REPO_SRC, "docs", "index.html")
+    source_html_before = None
+    if os.path.isfile(source_html_path):
+        with open(source_html_path, "rb") as f:
+            source_html_before = f.read()
 
     def step2():
         nonlocal out_html
         ok, msg, out_html = build_edge_product(fake_csv_path, work_dir)
-        real_untouched = True
-        try:
-            real_mtime_before = os.path.getmtime("/tmp/p2-chart/docs/index.html")
-        except Exception:
-            real_mtime_before = None
         R.record("EDGE2", "在scratchpad的干净副本里跑build.py，产物落在副本自己的docs/下",
                  "PASS" if ok else "FAIL",
                  expected="build.py 成功退出，产物写到副本docs/index.html",
@@ -306,10 +329,9 @@ def main():
         sys.exit(1)
 
     def step2b():
-        # 保险验证：绝没有碰真实产物 —— 真实 docs/index.html 的 META.years/coverageEndMonth
-        # 跟我们这份临时产物必须不同（临时产物应该是 coverageEndMonth=12，真实的是 7），
-        # 且真实文件路径本身必须原封不动地还在。
-        real_path = "/tmp/p2-chart/docs/index.html"
+        # 保险验证：绝没有碰真实产物。原有 docs/index.html 的字节内容必须不变，
+        # 临时产物应为 coverageEndMonth=12。
+        real_path = source_html_path
         exists = os.path.isfile(real_path)
         with open(real_path, "r", encoding="utf-8") as f:
             real_text = f.read()
@@ -319,12 +341,14 @@ def main():
             fake_text = f.read()
         m2 = re.search(r'"coverageEndMonth":\s*(\d+)', fake_text)
         fake_end_month = int(m2.group(1)) if m2 else None
-        ok = exists and real_end_month == 7 and fake_end_month == 12
+        with open(real_path, "rb") as f:
+            source_unchanged = (source_html_before is not None and f.read() == source_html_before)
+        ok = exists and source_unchanged and fake_end_month == 12
         R.record("EDGE2b", "保险验证：真实产物/docs/index.html 没有被覆盖或改动",
                  "PASS" if ok else "FAIL",
-                 expected="真实产物仍存在且 coverageEndMonth=7；临时产物 coverageEndMonth=12",
-                 actual=f"真实产物存在={exists}，真实coverageEndMonth={real_end_month}，"
-                        f"临时产物coverageEndMonth={fake_end_month}")
+                 expected="真实产物字节不变；临时产物 coverageEndMonth=12",
+                 actual=f"真实产物存在={exists}，真实未改动={source_unchanged}，"
+                        f"真实coverageEndMonth={real_end_month}，临时coverageEndMonth={fake_end_month}")
     safe_run("EDGE2b", "真实产物未被覆盖", step2b)
 
     # ---- 步骤3：对临时产物做3项断言 ----

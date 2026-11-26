@@ -20,7 +20,9 @@ import os
 import re
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(TESTS_DIR)
+sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 import sync_script as S
 
 FAILURES = []

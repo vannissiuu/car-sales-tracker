@@ -18,15 +18,17 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 
-# 注意：tests/ 目录下其余测试文件里的 `sys.path.insert(0, .../__file__ 所在目录)` 这行
-# 实际指向 tests/ 自己，而 sync_script.py 现在在 src/ 下，直接照抄会 ModuleNotFoundError。
-# 这里改成指向 src/ 才能真的 import 到。
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
+# sync_script.py 位于仓库的 src/ 目录，直接从仓库根目录运行测试时要指向那里。
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(TESTS_DIR)
+sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 import sync_script as S
 
 FAILURES = []
-SCRATCH_ROOT = "/tmp/p1-sync/test_prices_scratch"
+_TEST_TMP = tempfile.TemporaryDirectory(prefix="car-sales-test-prices-")
+SCRATCH_ROOT = _TEST_TMP.name
 
 
 def check(desc, cond):

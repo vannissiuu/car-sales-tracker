@@ -19,12 +19,16 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(TESTS_DIR)
+sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 import sync_script as S
 
 FAILURES = []
-SCRATCH_ROOT = "/tmp/p1-sync/test_brand_scratch"
+_TEST_TMP = tempfile.TemporaryDirectory(prefix="car-sales-test-brand-")
+SCRATCH_ROOT = _TEST_TMP.name
 
 
 def check(desc, cond):

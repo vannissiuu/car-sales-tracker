@@ -252,14 +252,13 @@ Settings → Secrets and variables → Actions → New repository secret，
    python3 -m playwright install chromium           # 首次
 
    python3 src/build.py            # 重建 docs/index.html
-   python3 tests/verify_scope_filter.py
+   python3 tests/verify_scope_filter.py --html docs/index.html --shots screenshots/regression
    python3 tests/verify_capmonth12_edge.py
    ```
 
    `verify_scope_filter.py` 共 100 条用例，分 A–P 共 16 组，必须全绿。它覆盖了几处肉眼
    极难发现的问题：勾选状态在切换筛选条件时被破坏性重置、系统自动补的 Top20/Top10 被
-   误当成用户选择而永久粘住、零销量对象污染对象池、同比跨期比较错误（比亚迪 2026 同比
-   -43.8% 是回归哨兵，数字变了说明踩坏了）。
+   误当成用户选择而永久粘住、零销量对象污染对象池、同比跨期比较错误（测试用当前数据独立计算预期值，再与页面结果核对）。
 
    `verify_capmonth12_edge.py` 是独立的边界验证脚本，共 7 条用例，单独运行、不并入上面
    的套件。它验证的是"最新年份也补齐到 12 月"这个必然会到来的边界（即 2027 年 1 月数据
@@ -269,7 +268,7 @@ Settings → Secrets and variables → Actions → New repository secret，
 3. 测的是构建产物 `docs/index.html`，不是源码——跑测试之前先确认它是你刚重建的那一份，
    拿一份过期产物去跑，得到的全绿是假的。现在因为可以本地直接 `python3 src/build.py`，
    这一步比以前简单了。
-4. 提交。push 之后 GitHub Actions 会自动重建并发布，不需要手动点 Run workflow。
+4. 月度同步成功后，GitHub Actions 会自动重建看板并更新发布产物。若单独修改构建代码，可在合入 main 后手动运行 build.yml。
 
 **为什么改**：内嵌 heredoc 当初是为了让非技术用户只粘贴一个文件就能完成首次部署，代价是
 之后每次更新都要粘贴一个十几万字的 YAML、缩进极易出错、diff 完全不可读。现在 push 已经

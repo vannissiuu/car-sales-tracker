@@ -28,17 +28,21 @@ PART A 覆盖范围说明（诚实标注，不夸大）：
 import csv
 import os
 import sys
+import tempfile
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+TESTS_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(TESTS_DIR)
+sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
 import sync_script as S
 
-SAMPLE_DIR = "/tmp/cv3/probe_v3_output"
+SAMPLE_DIR = os.path.join(REPO_ROOT, "probe_v3_output")
 
 # label_rows() 这一轮改动加了 mapping 参数（品牌解析用）。这里这些测试不关心品牌，
 # 用一个空字典即可 —— 两个映射表都是空的，resolve_brand 会稳定回退成 manufacturer 原值，
 # 不影响 body_type/energy_type 相关的既有断言。
 EMPTY_BRAND_MAPPING = {"manufacturer_to_brand": {}, "model_to_brand": {}}
-OUT_DIR = "/tmp/p1-sync/mini_output"
+_TEST_TMP = tempfile.TemporaryDirectory(prefix="car-sales-test-e2e-")
+OUT_DIR = _TEST_TMP.name
 OUT_CSV = os.path.join(OUT_DIR, "sales_mini.csv")
 
 
